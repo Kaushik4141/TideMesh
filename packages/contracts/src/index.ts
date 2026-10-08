@@ -5,3 +5,5 @@ export * from "./priority.js";
 export * from "./alert.js";
 export * from "./zone.js";
 export * from "./user.js";
+export * from "./observation.js";
+

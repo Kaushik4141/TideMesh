@@ -1,0 +1,415 @@
+import { existsSync, readFileSync } from "fs";
+import { resolve } from "path";
+import { sql } from "drizzle-orm";
+import type { DatabaseInstance } from "../db/index.js";
+import {
+  EnvironmentalObservationSchema,
+  type EnvironmentalObservation,
+  type DataQualityStatus,
+} from "@tidemesh/contracts";
+
+export interface EnvironmentalQueryFilters {
+  start?: string;
+  end?: string;
+  source?: string;
+  dataQuality?: DataQualityStatus;
+  minRainfall?: number;
+  latitude?: number;
+  longitude?: number;
+  limit?: number;
+}
+
+export interface IngestionReport {
+  success: boolean;
+  source: string;
+  totalParsed: number;
+  inserted: number;
+  skipped: number;
+  qualityBreakdown: Record<string, number>;
+  timeRange: { start: string | null; end: string | null };
+}
+
+export class EnvironmentalService {
+  private repoRoot: string;
+
+  constructor() {
+    this.repoRoot = resolve(process.cwd(), "../..");
+  }
+
+  /**
+   * Reads raw P2 feeds and normalizes them into canonical EnvironmentalObservation contracts.
+   */
+  public parseAndNormalizeFeeds(): EnvironmentalObservation[] {
+    const observations: EnvironmentalObservation[] = [];
+
+    // 1. Process Open-Meteo local feed (Asia/Kolkata -> UTC conversion)
+    const meteoPath = this.resolvePath("data-pipeline/data/raw/open-meteo/open_meteo_hourly.json");
+    if (existsSync(meteoPath)) {
+      try {
+        const raw = JSON.parse(readFileSync(meteoPath, "utf-8"));
+        const lat = Number(raw.latitude);
+        const lon = Number(raw.longitude);
+        const elev = raw.elevation != null ? Number(raw.elevation) : null;
+        const utcOffsetSeconds = Number(raw.utc_offset_seconds || 19800);
+        const hourly = raw.hourly || {};
+        const times: string[] = hourly.time || [];
+        const precipitation: number[] = hourly.precipitation || [];
+        const rain: number[] = hourly.rain || [];
+
+        times.forEach((tStr, idx) => {
+          // Local time (Asia/Kolkata = UTC+5:30)
+          const localDt = new Date(tStr + ":00+05:30");
+          const utcIso = localDt.toISOString();
+          const rainVal = rain[idx] != null ? Number(rain[idx]) : 0;
+          const precipVal = precipitation[idx] != null ? Number(precipitation[idx]) : rainVal;
+
+          const obs = EnvironmentalObservationSchema.parse({
+            timestamp: utcIso,
+            latitude: lat,
+            longitude: lon,
+            elevation: elev,
+            rainfall: Math.max(0, rainVal),
+            precipitation: Math.max(0, precipVal),
+            temperature: null,
+            surfacePressure: null,
+            windSpeed: null,
+            tideLevel: null,  // STRICT: Not provided in Open-Meteo weather feed
+            stormSurge: null, // STRICT: Not provided in Open-Meteo weather feed
+            source: "open-meteo",
+            sourceTimestamp: tStr,
+            dataQuality: "VERIFIED",
+          });
+          observations.push(obs);
+        });
+      } catch (err) {
+        console.warn("⚠️ Warning: Failed to parse Open-Meteo raw feed:", err);
+      }
+    }
+
+    // 2. Process Unverified CWC Feed (GMT Open-Meteo feed mislabeled as CWC)
+    const cwcPath = this.resolvePath("data-pipeline/data/raw/cwc/cwc_observations.json");
+    if (existsSync(cwcPath)) {
+      try {
+        const raw = JSON.parse(readFileSync(cwcPath, "utf-8"));
+        const lat = Number(raw.latitude);
+        const lon = Number(raw.longitude);
+        const elev = raw.elevation != null ? Number(raw.elevation) : null;
+        const hourly = raw.hourly || {};
+        const times: string[] = hourly.time || [];
+        const precipitation: number[] = hourly.precipitation || [];
+        const rain: number[] = hourly.rain || [];
+        const temp: number[] = hourly.temperature_2m || [];
+        const press: number[] = hourly.surface_pressure || [];
+        const wind: number[] = hourly.wind_speed_10m || [];
+
+        times.forEach((tStr, idx) => {
+          // Timezone is GMT (UTC+0)
+          const utcDt = new Date(tStr + ":00Z");
+          const utcIso = utcDt.toISOString();
+          const rainVal = rain[idx] != null ? Number(rain[idx]) : 0;
+          const precipVal = precipitation[idx] != null ? Number(precipitation[idx]) : rainVal;
+
+          const obs = EnvironmentalObservationSchema.parse({
+            timestamp: utcIso,
+            latitude: lat,
+            longitude: lon,
+            elevation: elev,
+            rainfall: Math.max(0, rainVal),
+            precipitation: Math.max(0, precipVal),
+            temperature: temp[idx] != null ? Number(temp[idx]) : null,
+            surfacePressure: press[idx] != null ? Number(press[idx]) : null,
+            windSpeed: wind[idx] != null ? Number(wind[idx]) : null,
+            tideLevel: null,  // STRICT: River/sea water levels missing
+            stormSurge: null, // STRICT: Storm surge missing
+            source: "unverified-cwc",
+            sourceTimestamp: tStr,
+            dataQuality: "UNVERIFIED_SOURCE", // CRITICAL AUDIT FLAG
+          });
+          observations.push(obs);
+        });
+      } catch (err) {
+        console.warn("⚠️ Warning: Failed to parse CWC raw feed:", err);
+      }
+    }
+
+    return observations;
+  }
+
+  /**
+   * Ingests normalized environmental observations into Neon PostgreSQL + PostGIS database.
+   * Uses ON CONFLICT on (source, timestamp, latitude, longitude) to avoid duplicate rows.
+   */
+  async ingestToDatabase(db: DatabaseInstance): Promise<IngestionReport> {
+    const observations = this.parseAndNormalizeFeeds();
+    let inserted = 0;
+    let skipped = 0;
+    const qualityMap: Record<string, number> = {};
+
+    let minTime: string | null = null;
+    let maxTime: string | null = null;
+
+    for (const obs of observations) {
+      qualityMap[obs.dataQuality] = (qualityMap[obs.dataQuality] || 0) + 1;
+      if (!minTime || obs.timestamp < minTime) minTime = obs.timestamp;
+      if (!maxTime || obs.timestamp > maxTime) maxTime = obs.timestamp;
+    }
+
+    const chunkSize = 50;
+
+    for (let i = 0; i < observations.length; i += chunkSize) {
+      const chunk = observations.slice(i, i + chunkSize);
+      const valueClauses = chunk.map(
+        (obs) => sql`(
+          ${obs.timestamp}::timestamptz,
+          ${obs.latitude},
+          ${obs.longitude},
+          ST_SetSRID(ST_MakePoint(${obs.longitude}, ${obs.latitude}), 4326),
+          ${obs.elevation ?? null},
+          ${obs.rainfall ?? null},
+          ${obs.precipitation ?? null},
+          ${obs.temperature ?? null},
+          ${obs.surfacePressure ?? null},
+          ${obs.windSpeed ?? null},
+          ${obs.tideLevel ?? null},
+          ${obs.stormSurge ?? null},
+          ${obs.source},
+          ${obs.sourceTimestamp ?? null},
+          ${obs.dataQuality}
+        )`
+      );
+
+      try {
+        const res = await db.execute<{ id: string }>(sql`
+          INSERT INTO environmental_observations (
+            timestamp,
+            latitude,
+            longitude,
+            location,
+            elevation,
+            rainfall,
+            precipitation,
+            temperature,
+            surface_pressure,
+            wind_speed,
+            tide_level,
+            storm_surge,
+            source,
+            source_timestamp,
+            data_quality
+          ) VALUES ${sql.join(valueClauses, sql`, `)}
+          ON CONFLICT (source, timestamp, latitude, longitude) 
+          DO UPDATE SET
+            rainfall = EXCLUDED.rainfall,
+            precipitation = EXCLUDED.precipitation,
+            temperature = COALESCE(EXCLUDED.temperature, environmental_observations.temperature),
+            surface_pressure = COALESCE(EXCLUDED.surface_pressure, environmental_observations.surface_pressure),
+            wind_speed = COALESCE(EXCLUDED.wind_speed, environmental_observations.wind_speed),
+            data_quality = EXCLUDED.data_quality
+          RETURNING id;
+        `);
+
+        inserted += res.rows.length;
+      } catch (err) {
+        console.error("Batch insert error:", err);
+        skipped += chunk.length;
+      }
+    }
+
+
+    return {
+      success: true,
+      source: "data-pipeline (open-meteo & unverified-cwc)",
+      totalParsed: observations.length,
+      inserted,
+      skipped,
+      qualityBreakdown: qualityMap,
+      timeRange: { start: minTime, end: maxTime },
+    };
+  }
+
+  /**
+   * Retrieves environmental observations with filtering.
+   */
+  async getObservations(
+    db: DatabaseInstance,
+    filters: EnvironmentalQueryFilters = {}
+  ): Promise<EnvironmentalObservation[]> {
+    const limit = Math.min(filters.limit || 168, 1000);
+    const conditions = [];
+
+    if (filters.start) {
+      conditions.push(sql`timestamp >= ${filters.start}::timestamptz`);
+    }
+    if (filters.end) {
+      conditions.push(sql`timestamp <= ${filters.end}::timestamptz`);
+    }
+    if (filters.source) {
+      conditions.push(sql`source = ${filters.source}`);
+    }
+    if (filters.dataQuality) {
+      conditions.push(sql`data_quality = ${filters.dataQuality}`);
+    }
+    if (filters.minRainfall != null) {
+      conditions.push(sql`rainfall >= ${filters.minRainfall}`);
+    }
+
+    const whereClause = conditions.length > 0
+      ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
+      : sql``;
+
+    const res = await db.execute<{
+      id: string;
+      timestamp: string;
+      latitude: number;
+      longitude: number;
+      elevation: number | null;
+      rainfall: number | null;
+      precipitation: number | null;
+      temperature: number | null;
+      surface_pressure: number | null;
+      wind_speed: number | null;
+      tide_level: number | null;
+      storm_surge: number | null;
+      source: string;
+      source_timestamp: string | null;
+      data_quality: string;
+      created_at: string;
+    }>(sql`
+      SELECT 
+        id,
+        timestamp,
+        latitude,
+        longitude,
+        elevation,
+        rainfall,
+        precipitation,
+        temperature,
+        surface_pressure,
+        wind_speed,
+        tide_level,
+        storm_surge,
+        source,
+        source_timestamp,
+        data_quality,
+        created_at
+      FROM environmental_observations
+      ${whereClause}
+      ORDER BY timestamp ASC
+      LIMIT ${sql.raw(String(limit))};
+    `);
+
+
+    return res.rows.map((row) => ({
+      id: row.id,
+      timestamp: new Date(row.timestamp).toISOString(),
+      latitude: Number(row.latitude),
+      longitude: Number(row.longitude),
+      elevation: row.elevation != null ? Number(row.elevation) : null,
+      rainfall: row.rainfall != null ? Number(row.rainfall) : null,
+      precipitation: row.precipitation != null ? Number(row.precipitation) : null,
+      temperature: row.temperature != null ? Number(row.temperature) : null,
+      surfacePressure: row.surface_pressure != null ? Number(row.surface_pressure) : null,
+      windSpeed: row.wind_speed != null ? Number(row.wind_speed) : null,
+      tideLevel: row.tide_level != null ? Number(row.tide_level) : null,
+      stormSurge: row.storm_surge != null ? Number(row.storm_surge) : null,
+      source: row.source,
+      sourceTimestamp: row.source_timestamp,
+      dataQuality: row.data_quality as DataQualityStatus,
+      createdAt: new Date(row.created_at).toISOString(),
+    }));
+  }
+
+  /**
+   * Retrieves environmental conditions associated with a specific event.
+   */
+  async getEventEnvironment(db: DatabaseInstance, eventId: string) {
+    if (eventId === "mangaluru-historical-2018") {
+      // Historical event metadata & forcing parameters
+      return {
+        eventId,
+        location: "Mangaluru Coastal / Netravati Estuary",
+        period: {
+          start: "2018-05-29T00:00:00Z",
+          end: "2018-05-29T06:00:00Z",
+        },
+        forcing: {
+          rainfall: {
+            source: "IMD Mangaluru Extreme Downpour",
+            peakRateMmHr: 75.0,
+            status: "HISTORICAL_RECORDED",
+          },
+          tide: {
+            source: "Panambur Port Spring Tide",
+            peakLevelM: 2.25,
+            datum: "MSL",
+            status: "HYDROGRAPHIC_SURVEY",
+          },
+          stormSurge: {
+            source: "Cyclone Mekunu Induced Surge",
+            peakM: 0.85,
+            status: "MODEL_RECONSTRUCTED",
+          },
+        },
+        datasetAvailability: {
+          p2FeedsCoverage: "2026-10-08 to 2026-10-14 (Real-time forecast horizon)",
+          historical2018Coverage: "Available via P1 SFINCS historical simulation forcing archive",
+        },
+      };
+    }
+
+    // Otherwise query matching observations from database
+    const obs = await this.getObservations(db, { limit: 24 });
+    return {
+      eventId,
+      observationsCount: obs.length,
+      observations: obs,
+    };
+  }
+
+  /**
+   * Generates a SFINCS-compatible rainfall boundary forcing time series.
+   * Maps normalized environmental observations to SFINCS precipitation inputs.
+   */
+  async prepareSfincsRainfallSeries(
+    db: DatabaseInstance,
+    options: { start?: string; end?: string; source?: string } = {}
+  ) {
+    const obs = await this.getObservations(db, {
+      start: options.start,
+      end: options.end,
+      source: options.source || "open-meteo",
+      limit: 168,
+    });
+
+    const series = obs.map((o) => ({
+      timestamp: o.timestamp,
+      rainfall_mm_hr: o.rainfall ?? o.precipitation ?? 0.0,
+    }));
+
+    return {
+      parameter: "sfincs.precip",
+      units: "mm/hr",
+      recordCount: series.length,
+      timeSeries: series,
+      tideBoundaryStatus: {
+        parameter: "sfincs.bzs",
+        available: false,
+        reason: "P2 environmental data pipeline does not supply marine tide or surge observations. External hydrographic tide table required.",
+      },
+    };
+  }
+
+  private resolvePath(relPath: string): string {
+    const candidates = [
+      resolve(process.cwd(), relPath),
+      resolve(process.cwd(), "../..", relPath),
+      resolve(this.repoRoot, relPath),
+    ];
+    for (const p of candidates) {
+      if (existsSync(p)) return p;
+    }
+    return candidates[0];
+  }
+}
+
+export const environmentalService = new EnvironmentalService();

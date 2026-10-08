@@ -5,6 +5,10 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { healthRouter } from "./routes/health.js";
 import { simulationRouter } from "./routes/simulation.js";
+import {
+  environmentalRouter,
+  eventEnvironmentRouter,
+} from "./routes/environmental.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { requestLogger } from "./middleware/logger.middleware.js";
 
@@ -43,6 +47,10 @@ app.get("/", (c) => {
       simulations: "/api/v1/simulations",
       mangaluruForecast: "/api/v1/simulations/mangaluru-historical-2018/forecast",
       mangaluruExtent: "/api/v1/simulations/mangaluru-historical-2018/extent",
+      environmentalObservations: "/api/v1/environmental-observations",
+      ingestEnvironment: "/api/v1/environmental-observations/ingest",
+      eventEnvironment: "/api/v1/events/mangaluru-historical-2018/environment",
+      sfincsForcing: "/api/v1/environmental-observations/sfincs-forcing",
     },
   });
 });
@@ -50,6 +58,9 @@ app.get("/", (c) => {
 // Mount routes
 app.route("/api/v1/health", healthRouter);
 app.route("/api/v1/simulations", simulationRouter);
+app.route("/api/v1/environmental-observations", environmentalRouter);
+app.route("/api/v1/events", eventEnvironmentRouter);
+
 
 
 // Cloudflare Workers entrypoint

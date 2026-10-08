@@ -102,11 +102,17 @@ def clean_meteo(input_path: Path, output_path: Path) -> dict:
     print(f"  End: {df['timestamp'].max()}")
     print(f"  Frequency: ~1 hour")
 
-    # Save to parquet
+    # Save to parquet (with CSV fallback if pyarrow missing)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(output_path, index=False)
-    print(f"\nSaved to: {output_path}")
+    try:
+        df.to_parquet(output_path, index=False)
+        print(f"\nSaved to: {output_path}")
+    except Exception as e:
+        csv_path = output_path.with_suffix(".csv")
+        df.to_csv(csv_path, index=False)
+        print(f"\nSaved to fallback CSV: {csv_path} (pyarrow not present: {e})")
     print(f"Rows: {len(df)}, Columns: {list(df.columns)}")
+
 
     return {
         "status": "SUCCESS",
@@ -121,10 +127,12 @@ def clean_meteo(input_path: Path, output_path: Path) -> dict:
 
 
 def main():
-    input_path = Path("data/raw/open-meteo/open_meteo_hourly.json")
-    output_path = Path("data/processed/open-meteo/open_meteo_hourly.parquet")
+    base_dir = Path(__file__).resolve().parent.parent
+    input_path = base_dir / "data" / "raw" / "open-meteo" / "open_meteo_hourly.json"
+    output_path = base_dir / "data" / "processed" / "open-meteo" / "open_meteo_hourly.parquet"
 
     result = clean_meteo(input_path, output_path)
+
 
     print(f"\n{'='*60}")
     print("RESULT:", result)
