@@ -424,30 +424,43 @@ export class EnvironmentalService {
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,rain,temperature_2m,wind_speed_10m,wind_direction_10m,surface_pressure&timezone=auto&forecast_days=${forecastDays}`;
     const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height&forecast_days=${forecastDays}`;
 
-    const [weatherRes, marineRes] = await Promise.allSettled([
-      fetch(weatherUrl),
-      fetch(marineUrl),
-    ]);
+    let weatherData: any = null;
+    let marineMap: Record<string, number> = {};
 
-    if (weatherRes.status !== "fulfilled" || !weatherRes.value.ok) {
-      throw new Error("Failed to fetch live weather data from Open-Meteo API");
+    try {
+      const [weatherRes, marineRes] = await Promise.allSettled([
+        fetch(weatherUrl, { signal: AbortSignal.timeout(10000) }),
+        fetch(marineUrl, { signal: AbortSignal.timeout(10000) }),
+      ]);
+
+      if (weatherRes.status === "fulfilled" && weatherRes.value.ok) {
+        weatherData = await weatherRes.value.json();
+      }
+
+      if (marineRes.status === "fulfilled" && marineRes.value.ok) {
+        try {
+          const marineData = (await marineRes.value.json()) as any;
+          const mTimes: string[] = marineData.hourly?.time || [];
+          const mHeights: number[] = marineData.hourly?.wave_height || [];
+          mTimes.forEach((t, i) => {
+            if (mHeights[i] != null) {
+              marineMap[t] = Number(mHeights[i]);
+            }
+          });
+        } catch {
+          // ignore marine parse errors
+        }
+      }
+    } catch (err) {
+      console.warn("⚠️ Live Open-Meteo query failed, falling back to local cache:", err);
     }
 
-    const weatherData = (await weatherRes.value.json()) as any;
-    const marineMap: Record<string, number> = {};
-
-    if (marineRes.status === "fulfilled" && marineRes.value.ok) {
-      try {
-        const marineData = (await marineRes.value.json()) as any;
-        const mTimes: string[] = marineData.hourly?.time || [];
-        const mHeights: number[] = marineData.hourly?.wave_height || [];
-        mTimes.forEach((t, i) => {
-          if (mHeights[i] != null) {
-            marineMap[t] = Number(mHeights[i]);
-          }
-        });
-      } catch {
-        // Marine fallback
+    if (!weatherData) {
+      const meteoPath = this.resolvePath("data-pipeline/data/raw/open-meteo/open_meteo_hourly.json");
+      if (existsSync(meteoPath)) {
+        weatherData = JSON.parse(readFileSync(meteoPath, "utf-8"));
+      } else {
+        throw new Error("Failed to fetch live weather data from Open-Meteo API and local cache is missing");
       }
     }
 

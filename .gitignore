@@ -241,3 +241,4 @@ desktop.ini
 *.swp
 *.swo
 simulations/runs/
+simulations/latest/
