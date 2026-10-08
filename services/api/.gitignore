@@ -1,0 +1,6 @@
+.neon
+.env.local
+node_modules/
+dist/
+.wrangler/
+.agents/

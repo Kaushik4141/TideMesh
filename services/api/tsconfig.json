@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ESNext"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "declaration": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*", "scripts/**/*", "tests/**/*", "drizzle.config.ts", "neon.ts"],
+  "exclude": ["node_modules", "dist", ".agents"]
+}

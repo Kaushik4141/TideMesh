@@ -1,0 +1,18 @@
+{
+  "name": "tidemesh",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "api:dev": "npm run dev --workspace=@tidemesh/api",
+    "api:build": "npm run build --workspace=@tidemesh/api",
+    "db:generate": "npm run db:generate --workspace=@tidemesh/api",
+    "db:migrate": "npm run db:migrate --workspace=@tidemesh/api",
+    "db:seed": "npm run db:seed --workspace=@tidemesh/api",
+    "test": "npm run test --workspace=@tidemesh/api"
+  }
+}
