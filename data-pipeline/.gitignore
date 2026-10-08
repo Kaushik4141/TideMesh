@@ -1,0 +1,28 @@
+# Data files
+data/processed/
+data/raw/cwc/*.parquet
+data/raw/open-meteo/*.parquet
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+.venv
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
