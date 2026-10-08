@@ -185,3 +185,52 @@ simulationRouter.get("/:eventId/replay", async (c) => {
   }
 });
 
+/**
+ * GET /api/v1/simulations/live/forecast
+ * Primary Operational Mode: 0–6 hour forward hydrodynamic forecast
+ * driven by live and forecast meteorological + marine conditions.
+ */
+simulationRouter.get("/live/forecast", async (c) => {
+  try {
+    const db = getDb(c.env);
+    const forecast = await simulationService.getLiveForecast(db);
+    return c.json(forecast);
+  } catch (error) {
+    const err = error as Error;
+    return c.json(
+      {
+        success: false,
+        error: `Failed to generate operational live forecast: ${err.message}`,
+      },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/v1/simulations/scenario
+ * What-If Contingency Mode: Generates hypothetical stress-test sequence
+ * based on user-supplied rainfall intensity and storm surge sliders.
+ */
+simulationRouter.post("/scenario", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const scenario = simulationService.getScenarioData({
+      rainfallRateMmHr: body.rainfallRateMmHr != null ? Number(body.rainfallRateMmHr) : undefined,
+      surgeLevelM: body.surgeLevelM != null ? Number(body.surgeLevelM) : undefined,
+      scenarioName: body.scenarioName,
+      breachSeaWall: body.breachSeaWall !== false,
+    });
+    return c.json(scenario);
+  } catch (error) {
+    const err = error as Error;
+    return c.json(
+      {
+        success: false,
+        error: `Failed to generate contingency scenario: ${err.message}`,
+      },
+      500
+    );
+  }
+});
+

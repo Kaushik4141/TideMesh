@@ -34,6 +34,51 @@ class ApiClient {
   }
 
   /**
+   * Primary Operational Mode: Fetches 0-6 hour live forward forecast
+   * driven by real-time meteorological and marine conditions.
+   */
+  async fetchLiveForecast(): Promise<ReplayEventResponse> {
+    const url = `${this.baseUrl}/api/v1/forecast/live`;
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        throw new Error(`API returned HTTP ${res.status}: ${res.statusText}`);
+      }
+      return (await res.json()) as ReplayEventResponse;
+    } catch (err) {
+      console.warn(`[ApiClient] Failed to fetch live forecast from ${url}:`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * What-If Contingency Mode: Generates hypothetical stress test sequence.
+   */
+  async fetchScenario(options: {
+    rainfallRateMmHr?: number;
+    surgeLevelM?: number;
+    scenarioName?: string;
+    breachSeaWall?: boolean;
+  } = {}): Promise<ReplayEventResponse> {
+    const url = `${this.baseUrl}/api/v1/simulations/scenario`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(options),
+      });
+      if (!res.ok) throw new Error(`API returned HTTP ${res.status}`);
+      return (await res.json()) as ReplayEventResponse;
+    } catch (err) {
+      console.warn(`[ApiClient] Failed to fetch scenario from ${url}:`, err);
+      throw err;
+    }
+  }
+
+  /**
    * Fetches the complete aggregated historical replay sequence for the event.
    */
   async fetchReplayEvent(

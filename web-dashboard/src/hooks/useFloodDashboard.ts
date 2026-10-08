@@ -21,7 +21,12 @@ import {
   type PriorityItem,
 } from '@/mocks/floodData';
 import { apiClient } from '@/lib/api/client';
-import type { ReplaySimulationEvent, EventEnvironmentResponse } from '@/lib/api/types';
+import type {
+  ReplaySimulationEvent,
+  EventEnvironmentResponse,
+  DashboardMode,
+  ScenarioParameters,
+} from '@/lib/api/types';
 
 export type ActionStatus = 'unassigned' | 'dispatched' | 'done';
 
@@ -32,23 +37,32 @@ export interface AcknowledgmentState {
 }
 
 export function useFloodDashboard() {
+  // Operational Dashboard Mode: LIVE_FORECAST (Default), HISTORICAL_REPLAY, or SCENARIO
+  const [activeMode, setActiveMode] = useState<DashboardMode>('LIVE_FORECAST');
+  const [scenarioParams, setScenarioParams] = useState<ScenarioParameters>({
+    rainfallRateMmHr: 110,
+    surgeLevelM: 2.80,
+    scenarioName: 'Extreme Monsoonal Cloudburst (+110 mm/hr) + 1-in-100 Year Surge',
+    breachSeaWall: true,
+  });
+
   // Selected Zone ID (defaults to Rank 1 critical zone 'B')
   const [selectedZoneId, setSelectedZoneId] = useState<string>('B');
   const [drawerOpen, setDrawerOpen] = useState<boolean>(true);
 
   // Time & Playback States
-  const [currentTime, setCurrentTime] = useState<string>('14:26');
+  const [currentTime, setCurrentTime] = useState<string>('NOW');
   const [availableTimestamps, setAvailableTimestamps] = useState<string[]>([
-    '14:00',
-    '14:15',
-    '14:26',
-    '14:30',
-    '14:45',
-    '15:00',
-    '15:15',
-    '15:30',
-    '15:45',
-    '16:00',
+    'NOW',
+    '+15m',
+    '+30m',
+    '+45m',
+    '+1h',
+    '+1h 30m',
+    '+2h',
+    '+3h',
+    '+4h',
+    '+6h',
   ]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<1 | 2 | 5>(1);
@@ -75,70 +89,92 @@ export function useFloodDashboard() {
     Record<string, { status: ActionStatus; team?: string; timestamp?: string }>
   >({});
 
-  // Initial Data Fetching from Live API
-  useEffect(() => {
-    let mounted = true;
-
-    async function fetchInitialReplay() {
+  // Core Data Loader parameterized by active mode
+  const loadModeData = useCallback(
+    async (mode: DashboardMode, customScenarioParams?: ScenarioParameters) => {
       setIsLoading(true);
       setError(null);
+      setIsPlaying(false);
       try {
-        console.info('[useFloodDashboard] Fetching active replay simulation from API...');
-        const resp = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
-        if (mounted && resp?.success && resp.event) {
+        let resp;
+        if (mode === 'LIVE_FORECAST') {
+          resp = await apiClient.fetchLiveForecast();
+        } else if (mode === 'HISTORICAL_REPLAY') {
+          resp = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
+        } else {
+          resp = await apiClient.fetchScenario(customScenarioParams || scenarioParams);
+        }
+
+        if (resp?.success && resp.event) {
           setEventData(resp.event);
           if (resp.event.timestamps && resp.event.timestamps.length > 0) {
             setAvailableTimestamps(resp.event.timestamps);
-            // If currentTime is not in timestamps, set to closest or first
-            if (!resp.event.timestamps.includes(currentTime)) {
-              const preferred = resp.event.timestamps.includes('14:26')
+            // Default to appropriate starting timestamp for mode
+            if (mode === 'LIVE_FORECAST') {
+              setCurrentTime(resp.event.timestamps[0] || 'NOW');
+            } else if (mode === 'HISTORICAL_REPLAY') {
+              const defaultTs = resp.event.timestamps.includes('14:30')
+                ? '14:30'
+                : resp.event.timestamps.includes('14:26')
                 ? '14:26'
                 : resp.event.timestamps[0];
-              setCurrentTime(preferred);
+              setCurrentTime(defaultTs);
+            } else {
+              setCurrentTime(resp.event.timestamps[0] || 'T+00');
             }
           }
         }
 
-        const envResp = await apiClient.fetchEventEnvironment('mangaluru-historical-2018');
-        if (mounted && envResp?.success && envResp.eventEnvironment) {
-          setEnvironmentalData(envResp.eventEnvironment);
-        }
+        // Fetch live environmental telemetry for sidebar
+        try {
+          const envResp = await apiClient.fetchEventEnvironment('mangaluru-historical-2018');
+          if (envResp?.success && envResp.eventEnvironment) {
+            setEnvironmentalData(envResp.eventEnvironment);
+          }
+        } catch {}
       } catch (err: unknown) {
-        console.warn('[useFloodDashboard] API offline, falling back gracefully to embedded data:', err);
-        if (mounted) {
-          const message = err instanceof Error ? err.message : 'Failed to fetch replay data';
-          setError(message);
-        }
+        console.warn(`[useFloodDashboard] Mode ${mode} fetch warning:`, err);
+        setError(err instanceof Error ? err.message : String(err));
       } finally {
-        if (mounted) setIsLoading(false);
+        setIsLoading(false);
       }
-    }
+    },
+    [scenarioParams]
+  );
 
-    fetchInitialReplay();
+  // Initial Data Fetching for active mode
+  useEffect(() => {
+    let mounted = true;
+    if (mounted) {
+      loadModeData(activeMode);
+    }
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [activeMode, loadModeData]);
+
+  // Mode switcher handler
+  const switchMode = useCallback(
+    (newMode: DashboardMode) => {
+      setActiveMode(newMode);
+    },
+    []
+  );
+
+  // Trigger custom scenario stress-test
+  const triggerScenarioRun = useCallback(
+    async (params: ScenarioParameters) => {
+      setScenarioParams(params);
+      setActiveMode('SCENARIO');
+      await loadModeData('SCENARIO', params);
+    },
+    [loadModeData]
+  );
 
   // Manual refresh helper
   const refreshData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const resp = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
-      if (resp?.success && resp.event) {
-        setEventData(resp.event);
-        setAvailableTimestamps(resp.event.timestamps);
-      }
-      const envResp = await apiClient.fetchEventEnvironment('mangaluru-historical-2018');
-      if (envResp?.success && envResp.eventEnvironment) {
-        setEnvironmentalData(envResp.eventEnvironment);
-      }
-    } catch (err: unknown) {
-      console.warn('[useFloodDashboard] Manual refresh fallback notice:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    await loadModeData(activeMode);
+  }, [activeMode, loadModeData]);
 
   // Derive active timestep data from loaded replay or fall back gracefully
   const activeTimestep = useMemo(() => {
