@@ -1,0 +1,21 @@
+{
+  "model": "SFINCS",
+  "model_version": "v2.4.2",
+  "location": "Mangaluru Coastal / Netravati Estuary Baseline Domain",
+  "simulation_id": "mangaluru-baseline-m2",
+  "start_time": "2026-06-15T00:00:00Z",
+  "end_time": "2026-06-15T06:00:00Z",
+  "time_step_minutes": 5,
+  "grid_resolution_m": 50,
+  "crs": "EPSG:32643",
+  "vertical_datum": "MSL",
+  "max_depth_m": 3.0,
+  "mean_flooded_depth_m": 1.6524218320846558,
+  "flooded_area_km2": 8.0,
+  "onset_threshold_m": 0.05,
+  "flood_threshold_m": 0.1,
+  "forcing": {
+    "type": "Controlled High Tide Pulse",
+    "peak_water_level_m_msl": 1.2
+  }
+}

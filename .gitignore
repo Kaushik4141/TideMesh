@@ -159,21 +159,32 @@ vite.config.ts.timestamp-*
 # Coding Agent / Assistant Workspace Data
 .agents/
 
-# Python & ML Environments
+# Python & Virtual Environments
+venv/
+env/
+.venv/
+ENV/
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 *$py.class
 *.so
 .Python
-env/
-venv/
-.venv/
-ENV/
 *.egg-info/
+.deps/
 .pytest_cache/
 .ipynb_checkpoints/
 
-# Large Model Artifacts & Geospatial Datasets (keep in Cloudflare R2)
+# SFINCS Simulation Binary Outputs & Runtime Logs
+docker_stdout.log
+docker_stderr.log
+hydromt.log
+sfincs.log
+*.nc
+*.dat
+
+# Large Model Artifacts (keep in Cloudflare R2)
 *.pkl
 *.pickle
 *.joblib
@@ -182,10 +193,11 @@ ENV/
 *.pth
 *.h5
 *.parquet
-*.tif
-*.tiff
-*.geotiff
-*.gpkg
+
+# Keep standardized contract outputs committed
+!outputs/*.tif
+!outputs/*.geojson
+!outputs/*.json
 
 # OS & Editor Files
 .DS_Store
@@ -193,6 +205,7 @@ ENV/
 ._*
 Thumbs.db
 desktop.ini
+.vscode/
 .idea/
 *.swp
 *.swo

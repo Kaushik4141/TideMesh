@@ -1,0 +1,18 @@
+# HydroMT-SFINCS Model Building Configuration for Mangaluru Baseline Model
+setup_config:
+  t0: "20260615 000000"
+  tstop: "20260615 060000"
+  dtout: 300
+  alpha: 0.5
+  manning: 0.04
+  crs: 32643
+
+setup_grid:
+  x0: 483000
+  y0: 1421000
+  dx: 50
+  dy: 50
+  nmax: 100
+  mmax: 100
+  rotation: 0
+  epsg: 32643
