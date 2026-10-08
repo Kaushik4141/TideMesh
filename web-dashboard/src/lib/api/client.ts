@@ -2,6 +2,7 @@ import type {
   ReplayEventResponse,
   SimulationEventSummary,
   RunSimulationResponse,
+  EventEnvironmentResponse,
 } from './types';
 
 const API_BASE_URL =
@@ -36,6 +37,28 @@ class ApiClient {
       return (await res.json()) as ReplayEventResponse;
     } catch (err) {
       console.warn(`[ApiClient] Failed to fetch replay from ${url}:`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Fetches environmental forcing data for an event.
+   */
+  async fetchEventEnvironment(
+    eventId: string = 'mangaluru-historical-2018'
+  ): Promise<EventEnvironmentResponse> {
+    const url = `${this.baseUrl}/api/v1/environmental/events/${encodeURIComponent(eventId)}/summary`;
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        throw new Error(`API returned HTTP ${res.status}: ${res.statusText}`);
+      }
+      return (await res.json()) as EventEnvironmentResponse;
+    } catch (err) {
+      console.warn(`[ApiClient] Failed to fetch event environment from ${url}:`, err);
       throw err;
     }
   }

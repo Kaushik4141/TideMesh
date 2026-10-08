@@ -10,16 +10,20 @@ interface TimelineProps {
   onSelectTime?: (time: string) => void;
   isPlaying: boolean;
   onTogglePlay: () => void;
-  onStepForward?: () => void;
-  onStepBackward?: () => void;
   playbackSpeed: 1 | 2 | 5;
   onChangeSpeed: (speed: 1 | 2 | 5) => void;
+  onStepForward?: () => void;
+  onStepBackward?: () => void;
+  onReset?: () => void;
+  currentFloodDepth?: string;
+  statusLabel?: string;
   className?: string;
 }
 
 const DEFAULT_TIMESTAMPS = [
   '14:00',
   '14:15',
+  '14:26',
   '14:30',
   '14:45',
   '15:00',
@@ -35,10 +39,13 @@ export function Timeline({
   onSelectTime,
   isPlaying,
   onTogglePlay,
-  onStepForward,
-  onStepBackward,
   playbackSpeed,
   onChangeSpeed,
+  onStepForward,
+  onStepBackward,
+  onReset,
+  currentFloodDepth = '0.31–0.71 m',
+  statusLabel,
   className,
 }: TimelineProps) {
   const currentIndex = availableTimestamps.indexOf(currentTime);
@@ -71,29 +78,29 @@ export function Timeline({
             strokeWidth="1.5"
           />
           <path
-            d="M 320,19 Q 400,16 450,10 T 520,5 L 520,32 L 320,32 Z"
+            d="M 200,22 Q 400,16 480,10 T 560,5 L 560,32 L 200,32 Z"
             fill="#FEE2E2"
             opacity="0.5"
           />
         </svg>
 
         {/* Base Progress Rail */}
-        <div className="w-full h-1.5 bg-slate-200 rounded-full relative z-0 flex items-center">
+        <div className="w-full h-1.5 bg-slate-200 rounded-full relative z-0 flex items-center overflow-hidden">
           <div
-            className="h-full bg-slate-500 rounded-full transition-all duration-200"
+            className="h-full bg-slate-500 rounded-full transition-all duration-300"
             style={{ width: `${progressPct}%` }}
           />
         </div>
 
         {/* Dynamic Current Cursor Indicator */}
         <div
-          className="absolute -top-1 flex flex-col items-center z-20 -translate-x-1/2 transition-all duration-200"
+          className="absolute -top-1 flex flex-col items-center z-20 -translate-x-1/2 transition-all duration-300"
           style={{ left: `${progressPct}%` }}
         >
-          <span className="bg-slate-900 text-white px-1.5 py-0.2 rounded text-[10px] font-bold shadow-xs whitespace-nowrap">
-            {currentTime}
+          <span className="bg-teal-700 text-white px-1.5 py-0.2 rounded text-[10px] font-bold shadow-xs whitespace-nowrap">
+            NOW {currentTime}
           </span>
-          <div className="w-0.5 h-4 bg-slate-900 mt-0.5" />
+          <div className="w-0.5 h-4 bg-teal-700 mt-0.5" />
         </div>
 
         {/* Static Milestone: ONSET 14:30 */}
@@ -101,28 +108,28 @@ export function Timeline({
           <span className="bg-red-600 text-white px-1.5 py-0.2 rounded text-[9px] font-bold shadow-xs whitespace-nowrap">
             ONSET 14:30
           </span>
-          <div className="w-0.5 h-4 bg-red-600 mt-0.5" />
+          <div className="w-0.5 h-3 bg-red-600 mt-0.5" />
         </div>
 
         {/* Static Milestone: PEAK 15:10 */}
         <div className="absolute left-[58%] -top-1.5 flex flex-col items-center z-10 -translate-x-1/2 pointer-events-none">
-          <span className="bg-orange-600 text-white px-1.5 py-0.2 rounded text-[9px] font-bold shadow-xs whitespace-nowrap">
-            PEAK 15:10
+          <span className="bg-slate-900 text-white px-1.5 py-0.2 rounded text-[9px] font-bold shadow-xs whitespace-nowrap">
+            PEAK 15:10 (0.71 m)
           </span>
-          <div className="w-0.5 h-4 bg-orange-600 mt-0.5" />
+          <div className="w-0.5 h-3 bg-slate-900 mt-0.5" />
         </div>
       </div>
 
-      {/* Control Strip & Interactive Time Step Buttons */}
-      <div className="flex items-center justify-between pt-1 border-t border-slate-100 gap-2">
+      {/* Playback Controls & Timesteps */}
+      <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
         {/* Playback Controls */}
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
             onClick={onStepBackward}
             className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 transition-colors cursor-pointer"
-            title="Step back 15 mins (Left Arrow)"
-            aria-label="Step back 15 minutes"
+            title="Step backward in simulation (Left Arrow)"
+            aria-label="Step backward in simulation"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
@@ -130,7 +137,7 @@ export function Timeline({
             type="button"
             onClick={onTogglePlay}
             className="w-6 h-6 flex items-center justify-center rounded bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-slate-900 shadow-2xs transition-colors cursor-pointer"
-            title={isPlaying ? 'Pause timeline (Space)' : 'Play simulation (Space)'}
+            title={isPlaying ? 'Pause simulation (Space)' : 'Play simulation (Space)'}
             aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
           >
             {isPlaying ? (
@@ -143,8 +150,8 @@ export function Timeline({
             type="button"
             onClick={onStepForward}
             className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 transition-colors cursor-pointer"
-            title="Step forward 15 mins (Right Arrow)"
-            aria-label="Step forward 15 minutes"
+            title="Step forward in simulation (Right Arrow)"
+            aria-label="Step forward in simulation"
           >
             <RotateCw className="w-3.5 h-3.5" />
           </button>
@@ -172,24 +179,32 @@ export function Timeline({
           ))}
         </div>
 
-        {/* Speed Controls */}
-        <div className="flex items-center gap-0.5 shrink-0 bg-slate-100 rounded p-0.5">
-          {([1, 2, 5] as const).map((spd) => (
-            <button
-              key={spd}
-              type="button"
-              onClick={() => onChangeSpeed(spd)}
-              className={cn(
-                'px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer',
-                playbackSpeed === spd
-                  ? 'bg-white text-slate-900 shadow-2xs font-extrabold'
-                  : 'text-slate-500 hover:text-slate-900'
-              )}
-              title={`${spd}x Speed`}
-            >
-              {spd}x
-            </button>
-          ))}
+        {/* Playback Speed Multipliers & Delta */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center bg-slate-100 rounded p-0.5 border border-slate-200/80">
+            {([1, 2, 5] as const).map((spd) => (
+              <button
+                key={spd}
+                type="button"
+                onClick={() => onChangeSpeed(spd)}
+                className={cn(
+                  'px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer',
+                  playbackSpeed === spd
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold'
+                    : 'text-slate-500 hover:text-slate-900'
+                )}
+                aria-label={`${spd}x playback speed`}
+              >
+                {spd}x
+              </button>
+            ))}
+          </div>
+          <span
+            className="text-xs font-bold tabular-nums text-slate-900 min-w-[50px] text-right truncate"
+            title={statusLabel || `Depth: ${currentFloodDepth}`}
+          >
+            {statusLabel ? statusLabel.split(' ')[0] : currentFloodDepth}
+          </span>
         </div>
       </div>
     </div>

@@ -40,6 +40,23 @@ export interface ReplayEventResponse {
   };
 }
 
+export type ReplaySimulationEvent = ReplayEventResponse['event'];
+
+export interface EventEnvironmentResponse {
+  success: boolean;
+  eventEnvironment: {
+    eventId: string;
+    forcing?: {
+      rainfall?: {
+        peakRateMmHr?: number;
+      };
+      surge?: {
+        peakSurgeM?: number;
+      };
+    };
+  };
+}
+
 export interface SimulationEventSummary {
   eventId: string;
   name: string;

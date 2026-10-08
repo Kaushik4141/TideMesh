@@ -1,24 +1,41 @@
 'use client';
 
 import React from 'react';
-import { Shield, Droplets, Building2, Bell, User, Keyboard, Zap, Loader2 } from 'lucide-react';
+import {
+  Shield,
+  Droplets,
+  Building2,
+  Bell,
+  User,
+  Keyboard,
+  Zap,
+  Loader2,
+  RefreshCw,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TopHeaderProps {
   onOpenShortcuts?: () => void;
   eventName?: string;
   eventType?: string;
   currentTime?: string;
+  isSimulation?: boolean;
   isSimulationRunning?: boolean;
   onRunSimulation?: () => void;
+  onRefresh?: () => void;
+  isLoading?: boolean;
 }
 
 export function TopHeader({
   onOpenShortcuts,
-  eventName = 'Cyclone Mekunu Monsoon Event — Mangaluru Coast',
-  eventType = 'HISTORICAL REPLAY',
-  currentTime = '14:30',
+  eventName = 'Coastal Flood Event — Mangaluru Coast',
+  eventType = 'SIMULATION',
+  currentTime = '14:26',
+  isSimulation = true,
   isSimulationRunning = false,
   onRunSimulation,
+  onRefresh,
+  isLoading = false,
 }: TopHeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-200 z-40 flex items-center justify-between px-4 lg:px-6 whitespace-nowrap select-none shadow-xs">
@@ -30,7 +47,7 @@ export function TopHeader({
             <Shield className="w-5 h-5 text-sky-400" aria-hidden="true" />
           </div>
           <span className="text-base lg:text-lg font-bold text-slate-900 tracking-tight whitespace-nowrap">
-            CoastShield AI
+            TideMesh
           </span>
         </div>
 
@@ -50,7 +67,18 @@ export function TopHeader({
 
       {/* Center: Status Chips */}
       <div className="flex items-center gap-2 lg:gap-3 shrink-0">
-        {/* Real Mode & Status Chip */}
+        {/* SIMULATION Demo Chip */}
+        {isSimulation && (
+          <div
+            className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold text-amber-800 tracking-wider uppercase whitespace-nowrap"
+            title="Historical Replay / SFINCS Simulation Model"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            <span>SIMULATION</span>
+          </div>
+        )}
+
+        {/* LIVE Time Chip */}
         <div
           className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-200/80 px-2.5 py-1 rounded-md text-[11px] lg:text-xs font-semibold text-slate-700 whitespace-nowrap"
           title="Verified model simulation state and timeline cursor"
@@ -97,6 +125,19 @@ export function TopHeader({
             )}
           </button>
         )}
+
+        {/* Manual Telemetry & Simulation Refresh Button */}
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 disabled:opacity-60 text-slate-700 rounded-md text-[11px] lg:text-xs font-semibold border border-slate-200 shadow-2xs transition-colors cursor-pointer"
+            title="Refresh live telemetry and replay from API"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh Data</span>
+          </button>
+        )}
       </div>
 
       {/* Right: Shortcuts, Notifications, Duty Officer */}
@@ -111,7 +152,9 @@ export function TopHeader({
           >
             <Keyboard className="w-3.5 h-3.5 text-slate-500" />
             <span className="text-[10px] text-slate-500">Shortcuts</span>
-            <kbd className="px-1 py-0.2 bg-slate-200/80 rounded text-[9px] font-mono text-slate-700">?</kbd>
+            <kbd className="px-1 py-0.2 bg-slate-200/80 rounded text-[9px] font-mono text-slate-700">
+              ?
+            </kbd>
           </button>
         )}
 
@@ -141,7 +184,7 @@ export function TopHeader({
             className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300/80 flex items-center justify-center text-slate-700 font-bold text-xs"
             title="Duty Officer: R. Shetty (DK District Disaster Cell)"
           >
-            RS
+            <User className="w-4 h-4" />
           </div>
         </div>
       </div>

@@ -7,18 +7,49 @@ import {
   CheckCircle, Clock, RadioTower, LocateFixed, History, 
   Wrench, Radio, ClipboardCheck, FileEdit, Download, Phone 
 } from "lucide-react";
+import { TopHeader } from "@/components/dashboard/TopHeader";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { ShortcutsModal } from "@/components/dashboard/ShortcutsModal";
+import { ScenarioModal } from "@/components/dashboard/ScenarioModal";
+import { apiClient } from "@/lib/api/client";
+import Link from "next/link";
 
 export default function DegradedStatePage() {
-  const [retryStatus, setRetryStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [retryStatus, setRetryStatus] = useState<"idle" | "loading" | "connected" | "error">("idle");
   const [acknowledged, setAcknowledged] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<"idle" | "loading" | "done">("idle");
 
-  const handleRetry = () => {
+  // Active check if backend telemetry is alive
+  React.useEffect(() => {
+    let mounted = true;
+    console.info('[DegradedStatePage] Verifying backend replay connection from API...');
+    apiClient
+      .fetchReplayEvent('mangaluru-historical-2018')
+      .then((resp) => {
+        if (mounted && resp?.success) {
+          setRetryStatus("connected");
+        }
+      })
+      .catch((err) => {
+        console.warn('[DegradedStatePage] Replay fetch notice:', err);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleRetry = async () => {
     setRetryStatus("loading");
-    setTimeout(() => {
+    try {
+      const resp = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
+      if (resp?.success) {
+        setRetryStatus("connected");
+      } else {
+        setRetryStatus("error");
+      }
+    } catch {
       setRetryStatus("error");
-      setTimeout(() => setRetryStatus("idle"), 3000);
-    }, 1500);
+    }
   };
 
   const handleDownload = () => {
@@ -29,156 +60,78 @@ export default function DegradedStatePage() {
     }, 1200);
   };
 
+  const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
+
   return (
-    <div className="bg-slate-50 font-sans text-slate-900 antialiased min-h-screen">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-200 z-40 flex items-center justify-between px-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            <Shield className="text-blue-900 w-[22px] h-[22px]" />
-            <span className="text-lg font-semibold text-blue-600 tracking-tight">CoastShield AI</span>
-          </div>
-          <div className="h-4 w-px bg-slate-300"></div>
-          <div className="flex items-center gap-2">
-            <Waves className="text-blue-600 w-[18px] h-[18px]" />
-            <span className="text-sm font-semibold text-blue-900">Coastal Flood Event — Mangaluru Coast</span>
-          </div>
-        </div>
-        <div className="hidden lg:flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-            </span>
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-900">LIVE · Updated 14:26 (2 min ago)</span>
-          </div>
-          <div className="bg-slate-50 px-3 py-1 rounded border border-slate-200">
-            <span className="text-xs font-medium text-slate-500">Model: <strong className="text-slate-900 font-semibold">v1.2</strong></span>
-          </div>
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded px-3 py-1 text-slate-900 text-xs font-medium">
-            <Activity className="w-[16px] h-[16px] mr-1 text-slate-500" />
-            <span>EOC STATUS: FULL ACTIVATION</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="relative flex items-center justify-center p-1.5 text-slate-500 hover:text-slate-900 cursor-pointer rounded hover:bg-slate-200 transition-colors">
-            <Bell className="w-[20px] h-[20px]" />
-            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white text-[9px] font-bold">3</span>
-          </div>
-          <div className="h-4 w-px bg-slate-300"></div>
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col text-right">
-              <span className="text-sm font-medium text-slate-900">R. Shetty</span>
-              <span className="text-xs font-medium text-slate-500">Duty Officer · EOC Shift 1</span>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-              <User className="text-white w-[18px] h-[18px]" />
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans antialiased text-slate-900 select-none">
+      {/* Top Header */}
+      <TopHeader
+        onOpenShortcuts={() => setShortcutsModalOpen(true)}
+        currentTime="14:26"
+        isSimulation={true}
+      />
 
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-14 bottom-0 w-[232px] bg-white border-r border-slate-200 z-30 flex flex-col justify-between">
-        <div className="flex flex-col pt-3">
-          <nav className="flex flex-col gap-0.5 px-2">
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded bg-blue-50 text-blue-900 border-l-4 border-blue-600 font-semibold transition-colors">
-              <div className="flex items-center gap-3">
-                <LayoutDashboard className="w-[18px] h-[18px]" />
-                <span>Overview</span>
-              </div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <Grid className="w-[18px] h-[18px]" />
-                <span>Zones</span>
-              </div>
-              <span className="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-xs font-medium">12</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <Hospital className="w-[18px] h-[18px]" />
-                <span>Critical Facilities</span>
-              </div>
-              <span className="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-xs font-medium">7</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <Siren className="w-[18px] h-[18px]" />
-                <span>Response &amp; Actions</span>
-              </div>
-              <span className="px-1.5 py-0.5 bg-red-100 text-red-800 rounded text-xs font-medium">3 Pending</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <Route className="w-[18px] h-[18px]" />
-                <span>Evacuation Routes</span>
-              </div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <Activity className="w-[18px] h-[18px]" />
-                <span>Sensor Telemetry</span>
-              </div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <FileText className="w-[18px] h-[18px]" />
-                <span>Reports &amp; Briefings</span>
-              </div>
-            </a>
-          </nav>
-        </div>
-        <div className="p-3 m-2 mb-3 bg-slate-100 border border-slate-200 rounded-lg">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-2">
-            <span className="text-xs font-medium text-slate-500 uppercase">Data Engine</span>
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              <span className="text-xs font-semibold text-slate-900">ONLINE</span>
-            </div>
-          </div>
-          <div className="space-y-1 text-xs text-slate-500">
-            <div className="flex justify-between"><span>Telemetry Feed:</span><span className="text-xs font-medium text-slate-900">99.8%</span></div>
-            <div className="flex justify-between"><span>Hydro Model:</span><span className="text-xs font-medium text-slate-900">v1.2 Active</span></div>
-            <div className="flex justify-between"><span>Model Run:</span><span className="text-xs font-medium text-slate-900">14:24</span></div>
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">EOC Hotline:</span>
-            <span className="text-sm font-bold text-blue-600">1077</span>
-          </div>
-        </div>
-      </aside>
+      {/* Main Container */}
+      <div className="flex flex-1 pt-14 overflow-hidden">
+        {/* Left Sidebar */}
+        <Sidebar onOpenScenario={() => setScenarioModalOpen(true)} />
 
-      {/* Main Content */}
-      <div className="pl-[232px]">
-        <main className="w-full pt-14 bg-slate-50 min-h-screen">
-          <div className="flex flex-col w-full">
+        {/* Main Content */}
+        <div className="flex-1 ml-[220px] lg:ml-[232px] flex flex-col h-[calc(100vh-3.5rem)] overflow-y-auto bg-slate-50">
+          <main className="w-full">
+            <div className="flex flex-col w-full">
             
             {/* Banner */}
-            <aside className="w-full bg-amber-100 text-amber-900 px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm transition-all duration-200">
+            <aside className={`w-full ${retryStatus === 'connected' ? 'bg-emerald-50 text-emerald-950 border-b border-emerald-200' : 'bg-amber-100 text-amber-900'} px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm transition-all duration-200`}>
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-7 h-7 rounded bg-white flex items-center justify-center shrink-0">
-                  <AlertTriangle className="text-slate-500 w-[20px] h-[20px]" />
+                <div className={`w-7 h-7 rounded ${retryStatus === 'connected' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500'} flex items-center justify-center shrink-0`}>
+                  {retryStatus === 'connected' ? (
+                    <CheckCircle className="w-[18px] h-[18px] text-white" />
+                  ) : (
+                    <AlertTriangle className="text-amber-700 w-[20px] h-[20px]" />
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
-                  <span className="text-sm tracking-wide uppercase font-bold text-amber-900">DEGRADED OPERATIONAL STATE</span>
-                  <span className="text-slate-500 text-xs">·</span>
-                  <span className="text-sm text-amber-900">Telemetry feed interrupted. Displaying cached state as of <strong className="font-semibold text-blue-600">13:52</strong> (34 min ago). Model: <strong className="font-semibold text-blue-600">v1.2</strong> (Run 13:50 IST).</span>
+                  <span className="text-sm tracking-wide uppercase font-bold">
+                    {retryStatus === 'connected' ? 'LIVE TELEMETRY RESTORED' : 'DEGRADED OPERATIONAL STATE'}
+                  </span>
+                  <span className="text-slate-400 text-xs">·</span>
+                  <span className="text-sm">
+                    {retryStatus === 'connected' ? (
+                      <span>
+                        Backend API connected (HTTP 200). SFINCS hydrodynamic simulation and Open-Meteo telemetry active.
+                      </span>
+                    ) : (
+                      <span>
+                        Telemetry feed interrupted. Displaying cached state as of <strong className="font-semibold text-blue-600">13:52</strong> (34 min ago). Model: <strong className="font-semibold text-blue-600">v1.2</strong> (Run 13:50 IST).
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0 self-end md:self-auto">
-                <button 
-                  onClick={handleRetry}
-                  disabled={retryStatus !== "idle"}
-                  className="h-8 px-4 rounded bg-white hover:bg-slate-200 text-slate-900 text-sm font-medium flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {retryStatus === "idle" && <RefreshCw className="w-[16px] h-[16px] text-slate-500" />}
-                  {retryStatus === "loading" && <RefreshCw className="w-[16px] h-[16px] animate-spin text-slate-500" />}
-                  {retryStatus === "error" && <RadioTower className="w-[16px] h-[16px] text-red-500" />}
-                  <span>
-                    {retryStatus === "idle" ? "Retry Live Connection" : retryStatus === "loading" ? "Pinging Sensors..." : "Host Unreachable"}
-                  </span>
-                </button>
+                {retryStatus === 'connected' ? (
+                  <Link
+                    href="/"
+                    className="h-8 px-4 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                  >
+                    <span>Return to Live Dashboard →</span>
+                  </Link>
+                ) : (
+                  <button 
+                    onClick={handleRetry}
+                    disabled={retryStatus === "loading"}
+                    className="h-8 px-4 rounded bg-white hover:bg-slate-200 text-slate-900 text-sm font-medium flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {retryStatus === "idle" && <RefreshCw className="w-[16px] h-[16px] text-slate-500" />}
+                    {retryStatus === "loading" && <RefreshCw className="w-[16px] h-[16px] animate-spin text-slate-500" />}
+                    {retryStatus === "error" && <RadioTower className="w-[16px] h-[16px] text-red-500" />}
+                    <span>
+                      {retryStatus === "idle" ? "Retry Live Connection" : retryStatus === "loading" ? "Pinging Sensors..." : "Host Unreachable"}
+                    </span>
+                  </button>
+                )}
                 <button 
                   onClick={() => setAcknowledged(!acknowledged)}
                   className={`h-8 px-4 rounded ${acknowledged ? 'bg-slate-500' : 'bg-blue-100'} hover:${acknowledged ? 'bg-slate-600' : 'bg-blue-200'} ${acknowledged ? 'text-white' : 'text-blue-900'} text-sm font-medium flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer`}
@@ -590,6 +543,17 @@ export default function DegradedStatePage() {
           </div>
         </main>
       </div>
+    </div>
+
+      {/* Modals */}
+      <ShortcutsModal
+        open={shortcutsModalOpen}
+        onClose={() => setShortcutsModalOpen(false)}
+      />
+      <ScenarioModal
+        open={scenarioModalOpen}
+        onClose={() => setScenarioModalOpen(false)}
+      />
     </div>
   );
 }

@@ -1,20 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Shield,
   Waves,
   Building2,
-  Bell,
-  User,
-  LayoutDashboard,
-  Grid,
   Hospital,
-  Siren,
-  Route,
-  Radio,
-  FileText,
-  AlertTriangle,
   Flame,
   ArrowUp,
   Home,
@@ -28,139 +19,269 @@ import {
   Minus,
   Maximize,
   RadioTower,
+  Route,
+  AlertTriangle,
+  CheckCircle2,
+  Radio,
+  ExternalLink,
+  ChevronRight,
+  Info,
 } from "lucide-react";
+import { TopHeader } from "@/components/dashboard/TopHeader";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { ShortcutsModal } from "@/components/dashboard/ShortcutsModal";
+import { ScenarioModal } from "@/components/dashboard/ScenarioModal";
+import { apiClient } from "@/lib/api/client";
+import Link from "next/link";
+
+interface FacilityItem {
+  id: string;
+  name: string;
+  category: "medical" | "fire" | "shelter" | "security" | "utilities";
+  zoneId: string;
+  desc: string;
+  severity: "critical" | "high" | "elevated";
+  onset: string;
+  timeText?: string;
+  depth: string;
+  depthDesc?: string;
+  peak?: string;
+  peakDesc?: string;
+  routeStatus: "Route Clear" | "Potentially Affected" | "At Risk";
+  routeDesc?: string;
+  capacity?: string;
+  rationale: string;
+  contingency?: string;
+  x: number;
+  y: number;
+  icon: React.ComponentType<{ className?: string }>;
+  iconColor: string;
+  borderColor: string;
+  badgeBg: string;
+}
+
+const FACILITIES_DATA: FacilityItem[] = [
+  {
+    id: "city-hospital",
+    name: "City Hospital",
+    category: "medical",
+    zoneId: "B",
+    desc: "Hospital / Level-1 Trauma Center · Zone B (Panambur Coast)",
+    severity: "critical",
+    onset: "14:40",
+    timeText: "T-Minus 14 Min",
+    depth: "0.4 – 0.7 m",
+    depthDesc: "Basement Sump At Risk",
+    peak: "15:15 hrs",
+    peakDesc: "Duration ~85m",
+    routeStatus: "Potentially Affected",
+    routeDesc: "NH-66 North spur inundation predicted at 14:50",
+    rationale:
+      "Low surface elevation (1.8m AMSL), immediate proximity to Gurupura backwaters, local stormwater culvert discharge capacity exceeded by 210%.",
+    contingency:
+      "Backup diesel power generators on ground floor elevated 0.5m pad. ICU on 2nd floor secure; ground ER triaging transfer protocols.",
+    x: 375,
+    y: 250,
+    icon: Hospital,
+    iconColor: "text-red-600",
+    borderColor: "bg-red-600",
+    badgeBg: "bg-red-600",
+  },
+  {
+    id: "panambur-fire",
+    name: "Panambur Fire Station",
+    category: "fire",
+    zoneId: "B",
+    desc: "Fire & Rescue Logistics · Zone B (Harbor Perimeter)",
+    severity: "high",
+    onset: "14:55",
+    timeText: "T-Minus 29 Min",
+    depth: "0.2 – 0.5 m",
+    depthDesc: "Vehicle yard pooling",
+    peak: "15:25 hrs",
+    peakDesc: "Duration ~60m",
+    routeStatus: "Route Clear",
+    rationale:
+      "Surface runoff accumulation on station vehicle yard. Heavy responder deployment bays fully operational; Zodiac boats pre-staged.",
+    contingency:
+      "Zodiac rescue inflatable boats stationed at slipway. High-clearance tactical 4x4 trucks prioritized for coastal dispatch.",
+    x: 330,
+    y: 195,
+    icon: Flame,
+    iconColor: "text-orange-600",
+    borderColor: "bg-orange-600",
+    badgeBg: "bg-orange-600",
+  },
+  {
+    id: "govt-school-4",
+    name: "Govt. Higher Primary School (Shelter #4)",
+    category: "shelter",
+    zoneId: "B",
+    desc: "Designated Evacuation Shelter · Zone B (Panambur Ward)",
+    severity: "high",
+    onset: "15:00",
+    timeText: "T-Minus 34 Min",
+    depth: "0.15 – 0.4 m",
+    depthDesc: "Ground courtyard pooling",
+    capacity: "600 PAX Capacity",
+    routeStatus: "Route Clear",
+    rationale:
+      "Ground floor courtyard vulnerable to shallow pooling. Shelter multi-purpose hall on 1st floor certified secure for displaced residents.",
+    contingency:
+      "Drinking water tankers staged on upper terrace. 1st floor classrooms pre-fitted with emergency power bank stations.",
+    x: 435,
+    y: 295,
+    icon: Home,
+    iconColor: "text-orange-600",
+    borderColor: "bg-orange-600",
+    badgeBg: "bg-orange-600",
+  },
+  {
+    id: "tannirbhavi-cg",
+    name: "Tannirbhavi Coast Guard Station",
+    category: "security",
+    zoneId: "F",
+    desc: "Security & Marine Defense · Zone F (Sand Spit Sector)",
+    severity: "high",
+    onset: "15:10",
+    timeText: "T-Minus 44 Min",
+    depth: "0.25 – 0.45 m",
+    depthDesc: "Perimeter spit swash",
+    peak: "15:35 hrs",
+    peakDesc: "Duration ~45m",
+    routeStatus: "At Risk",
+    routeDesc: "Sand spit road access vulnerable to surge overtopping",
+    rationale:
+      "Wave overtopping along Bengre peninsula roadway. Marine jetty operations unaffected; land bridge access vulnerable after 15:30.",
+    contingency:
+      "Amphibious patrol vehicles stationed at dockside. Direct satellite backup link active to Mangaluru Coast Guard HQ.",
+    x: 310,
+    y: 430,
+    icon: ShieldCheck,
+    iconColor: "text-orange-600",
+    borderColor: "bg-orange-600",
+    badgeBg: "bg-orange-600",
+  },
+  {
+    id: "surathkal-substation",
+    name: "Surathkal Sub-Station 110kV",
+    category: "utilities",
+    zoneId: "C",
+    desc: "Critical Power Utility · Zone C (North Industrial Grid)",
+    severity: "high",
+    onset: "15:20",
+    timeText: "T-Minus 54 Min",
+    depth: "0.20 – 0.40 m",
+    depthDesc: "Switchyard trench runoff",
+    peak: "15:50 hrs",
+    peakDesc: "Duration ~40m",
+    routeStatus: "Route Clear",
+    rationale:
+      "Switchyard drainage trenches at 88% capacity. Automated high-voltage breaker isolation staged if threshold breaches 0.45m.",
+    contingency:
+      "Automated SCADA feed monitored from MESCOM central control. Standby bypass to Surathkal East 66kV feeder ready.",
+    x: 470,
+    y: 145,
+    icon: Zap,
+    iconColor: "text-orange-600",
+    borderColor: "bg-orange-600",
+    badgeBg: "bg-orange-600",
+  },
+  {
+    id: "bengre-chc",
+    name: "Bengre Community Health Center",
+    category: "medical",
+    zoneId: "H",
+    desc: "Primary Medical Clinic · Zone H (Estuary South)",
+    severity: "elevated",
+    onset: "15:55",
+    timeText: "T-Minus 89 Min",
+    depth: "0.10 – 0.25 m",
+    depthDesc: "Entry ramp threshold safe",
+    routeStatus: "Route Clear",
+    rationale:
+      "High tide harmonic back-flow via fishing harbor basin. Facility threshold elevated by 0.35m steps; patient triage operational.",
+    contingency:
+      "Portable oxygen supply and medication stock relocated to upper medical store room.",
+    x: 295,
+    y: 570,
+    icon: Stethoscope,
+    iconColor: "text-amber-600",
+    borderColor: "bg-amber-600",
+    badgeBg: "bg-amber-600",
+  },
+  {
+    id: "st-aloysius-hall",
+    name: "Kodialbail Community Relief Center",
+    category: "shelter",
+    zoneId: "A",
+    desc: "Secondary Shelter Reserve · Zone A (Urban Buffer)",
+    severity: "elevated",
+    onset: "16:10",
+    timeText: "T-Minus 104 Min",
+    depth: "0.05 – 0.15 m",
+    capacity: "1,250 PAX Capacity",
+    routeStatus: "Route Clear",
+    rationale:
+      "Storm drain surge capacity optimal. Standby emergency kitchen, generator units fueled for 72hr sustained operation.",
+    contingency:
+      "Community volunteers checked in. Food supply buffer for 3 days securely stored on site.",
+    x: 510,
+    y: 495,
+    icon: Building2,
+    iconColor: "text-amber-600",
+    borderColor: "bg-amber-600",
+    badgeBg: "bg-amber-600",
+  },
+];
 
 export default function CriticalFacilitiesPage() {
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOrder, setSortOrder] = useState("severity");
-  const [activeFacility, setActiveFacility] = useState("city-hospital");
+  const [sortOrder, setSortOrder] = useState<"severity" | "onset">("severity");
+  const [activeFacilityId, setActiveFacilityId] = useState<string>("city-hospital");
   const [layers, setLayers] = useState({ routes: true, contours: true, hydro: true });
   const [mapZoom, setMapZoom] = useState(1);
+  const [notification, setNotification] = useState<string | null>(null);
 
-  const facilities = [
-    {
-      id: "city-hospital",
-      name: "City Hospital",
-      category: "medical",
-      desc: "Hospital / Level-1 Trauma Center · Zone B (Panambur Coast)",
-      severity: "critical",
-      onset: "14:40",
-      timeText: "T-Minus 14 Min",
-      depth: "0.4 – 0.7 m",
-      depthDesc: "Basement Sump At Risk",
-      peak: "15:15 hrs",
-      peakDesc: "Duration ~85m",
-      routeStatus: "Potentially Affected",
-      routeDesc: "NH-66 North spur inundation predicted at 14:50",
-      rationale:
-        "Low surface elevation (1.8m AMSL), immediate proximity to Gurupura backwaters, local stormwater culvert discharge capacity exceeded by 210%.",
-      contingency:
-        "Backup diesel power generators on ground floor elevated 0.5m pad. ICU on 2nd floor secure; ground ER triaging transfer protocols.",
-      icon: Hospital,
-      iconColor: "text-red-600",
-      borderColor: "bg-red-600",
-    },
-    {
-      id: "panambur-fire",
-      name: "Panambur Fire Station",
-      category: "fire",
-      desc: "Fire & Rescue Logistics · Zone B (Harbor Perimeter)",
-      severity: "high",
-      onset: "14:55",
-      depth: "0.2 – 0.5 m",
-      routeStatus: "Route Clear",
-      rationale:
-        "Surface runoff accumulation on station vehicle yard. Heavy responder deployment bays fully operational; Zodiac boats pre-staged.",
-      icon: Flame,
-      iconColor: "text-slate-900",
-      borderColor: "bg-slate-900",
-    },
-    {
-      id: "govt-school-4",
-      name: "Govt. Higher Primary School (Designated Shelter #4)",
-      category: "shelter",
-      desc: "School / Evacuation Shelter · Zone B",
-      severity: "high",
-      onset: "15:00",
-      depth: "0.15 – 0.4 m",
-      capacity: "600 PAX",
-      routeStatus: "Route Clear",
-      rationale:
-        "Ground floor courtyard vulnerable to shallow pooling. Shelter multi-purpose hall on 1st floor certified secure for displaced residents.",
-      icon: Home,
-      iconColor: "text-slate-900",
-      borderColor: "bg-slate-900",
-    },
-    {
-      id: "tannirbhavi-cg",
-      name: "Tannirbhavi Coast Guard Station",
-      category: "security",
-      desc: "Security & Marine Defense · Zone F (Sand Spit Sector)",
-      severity: "high",
-      onset: "15:10",
-      depth: "0.25 – 0.45 m",
-      routeStatus: "At Risk",
-      rationale:
-        "Wave overtopping along Bengre peninsula roadway. Marine jetty operations unaffected; land bridge vulnerable after 15:30.",
-      icon: ShieldCheck,
-      iconColor: "text-slate-900",
-      borderColor: "bg-slate-900",
-    },
-    {
-      id: "surathkal-substation",
-      name: "Surathkal Sub-Station 110kV",
-      category: "utilities",
-      desc: "Critical Power Utility · Zone C (North Industrial Grid)",
-      severity: "high",
-      onset: "15:20",
-      depth: "0.20 – 0.40 m",
-      routeStatus: "Route Clear",
-      rationale:
-        "Switchyard drainage trenches at 88% capacity. Automated high-voltage breaker isolation staged if threshold breaches 0.45m.",
-      icon: Zap,
-      iconColor: "text-slate-900",
-      borderColor: "bg-slate-900",
-    },
-    {
-      id: "bengre-chc",
-      name: "Bengre Community Health Center",
-      category: "medical",
-      desc: "Primary Medical Clinic · Zone H (Estuary South)",
-      severity: "elevated",
-      onset: "15:55",
-      depth: "0.10 – 0.25 m",
-      routeStatus: "Route Clear",
-      rationale:
-        "High tide harmonic back-flow via fishing harbor basin. Facility threshold elevated by 0.35m steps; patient triage operational.",
-      icon: Stethoscope,
-      iconColor: "text-slate-500",
-      borderColor: "bg-slate-500",
-    },
-    {
-      id: "st-aloysius-hall",
-      name: "Kodialbail Community Relief Center",
-      category: "shelter",
-      desc: "Secondary Shelter Reserve · Zone A (Urban Buffer)",
-      severity: "elevated",
-      onset: "16:10",
-      depth: "0.05 – 0.15 m",
-      capacity: "1,250 PAX",
-      routeStatus: "Route Clear",
-      rationale:
-        "Storm drain surge capacity optimal. Standby emergency kitchen, generator units fueled for 72hr sustained operation.",
-      icon: Building2,
-      iconColor: "text-slate-500",
-      borderColor: "bg-slate-500",
-    },
-  ];
+  const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
 
-  const filteredFacilities = facilities
-    .filter((f) => filter === "all" || f.category === filter)
+  // Active sync with backend replay simulation
+  useEffect(() => {
+    let mounted = true;
+    console.info('[CriticalFacilitiesPage] Fetching simulation replay data from API...');
+    apiClient
+      .fetchReplayEvent('mangaluru-historical-2018')
+      .catch((err) => {
+        console.warn('[CriticalFacilitiesPage] Replay fetch notice:', err);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const showNotification = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => {
+      setNotification((curr) => (curr === msg ? null : curr));
+    }, 4000);
+  };
+
+  const filteredFacilities = FACILITIES_DATA.filter((f) => {
+    if (filter === "all") return true;
+    if (filter === "medical") return f.category === "medical";
+    if (filter === "fire") return f.category === "fire";
+    if (filter === "security") return f.category === "security";
+    if (filter === "shelter") return f.category === "shelter";
+    if (filter === "utilities") return f.category === "utilities";
+    return true;
+  })
     .filter(
       (f) =>
         f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        f.desc.toLowerCase().includes(searchQuery.toLowerCase())
+        f.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        f.zoneId.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
       if (sortOrder === "severity") {
@@ -172,485 +293,1033 @@ export default function CriticalFacilitiesPage() {
       return 0;
     });
 
+  const activeFacility =
+    FACILITIES_DATA.find((f) => f.id === activeFacilityId) || FACILITIES_DATA[0];
+
+  const handleSelectFacility = (id: string) => {
+    setActiveFacilityId(id);
+    const cardEl = document.getElementById(`facility-card-${id}`);
+    if (cardEl) {
+      cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  };
+
   const toggleLayer = (layer: keyof typeof layers) => {
-    setLayers({ ...layers, [layer]: !layers[layer] });
+    setLayers((prev) => ({ ...prev, [layer]: !prev[layer] }));
   };
 
   return (
-    <div className="bg-slate-50 font-sans text-slate-900 antialiased min-h-screen">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-300 z-40 flex items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Shield className="text-slate-900 w-5 h-5" />
-            <span className="text-base font-semibold text-slate-900 tracking-tight">CoastShield AI</span>
-          </div>
-          <div className="h-4 w-px bg-slate-300"></div>
-          <div className="flex items-center gap-1">
-            <Waves className="text-slate-900 w-4 h-4" />
-            <span className="text-sm text-slate-900 font-bold">Coastal Flood Event — Mangaluru Coast</span>
-          </div>
-        </div>
-        <div className="hidden lg:flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-600 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
-            </span>
-            <span className="text-[10px] uppercase tracking-wider text-slate-900 font-bold">LIVE · Updated 14:26 (2 min ago)</span>
-          </div>
-          <div className="bg-slate-50 px-2 py-1 rounded border border-slate-300">
-            <span className="text-[10px] text-slate-600 font-medium">
-              Model: <strong className="text-slate-900 font-semibold">v1.2</strong>
-            </span>
-          </div>
-          <div className="flex items-center bg-slate-50 border border-slate-300 rounded px-2 py-1 text-slate-900 text-[10px] font-bold">
-            <Building2 className="w-4 h-4 mr-1 text-slate-600" />
-            <span>EOC STATUS: FULL ACTIVATION</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center p-1.5 text-slate-600 hover:text-slate-900 cursor-pointer rounded hover:bg-slate-200 transition-colors">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-white text-[9px] font-bold">
-              3
-            </span>
-          </div>
-          <div className="h-4 w-px bg-slate-300"></div>
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col text-right">
-              <span className="text-xs text-slate-900 font-semibold">R. Shetty</span>
-              <span className="text-[10px] text-slate-600">Duty Officer · EOC Shift 1</span>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center">
-              <User className="text-white w-4 h-4" />
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans antialiased text-slate-900 select-none">
+      {/* Top Header */}
+      <TopHeader
+        onOpenShortcuts={() => setShortcutsModalOpen(true)}
+        currentTime="14:26"
+        isSimulation={true}
+      />
 
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-14 bottom-0 w-[232px] bg-white border-r border-slate-300 z-30 flex flex-col justify-between">
-        <div className="flex flex-col pt-2">
-          <nav className="flex flex-col gap-0.5 px-1">
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /><span>Overview</span></div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Grid className="w-4 h-4" /><span>Zones</span></div>
-              <span className="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-bold">12</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded transition-colors bg-blue-100 text-blue-900 border-l-4 border-slate-900 font-semibold text-xs">
-              <div className="flex items-center gap-2"><Hospital className="w-4 h-4" /><span>Critical Facilities</span></div>
-              <span className="px-1.5 py-0.5 bg-slate-300 text-slate-900 rounded text-[10px] font-bold">7</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Siren className="w-4 h-4" /><span>Response & Actions</span></div>
-              <span className="px-1.5 py-0.5 bg-red-100 text-red-900 rounded text-[10px] font-bold">3 Pending</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Route className="w-4 h-4" /><span>Evacuation Routes</span></div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Radio className="w-4 h-4" /><span>Sensor Telemetry</span></div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><FileText className="w-4 h-4" /><span>Reports & Briefings</span></div>
-            </a>
-          </nav>
-        </div>
-        <div className="p-2 m-1 mb-2 bg-slate-100 border border-slate-300 rounded-lg">
-          <div className="flex items-center justify-between pb-1 border-b border-slate-300 mb-1">
-            <span className="text-[10px] text-slate-600 uppercase font-bold">Data Engine</span>
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-              <span className="text-[10px] text-slate-900 font-semibold">ONLINE</span>
-            </div>
-          </div>
-          <div className="space-y-1 text-xs text-slate-600">
-            <div className="flex justify-between"><span>Telemetry Feed:</span><span className="text-[10px] text-slate-900 font-bold">99.8%</span></div>
-            <div className="flex justify-between"><span>Hydro Model:</span><span className="text-[10px] text-slate-900 font-bold">v1.2 Active</span></div>
-            <div className="flex justify-between"><span>Model Run:</span><span className="text-[10px] text-slate-900 font-bold">14:24</span></div>
-          </div>
-          <div className="mt-2 pt-1 border-t border-slate-300 flex items-center justify-between">
-            <span className="text-[10px] text-slate-600 font-bold">EOC Hotline:</span>
-            <span className="text-xs text-slate-900 font-bold">1077</span>
-          </div>
-        </div>
-      </aside>
+      {/* Main Container */}
+      <div className="flex flex-1 pt-14 overflow-hidden">
+        {/* Left Sidebar */}
+        <Sidebar onOpenScenario={() => setScenarioModalOpen(true)} />
 
-      {/* Main Content */}
-      <div className="pl-[232px]">
-        <main className="w-full pt-14 bg-slate-50 min-h-screen flex flex-col">
-          <div className="flex flex-col w-full">
-            {/* Header & Breadcrumb */}
-            <div className="px-4 pt-3 pb-2 bg-white shadow-sm">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 pb-2">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-600 font-bold">
-                    <span>Operational Grid</span><span>/</span>
-                    <span>Coastal Sector DK-04</span><span>/</span>
-                    <span className="text-red-600 font-bold flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                      Tier-1 Hydro Watch
-                    </span>
-                  </div>
-                  <h1 className="text-2xl text-slate-900 font-semibold tracking-tight mt-0.5">Critical Facilities</h1>
-                  <p className="text-sm text-slate-600">7 facilities in flood risk zones · Mangaluru Emergency Sector</p>
+        {/* Content Body */}
+        <div className="flex-1 ml-[220px] lg:ml-[232px] flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden bg-slate-50">
+          {/* Header & Sub-Bar */}
+          <div className="px-5 py-3 bg-white border-b border-slate-200 shrink-0 shadow-2xs">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-500 font-bold">
+                  <Link href="/" className="hover:text-blue-700 transition-colors">
+                    Command Center
+                  </Link>
+                  <span>/</span>
+                  <span className="text-slate-700">Sector DK-04</span>
+                  <span>/</span>
+                  <span className="text-red-700 font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                    Tier-1 Hydro Watch
+                  </span>
                 </div>
-                <div className="flex items-center gap-1 flex-wrap">
-                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded shadow-sm">
-                    <span className="text-[10px] text-slate-600 uppercase font-bold">ICU Capacity</span>
-                    <span className="text-lg text-slate-900 font-bold">142 Beds</span>
-                    <span className="px-1 py-0.5 bg-red-600 text-white rounded text-[9px] uppercase font-bold">Active Watch</span>
-                  </div>
-                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded shadow-sm">
-                    <span className="text-[10px] text-slate-600 uppercase font-bold">Shelter Avail.</span>
-                    <span className="text-lg text-slate-900 font-bold">1,850 Cap</span>
-                    <span className="text-[10px] text-slate-600 font-bold">82% Operational</span>
-                  </div>
-                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-900 text-white rounded shadow-sm">
-                    <RefreshCw className="w-4 h-4" />
-                    <span className="text-[10px] uppercase tracking-wider font-bold">Telemetry Live · Delta 12s</span>
-                  </div>
+                <h1 className="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
+                  Critical Facilities
+                </h1>
+                <p className="text-xs text-slate-500">
+                  7 facilities in coastal flood risk zones · Mangaluru Emergency Sector
+                </p>
+              </div>
+
+              {/* Status Chips */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded border border-slate-200">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold">
+                    ICU Capacity:
+                  </span>
+                  <span className="text-sm text-slate-900 font-bold">142 Beds</span>
+                  <span className="px-1.5 py-0.5 bg-red-600 text-white rounded text-[9px] uppercase font-bold">
+                    Active Watch
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded border border-slate-200">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold">
+                    Shelter Avail:
+                  </span>
+                  <span className="text-sm text-slate-900 font-bold">1,850 Cap</span>
+                  <span className="text-[10px] text-slate-600 font-semibold">
+                    82% Operational
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 text-white rounded text-[10px] font-bold">
+                  <RefreshCw className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Telemetry Live · Delta 12s</span>
                 </div>
               </div>
-              {/* Filters */}
-              <div className="pt-2 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0">
-                  <button onClick={() => setFilter('all')} className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold ${filter === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                    <span>All Facilities</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${filter === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-300 text-slate-900'}`}>7</span>
-                  </button>
-                  <button onClick={() => setFilter('medical')} className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold ${filter === 'medical' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                    <span>Hospitals & Medical</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${filter === 'medical' ? 'bg-slate-800 text-white' : 'bg-slate-300 text-slate-900'}`}>2</span>
-                  </button>
-                  <button onClick={() => setFilter('fire')} className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold ${filter === 'fire' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                    <span>Fire & Rescue</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${filter === 'fire' ? 'bg-slate-800 text-white' : 'bg-slate-300 text-slate-900'}`}>1</span>
-                  </button>
-                  <button onClick={() => setFilter('security')} className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold ${filter === 'security' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                    <span>Police & Security</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${filter === 'security' ? 'bg-slate-800 text-white' : 'bg-slate-300 text-slate-900'}`}>1</span>
-                  </button>
-                  <button onClick={() => setFilter('shelter')} className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold ${filter === 'shelter' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                    <span>Schools & Shelters</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${filter === 'shelter' ? 'bg-slate-800 text-white' : 'bg-slate-300 text-slate-900'}`}>2</span>
-                  </button>
-                  <button onClick={() => setFilter('utilities')} className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold ${filter === 'utilities' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-                    <span>Power & Utilities</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${filter === 'utilities' ? 'bg-slate-800 text-white' : 'bg-slate-300 text-slate-900'}`}>1</span>
-                  </button>
+            </div>
+
+            {/* Filters & Search Toolbar */}
+            <div className="mt-3 pt-2.5 border-t border-slate-100 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0">
+                <button
+                  onClick={() => setFilter("all")}
+                  className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold cursor-pointer ${
+                    filter === "all"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  <span>All Facilities</span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                      filter === "all"
+                        ? "bg-slate-800 text-white"
+                        : "bg-slate-200 text-slate-800"
+                    }`}
+                  >
+                    7
+                  </span>
+                </button>
+                <button
+                  onClick={() => setFilter("medical")}
+                  className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold cursor-pointer ${
+                    filter === "medical"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  <Hospital className="w-3.5 h-3.5" />
+                  <span>Medical (2)</span>
+                </button>
+                <button
+                  onClick={() => setFilter("fire")}
+                  className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold cursor-pointer ${
+                    filter === "fire"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  <span>Fire & Rescue (1)</span>
+                </button>
+                <button
+                  onClick={() => setFilter("shelter")}
+                  className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold cursor-pointer ${
+                    filter === "shelter"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  <Home className="w-3.5 h-3.5" />
+                  <span>Shelters (2)</span>
+                </button>
+                <button
+                  onClick={() => setFilter("security")}
+                  className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold cursor-pointer ${
+                    filter === "security"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Security (1)</span>
+                </button>
+                <button
+                  onClick={() => setFilter("utilities")}
+                  className={`px-3 py-1.5 rounded text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap font-semibold cursor-pointer ${
+                    filter === "utilities"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Utilities (1)</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="absolute left-2.5 top-2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    className="w-full pl-8 pr-3 py-1.5 bg-slate-100 rounded text-xs text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-900 border border-slate-200"
+                    placeholder="Search facility name or zone..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
-                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                  <div className="relative flex-1 sm:w-80">
-                    <Search className="absolute left-2.5 top-2 w-4 h-4 text-slate-600" />
-                    <input
-                      type="text"
-                      className="w-full pl-8 pr-3 py-1.5 bg-slate-50 rounded text-sm text-slate-900 placeholder-slate-600 focus:outline-none focus:bg-white shadow-sm"
-                      placeholder="Search facility name, type, or zone..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                <div className="flex items-center gap-1 bg-slate-100 px-2 py-1.5 rounded border border-slate-200">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
+                  <select
+                    className="bg-transparent text-[11px] text-slate-800 focus:outline-none cursor-pointer font-semibold"
+                    value={sortOrder}
+                    onChange={(e) =>
+                      setSortOrder(e.target.value as "severity" | "onset")
+                    }
+                  >
+                    <option value="severity">Sort: Severity first</option>
+                    <option value="onset">Sort: Earliest Onset</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Toast Notification Banner */}
+          {notification && (
+            <div className="bg-slate-900 text-white px-4 py-2 text-xs flex items-center justify-between z-30 transition-all">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{notification}</span>
+              </div>
+              <button
+                onClick={() => setNotification(null)}
+                className="text-slate-400 hover:text-white text-xs font-bold px-1"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Split Content: Left List / Right Map */}
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+            {/* Left Column: Facility Cards */}
+            <div className="lg:col-span-5 xl:col-span-5 overflow-y-auto p-3 space-y-2.5 bg-slate-50 border-r border-slate-200">
+              {filteredFacilities.map((facility) => {
+                const Icon = facility.icon;
+                const isActive = activeFacilityId === facility.id;
+
+                return (
+                  <article
+                    id={`facility-card-${facility.id}`}
+                    key={facility.id}
+                    onClick={() => handleSelectFacility(facility.id)}
+                    className={`bg-white rounded-lg border transition-all cursor-pointer relative overflow-hidden ${
+                      isActive
+                        ? "border-slate-900 ring-2 ring-slate-900/10 shadow-md"
+                        : "border-slate-200 hover:border-slate-300 hover:shadow-xs"
+                    }`}
+                  >
+                    {/* Left Accent Bar */}
+                    <div
+                      className={`absolute left-0 top-0 bottom-0 w-1.5 ${facility.borderColor}`}
                     />
-                  </div>
-                  <div className="flex items-center gap-1 bg-slate-50 px-2 py-1.5 rounded shadow-sm">
-                    <ArrowUpDown className="w-4 h-4 text-slate-600" />
-                    <select
-                      className="bg-transparent text-[10px] text-slate-900 focus:outline-none cursor-pointer font-bold"
-                      value={sortOrder}
-                      onChange={(e) => setSortOrder(e.target.value)}
-                    >
-                      <option value="severity">Sort by: Severity then Onset</option>
-                      <option value="onset">Sort by: Estimated Onset</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Content Area */}
-            <div className="grid grid-cols-1 lg:grid-cols-10 gap-0 h-[calc(100vh-188px)] overflow-hidden">
-              <section className="lg:col-span-5 xl:col-span-4 h-full overflow-y-auto p-3 space-y-2 bg-slate-50">
-                {filteredFacilities.map((facility) => {
-                  const Icon = facility.icon;
-                  const isActive = activeFacility === facility.id;
-                  return (
-                    <article
-                      key={facility.id}
-                      className={`bg-white rounded shadow-sm hover:shadow-md transition-all relative cursor-pointer ${isActive ? 'ring-1 ring-slate-300 shadow-md' : ''}`}
-                      onClick={() => setActiveFacility(facility.id)}
-                    >
-                      <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${facility.borderColor}`}></div>
-                      <div className="pl-4 pr-3.5 py-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5">
-                              <Icon className={`${facility.iconColor} w-4 h-4`} />
-                              <h2 className="text-base text-slate-900 font-bold tracking-tight">{facility.name}</h2>
-                            </div>
-                            <p className="text-xs text-slate-600 mt-0.5">{facility.desc}</p>
-                          </div>
-                          {facility.severity === 'critical' && (
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="px-2 py-0.5 bg-red-600 text-white rounded text-[10px] font-bold tracking-wider flex items-center gap-1 shadow-sm">
-                                <AlertTriangle className="w-3 h-3" /> CRITICAL
-                              </span>
-                              <span className="text-[10px] text-red-600 font-semibold">{facility.timeText}</span>
-                            </div>
-                          )}
-                          {facility.severity === 'high' && (
-                            <span className="px-2 py-0.5 bg-slate-300 text-slate-900 rounded text-[10px] font-bold tracking-wider flex items-center gap-1">
-                              <ArrowUp className="w-3 h-3 text-slate-900" /> HIGH
-                            </span>
-                          )}
-                          {facility.severity === 'elevated' && (
-                            <span className="px-2 py-0.5 bg-slate-200 text-slate-600 rounded text-[10px] font-bold tracking-wider flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-slate-500"></span> ELEVATED
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-2 mt-3 p-2 bg-slate-100 rounded">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-slate-600 uppercase font-bold">Expected Depth</span>
-                            <span className={`text-lg font-bold tracking-tight ${facility.severity === 'critical' ? 'text-red-600' : 'text-slate-900'}`}>{facility.depth}</span>
-                            {facility.depthDesc && <span className="text-xs text-slate-600">{facility.depthDesc}</span>}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-slate-600 uppercase font-bold">Est. Onset</span>
-                            <span className="text-lg text-slate-900 font-bold">{facility.onset} hrs</span>
-                            {facility.timeText && <span className="text-xs text-red-600 font-medium">({facility.timeText})</span>}
-                          </div>
-                          <div className="flex flex-col">
-                            {facility.peak ? (
-                              <>
-                                <span className="text-[10px] text-slate-600 uppercase font-bold">Peak Window</span>
-                                <span className="text-lg text-slate-900 font-bold">{facility.peak}</span>
-                                <span className="text-xs text-slate-600">{facility.peakDesc}</span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="text-[10px] text-slate-600 uppercase font-bold">{facility.capacity ? 'Cap Intake' : 'Access Corridor'}</span>
-                                {facility.capacity ? (
-                                  <p className="text-lg text-slate-900 font-bold">{facility.capacity}</p>
-                                ) : (
-                                  <p className={`text-[10px] font-bold px-1 py-0.5 rounded text-center mt-1 ${facility.routeStatus === 'Route Clear' ? 'text-sky-400 bg-sky-900' : 'text-red-900 bg-red-100'}`}>
-                                    {facility.routeStatus === 'Route Clear' ? '✓ Route Clear' : '⚠️ At Risk'}
-                                  </p>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {facility.routeDesc && (
-                          <div className="mt-2.5 p-2 bg-red-100 text-red-900 rounded flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <AlertTriangle className="text-red-600 w-4 h-4" />
-                              <span className="text-xs font-bold">⚠️ Potentially Affected</span>
-                            </div>
-                            <span className="text-xs">{facility.routeDesc}</span>
-                          </div>
-                        )}
-
-                        <div className="mt-2.5 text-slate-600 text-xs leading-relaxed">
-                          <span className="text-[10px] text-slate-900 uppercase font-bold tracking-wider">Rationale: </span>
-                          {facility.rationale}
-                        </div>
-
-                        {facility.contingency && (
-                          <div className="mt-2.5 p-2 bg-slate-200 rounded flex items-start gap-2">
-                            <Shield className="text-slate-600 w-4 h-4 mt-0.5" />
-                            <div className="text-xs text-slate-900">
-                              <strong className="text-[10px] uppercase text-slate-600">Active Contingency: </strong>
-                              {facility.contingency}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="mt-3 flex items-center justify-end gap-2 pt-2">
-                          {facility.severity === 'critical' && (
-                            <button
-                              onClick={() => alert(`[EOC DEPLOYMENT ORDER ACTIVATED]\n\nDispatching Mobile Hydrologic Inflatable Barrier Units (Pack 4) to: ${facility.name}.\nEstimated Deployment ETA: 8 minutes.\nCrew Frequency: 156.800 MHz.`)}
-                              className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-800 transition-colors flex items-center gap-1.5 shadow-sm"
+                    <div className="pl-4 pr-3.5 py-3">
+                      {/* Header row */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`p-1 rounded ${
+                                facility.severity === "critical"
+                                  ? "bg-red-50 text-red-600"
+                                  : "bg-slate-100 text-slate-700"
+                              }`}
                             >
-                              <Siren className="w-4 h-4" /> Deploy Flood Barriers
+                              <Icon className="w-4 h-4" />
+                            </span>
+                            <h2 className="text-sm font-bold text-slate-900 tracking-tight truncate">
+                              {facility.name}
+                            </h2>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                            {facility.desc}
+                          </p>
+                        </div>
+
+                        {/* Severity Badge */}
+                        <div className="shrink-0 flex flex-col items-end gap-0.5">
+                          {facility.severity === "critical" && (
+                            <span className="px-2 py-0.5 bg-red-600 text-white rounded text-[10px] font-bold tracking-wider flex items-center gap-1 shadow-2xs">
+                              <AlertTriangle className="w-3 h-3" /> CRITICAL
+                            </span>
+                          )}
+                          {facility.severity === "high" && (
+                            <span className="px-2 py-0.5 bg-orange-100 text-orange-800 border border-orange-200 rounded text-[10px] font-bold tracking-wider flex items-center gap-1">
+                              <ArrowUp className="w-3 h-3" /> HIGH
+                            </span>
+                          )}
+                          {facility.severity === "elevated" && (
+                            <span className="px-2 py-0.5 bg-yellow-50 text-yellow-800 border border-yellow-200 rounded text-[10px] font-bold tracking-wider flex items-center gap-1">
+                              ELEVATED
+                            </span>
+                          )}
+                          {facility.timeText && (
+                            <span
+                              className={`text-[10px] font-semibold ${
+                                facility.severity === "critical"
+                                  ? "text-red-700"
+                                  : "text-slate-600"
+                              }`}
+                            >
+                              {facility.timeText}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Stat grid */}
+                      <div className="grid grid-cols-3 gap-2 mt-2.5 p-2 bg-slate-50 rounded border border-slate-100 text-xs">
+                        <div>
+                          <div className="text-[10px] text-slate-400 uppercase font-bold">
+                            Depth
+                          </div>
+                          <div
+                            className={`font-bold ${
+                              facility.severity === "critical"
+                                ? "text-red-700"
+                                : "text-slate-900"
+                            }`}
+                          >
+                            {facility.depth}
+                          </div>
+                          {facility.depthDesc && (
+                            <div className="text-[10px] text-slate-500 truncate">
+                              {facility.depthDesc}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-slate-400 uppercase font-bold">
+                            Onset
+                          </div>
+                          <div className="font-bold text-slate-900">
+                            {facility.onset} hrs
+                          </div>
+                          <div className="text-[10px] text-slate-500">Predicted</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-slate-400 uppercase font-bold">
+                            Access
+                          </div>
+                          <div
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded inline-block mt-0.5 ${
+                              facility.routeStatus === "Route Clear"
+                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                : "bg-red-50 text-red-800 border border-red-200"
+                            }`}
+                          >
+                            {facility.routeStatus === "Route Clear"
+                              ? "✓ Route Clear"
+                              : "⚠️ At Risk"}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Route warning callout if present */}
+                      {facility.routeDesc && (
+                        <div className="mt-2 p-1.5 bg-red-50 border border-red-100 text-red-900 rounded text-[11px] flex items-center gap-1.5">
+                          <AlertTriangle className="text-red-600 w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{facility.routeDesc}</span>
+                        </div>
+                      )}
+
+                      {/* Rationale & Contingency */}
+                      <div className="mt-2 text-[11px] text-slate-600 leading-snug line-clamp-2">
+                        <span className="font-bold text-slate-900 uppercase tracking-wider text-[10px]">
+                          Rationale:{" "}
+                        </span>
+                        {facility.rationale}
+                      </div>
+
+                      {/* Actions row */}
+                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <Link
+                          href={`/?zone=${facility.zoneId}`}
+                          className="text-[11px] text-blue-700 hover:text-blue-900 font-semibold flex items-center gap-1 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          View Zone {facility.zoneId} Overview{" "}
+                          <ChevronRight className="w-3 h-3" />
+                        </Link>
+
+                        <div className="flex items-center gap-2">
+                          {facility.severity === "critical" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                showNotification(
+                                  `[ORDER ISSUED] Mobile barrier teams dispatched to ${facility.name} (Zone ${facility.zoneId}). ETA: 8 min.`
+                                );
+                              }}
+                              className="px-2.5 py-1 bg-red-600 text-white rounded text-[11px] font-semibold hover:bg-red-700 transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+                            >
+                              <Shield className="w-3 h-3" /> Deploy Barriers
                             </button>
                           )}
-                          <button className="px-3 py-1.5 bg-slate-300 text-slate-900 rounded text-xs font-semibold hover:bg-slate-200 transition-colors flex items-center gap-1">
-                            {facility.severity === 'critical' ? <Route className="w-4 h-4" /> : null}
-                            {facility.severity === 'critical' ? 'View Route Status' : 'Focus Geometry'}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectFacility(facility.id);
+                            }}
+                            className="px-2 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded text-[11px] font-medium transition-colors cursor-pointer"
+                          >
+                            Focus Map
                           </button>
                         </div>
                       </div>
-                    </article>
-                  );
-                })}
-              </section>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
 
-              <section className="lg:col-span-5 xl:col-span-6 h-full flex flex-col bg-slate-200 relative overflow-hidden">
-                <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
-                  <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-sm p-1.5 rounded shadow-md pointer-events-auto">
-                    <span className="text-[10px] text-slate-600 px-2 uppercase font-bold">Layers:</span>
-                    <button
-                      onClick={() => toggleLayer('routes')}
-                      className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors ${layers.routes ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
-                    >
-                      <Route className="w-3.5 h-3.5" /> Evacuation Corridors
-                    </button>
-                    <button
-                      onClick={() => toggleLayer('contours')}
-                      className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors ${layers.contours ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
-                    >
-                      <Waves className="w-3.5 h-3.5" /> Terrain Contours
-                    </button>
-                    <button
-                      onClick={() => toggleLayer('hydro')}
-                      className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors ${layers.hydro ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
-                    >
-                      <Waves className="w-3.5 h-3.5" /> Hydro Depth Model
-                    </button>
-                  </div>
-                  <div className="bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded shadow-md flex items-center gap-3 pointer-events-auto">
-                    <div className="flex flex-col text-right">
-                      <span className="text-[10px] text-slate-900 font-bold tracking-tight">{'12°54\'18"N · 74°49\'42"E'}</span>
-                      <span className="text-[9px] text-slate-600">DATUM: WGS84 · EPSG:4326</span>
-                    </div>
-                    <div className="h-5 w-px bg-slate-300"></div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-[9px] text-slate-600 uppercase font-bold">Scale</span>
-                      <div className="w-12 h-1 bg-slate-900 relative mt-0.5">
-                        <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-[9px] text-slate-900 font-semibold">500m</span>
-                      </div>
-                    </div>
-                  </div>
+            {/* Right Column: Interactive Map with Markers */}
+            <div className="lg:col-span-7 xl:col-span-7 flex flex-col bg-slate-200 relative overflow-hidden select-none">
+              {/* Map Layer Overlay Header */}
+              <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-sm p-1.5 rounded-md shadow-md border border-slate-200 pointer-events-auto">
+                  <span className="text-[10px] text-slate-500 px-1.5 uppercase font-bold">
+                    Layers:
+                  </span>
+                  <button
+                    onClick={() => toggleLayer("routes")}
+                    className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                      layers.routes
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    <Route className="w-3 h-3" /> Evacuation Corridors
+                  </button>
+                  <button
+                    onClick={() => toggleLayer("contours")}
+                    className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                      layers.contours
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    <Waves className="w-3 h-3" /> Contours
+                  </button>
+                  <button
+                    onClick={() => toggleLayer("hydro")}
+                    className={`px-2 py-1 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                      layers.hydro
+                        ? "bg-slate-900 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    <Waves className="w-3 h-3" /> Hydro Depth Model
+                  </button>
                 </div>
 
-                <div className="w-full flex-1 relative bg-slate-100 overflow-hidden select-none">
-                  <div style={{ transform: `scale(${mapZoom})`, transformOrigin: 'center center', transition: 'transform 0.25s ease-out' }} className="w-full h-full">
-                    <svg className="w-full h-full object-cover" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
-                      <defs>
-                        <pattern id="coastalGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d5e0f8" strokeWidth="0.75" strokeDasharray="2 2" />
-                        </pattern>
-                        <linearGradient id="depthGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#ba1a1a" stopOpacity="0.25" />
-                          <stop offset="50%" stopColor="#545f73" stopOpacity="0.15" />
-                          <stop offset="100%" stopColor="#d5e0f8" stopOpacity="0.3" />
-                        </linearGradient>
-                        <linearGradient id="seaWater" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#d5e0f8" />
-                          <stop offset="100%" stopColor="#bcc7de" />
-                        </linearGradient>
-                      </defs>
-
-                      <path d="M 0,0 L 260,0 Q 240,150 250,280 Q 260,420 220,530 Q 180,620 210,700 L 0,700 Z" fill="url(#seaWater)" opacity="0.8" />
-                      <path d="M 1000,140 Q 650,150 480,180 Q 340,210 270,270 Q 245,330 250,420 Q 255,510 320,570 Q 450,600 680,630 L 700,680 Q 420,650 280,610 Q 210,540 215,410 Q 220,310 260,240 Q 340,170 510,140 Q 700,110 1000,100 Z" fill="#93ccff" opacity="0.65" />
-                      <path d="M 1000,580 Q 750,560 550,580 Q 380,600 240,650 L 220,700 L 1000,700 Z" fill="#93ccff" opacity="0.6" />
-                      
-                      <rect x="250" y="0" width="750" height="700" fill="url(#coastalGrid)" opacity="0.4" />
-
-                      {layers.contours && (
-                        <g id="terrainContoursLayer" opacity="0.7">
-                          <path d="M 280,0 Q 320,180 340,300 Q 360,460 310,600 L 330,700" fill="none" stroke="#76777d" strokeWidth="1" strokeDasharray="4 3" />
-                          <path d="M 390,0 Q 430,220 460,340 Q 480,500 420,700" fill="none" stroke="#76777d" strokeWidth="1.2" strokeDasharray="6 4" />
-                          <path d="M 520,0 Q 560,250 580,380 Q 610,540 570,700" fill="none" stroke="#76777d" strokeWidth="1.5" strokeDasharray="8 4" />
-                          <text x="345" y="120" fill="#545f73" fontSize="9" fontWeight="600" fontFamily="Inter">+2.0m</text>
-                          <text x="465" y="160" fill="#545f73" fontSize="9" fontWeight="600" fontFamily="Inter">+5.0m</text>
-                          <text x="585" y="200" fill="#545f73" fontSize="9" fontWeight="600" fontFamily="Inter">+10.0m</text>
-                        </g>
-                      )}
-
-                      {layers.routes && (
-                        <g id="evacuationRoutesLayer">
-                          <path d="M 440,0 L 410,180 L 390,260 L 380,360 L 410,520 L 430,700" fill="none" stroke="#131b2e" strokeWidth="3.5" />
-                          <path d="M 330,120 L 320,240 L 300,380 L 340,490 L 380,520" fill="none" stroke="#188ace" strokeWidth="2.5" strokeDasharray="6 3" />
-                          <path d="M 405,220 L 395,290" fill="none" stroke="#ba1a1a" strokeWidth="5" strokeLinecap="round" strokeDasharray="2 3" />
-                          <text x="415" y="270" fill="#ba1a1a" fontSize="9" fontWeight="700" fontFamily="Inter">NH-66 BREACH SPOT (14:50)</text>
-                        </g>
-                      )}
-                      
-                      <g className="cursor-pointer" onClick={() => setActiveFacility('city-hospital')}>
-                        <circle cx="370" cy="250" fill="#ba1a1a" fillOpacity="0.25" r="28">
-                          <animate attributeName="r" values="16;34;16" dur="2.2s" repeatCount="indefinite" />
-                          <animate attributeName="fill-opacity" values="0.4;0.05;0.4" dur="2.2s" repeatCount="indefinite" />
-                        </circle>
-                        <circle cx="370" cy="250" r="16" fill="#ba1a1a" stroke="#ffffff" strokeWidth="2.5" />
-                        <path d="M 367,243 L 373,243 L 373,247 L 377,247 L 377,253 L 373,253 L 373,257 L 367,257 L 367,253 L 363,253 L 363,247 L 367,247 Z" fill="#ffffff" />
-                        <g transform="translate(395, 175)">
-                          <rect x="0" y="0" width="230" height="100" rx="4" fill="#ffffff" stroke="#ba1a1a" strokeWidth="1.5" />
-                          <rect x="0" y="0" width="230" height="22" rx="4" fill="#ba1a1a" />
-                          <text x="8" y="15" fill="#ffffff" fontSize="10" fontWeight="700" letterSpacing="0.5" fontFamily="Inter">CITY HOSPITAL · SIMULATION ACTIVE</text>
-                          <text x="8" y="38" fill="#191c1e" fontSize="11" fontWeight="700" fontFamily="Inter">Onset in 14 min (14:40)</text>
-                          <text x="8" y="52" fill="#545f73" fontSize="10" fontFamily="Inter">Predicted Crest: 0.62m at 15:15</text>
-                          <rect x="8" y="60" width="214" height="20" rx="2" fill="#ffdad6" />
-                          <text x="14" y="74" fill="#93000a" fontSize="9" fontWeight="700" fontFamily="Inter">NH-66 Cutoff @ 14:50 · Reroute via Beach Rd</text>
-                          <text x="8" y="92" fill="#188ace" fontSize="9" fontWeight="600" fontFamily="Inter">Click to deploy primary barrier teams →</text>
-                        </g>
-                      </g>
-
-                      <g className="cursor-pointer" transform="translate(350, 190)" onClick={() => setActiveFacility('panambur-fire')}>
-                        <circle cx="0" cy="0" r="14" fill="#131b2e" stroke="#ffffff" strokeWidth="2" />
-                        <rect x="18" y="-12" width="130" height="24" rx="2" fill="#ffffff" stroke="#e0e3e5" strokeWidth="1" />
-                        <text x="24" y="4" fill="#191c1e" fontSize="10" fontWeight="700" fontFamily="Inter">Panambur Fire Stn</text>
-                      </g>
-
-                    </svg>
-                  </div>
-
-                  {/* Legends */}
-                  <div className="absolute bottom-16 left-3 bg-white/95 backdrop-blur-sm p-2.5 rounded shadow-md z-20 space-y-1.5 text-[10px]">
-                    <div className="font-bold text-slate-900 uppercase tracking-wider pb-1 border-b border-slate-300">Facility Categorization</div>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <span className="w-3.5 h-3.5 rounded-full bg-red-600 flex items-center justify-center text-white text-[9px] font-bold">+</span>
-                      <span>Hospital / Medical Facility</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <span className="w-3.5 h-3.5 rounded-full bg-slate-900 flex items-center justify-center text-white text-[9px] font-bold">▲</span>
-                      <span>Fire & Emergency Stations</span>
-                    </div>
-                  </div>
-
-                  <div className="absolute bottom-16 right-3 flex flex-col gap-1 z-20">
-                    <button onClick={() => setMapZoom(mapZoom * 1.15)} className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-900 rounded shadow-md flex items-center justify-center font-bold">
-                      <Plus className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setMapZoom(mapZoom * 0.85)} className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-900 rounded shadow-md flex items-center justify-center font-bold">
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setMapZoom(1)} className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-900 rounded shadow-md flex items-center justify-center font-bold">
-                      <Maximize className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <footer className="h-14 bg-white px-3 flex items-center justify-between z-30 shadow-md">
-                  <div className="flex items-center gap-2.5 overflow-hidden">
-                    <span className="p-1.5 bg-red-100 text-red-600 rounded flex items-center justify-center animate-pulse">
-                      <Route className="w-5 h-5" />
+                <div className="bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded-md shadow-md border border-slate-200 flex items-center gap-3 pointer-events-auto">
+                  <div className="flex flex-col text-right">
+                    <span className="text-[10px] text-slate-900 font-bold tracking-tight">
+                      12°54&apos;18&quot;N · 74°49&apos;42&quot;E
                     </span>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-red-600 font-bold uppercase tracking-wider">Access Advisory DK-ROUTE-01:</span>
-                        <span className="text-xs text-slate-900 font-semibold truncate">
-                          Access corridor NH-66 to City Hospital at risk in 24 min — Alternative bypass via Beach Road recommended.
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-slate-600">EOC Traffic Command: Traffic diverted at Panambur Junction Circle</span>
+                    <span className="text-[9px] text-slate-500">
+                      WGS84 · Mangaluru Sector
+                    </span>
+                  </div>
+                  <div className="h-4 w-px bg-slate-300"></div>
+                  <div className="flex flex-col items-center">
+                    <span className="text-[8px] text-slate-400 uppercase font-bold">
+                      Scale
+                    </span>
+                    <div className="w-10 h-1 bg-slate-900 relative mt-0.5">
+                      <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-[8px] text-slate-900 font-semibold">
+                        500m
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={() => alert(`[RADIO & POLICE NOTIFICATION SENT]\n\nAdvisory DK-ROUTE-01 transmitted to Mangaluru Traffic HQ and public SMS alert corridor for NH-66 North spur diversion.`)} className="px-3 py-1.5 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-blue-900 transition-colors flex items-center gap-1 shadow-sm">
-                      <RadioTower className="w-4 h-4" /> Transmit Route Advisory
-                    </button>
+                </div>
+              </div>
+
+              {/* Map Canvas */}
+              <div className="w-full flex-1 relative bg-slate-100 overflow-hidden">
+                <div
+                  style={{
+                    transform: `scale(${mapZoom})`,
+                    transformOrigin: "center center",
+                    transition: "transform 0.2s ease-out",
+                  }}
+                  className="w-full h-full"
+                >
+                  <svg
+                    className="w-full h-full object-cover"
+                    viewBox="0 0 1000 700"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <defs>
+                      <pattern
+                        id="facGrid"
+                        width="40"
+                        height="40"
+                        patternUnits="userSpaceOnUse"
+                      >
+                        <path
+                          d="M 40 0 L 0 0 0 40"
+                          fill="none"
+                          stroke="#cbd5e1"
+                          strokeWidth="0.75"
+                          strokeDasharray="2 2"
+                        />
+                      </pattern>
+                      <linearGradient
+                        id="seaWaterGrad"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="0%"
+                      >
+                        <stop offset="0%" stopColor="#bae6fd" stopOpacity="0.85" />
+                        <stop offset="100%" stopColor="#7dd3fc" stopOpacity="0.65" />
+                      </linearGradient>
+                      <pattern
+                        id="hatchCritical"
+                        width="8"
+                        height="8"
+                        patternTransform="rotate(45 0 0)"
+                        patternUnits="userSpaceOnUse"
+                      >
+                        <line
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="8"
+                          stroke="#DC2626"
+                          strokeWidth="1.5"
+                          strokeOpacity="0.5"
+                        />
+                      </pattern>
+                    </defs>
+
+                    {/* Sea on West */}
+                    <path
+                      d="M 0,0 L 250,0 Q 235,160 250,280 Q 260,420 220,530 Q 180,620 210,700 L 0,700 Z"
+                      fill="url(#seaWaterGrad)"
+                    />
+                    <text
+                      x="70"
+                      y="360"
+                      fill="#0369a1"
+                      fontSize="14"
+                      fontWeight="bold"
+                      letterSpacing="3"
+                      opacity="0.6"
+                      transform="rotate(-90 70 360)"
+                    >
+                      ARABIAN SEA
+                    </text>
+
+                    {/* Estuary / Gurupura River Waterway */}
+                    <path
+                      d="M 1000,140 Q 650,150 480,180 Q 340,210 270,270 Q 245,330 250,420 Q 255,510 320,570 Q 450,600 680,630 L 700,680 Q 420,650 280,610 Q 210,540 215,410 Q 220,310 260,240 Q 340,170 510,140 Q 700,110 1000,100 Z"
+                      fill="#38bdf8"
+                      opacity="0.5"
+                    />
+
+                    {/* Netravati South Estuary */}
+                    <path
+                      d="M 1000,580 Q 750,560 550,580 Q 380,600 240,650 L 220,700 L 1000,700 Z"
+                      fill="#38bdf8"
+                      opacity="0.45"
+                    />
+
+                    {/* Background Grid */}
+                    <rect
+                      x="230"
+                      y="0"
+                      width="770"
+                      height="700"
+                      fill="url(#facGrid)"
+                      opacity="0.6"
+                    />
+
+                    {/* Terrain Contours Layer */}
+                    {layers.contours && (
+                      <g id="terrainContoursLayer" opacity="0.6">
+                        <path
+                          d="M 280,0 Q 320,180 340,300 Q 360,460 310,600 L 330,700"
+                          fill="none"
+                          stroke="#94a3b8"
+                          strokeWidth="1"
+                          strokeDasharray="4 3"
+                        />
+                        <path
+                          d="M 390,0 Q 430,220 460,340 Q 480,500 420,700"
+                          fill="none"
+                          stroke="#94a3b8"
+                          strokeWidth="1.2"
+                          strokeDasharray="6 4"
+                        />
+                        <path
+                          d="M 520,0 Q 560,250 580,380 Q 610,540 570,700"
+                          fill="none"
+                          stroke="#94a3b8"
+                          strokeWidth="1.5"
+                          strokeDasharray="8 4"
+                        />
+                        <text
+                          x="345"
+                          y="120"
+                          fill="#64748b"
+                          fontSize="9"
+                          fontWeight="600"
+                        >
+                          +2.0m
+                        </text>
+                        <text
+                          x="465"
+                          y="160"
+                          fill="#64748b"
+                          fontSize="9"
+                          fontWeight="600"
+                        >
+                          +5.0m
+                        </text>
+                        <text
+                          x="585"
+                          y="200"
+                          fill="#64748b"
+                          fontSize="9"
+                          fontWeight="600"
+                        >
+                          +10.0m
+                        </text>
+                      </g>
+                    )}
+
+                    {/* Hydro Depth Simulation Zones (Light Inundation Polygons) */}
+                    {layers.hydro && (
+                      <g id="hydroFloodLayer">
+                        {/* Zone B Critical Polygon with Hatch */}
+                        <polygon
+                          points="270,180 460,190 480,320 330,340 260,260"
+                          fill="url(#hatchCritical)"
+                          stroke="#DC2626"
+                          strokeWidth="1.5"
+                        />
+                        {/* Zone F High Polygon */}
+                        <polygon
+                          points="240,370 380,380 370,490 220,480"
+                          fill="#ea580c"
+                          fillOpacity="0.2"
+                          stroke="#ea580c"
+                          strokeWidth="1.5"
+                        />
+                        {/* Zone C High Polygon */}
+                        <polygon
+                          points="360,70 560,80 540,180 370,170"
+                          fill="#ea580c"
+                          fillOpacity="0.18"
+                          stroke="#ea580c"
+                          strokeWidth="1.5"
+                        />
+                      </g>
+                    )}
+
+                    {/* Evacuation Corridors & Breach Spots */}
+                    {layers.routes && (
+                      <g id="evacuationRoutesLayer">
+                        <path
+                          d="M 440,0 L 410,180 L 390,260 L 380,360 L 410,520 L 430,700"
+                          fill="none"
+                          stroke="#0f172a"
+                          strokeWidth="3.5"
+                        />
+                        <path
+                          d="M 330,120 L 320,240 L 300,380 L 340,490 L 380,520"
+                          fill="none"
+                          stroke="#0284c7"
+                          strokeWidth="2.5"
+                          strokeDasharray="6 3"
+                        />
+                        {/* NH-66 Breach indicator */}
+                        <path
+                          d="M 405,225 L 395,285"
+                          fill="none"
+                          stroke="#DC2626"
+                          strokeWidth="4.5"
+                          strokeLinecap="round"
+                          strokeDasharray="2 3"
+                        />
+                        <text
+                          x="415"
+                          y="265"
+                          fill="#DC2626"
+                          fontSize="9"
+                          fontWeight="bold"
+                        >
+                          NH-66 BREACH SPOT (14:50)
+                        </text>
+                      </g>
+                    )}
+
+                    {/* All 7 Facility Markers */}
+                    {FACILITIES_DATA.map((fac) => {
+                      const isSelected = fac.id === activeFacilityId;
+                      const isCritical = fac.severity === "critical";
+
+                      return (
+                        <g
+                          key={fac.id}
+                          className="cursor-pointer transition-all"
+                          onClick={() => handleSelectFacility(fac.id)}
+                        >
+                          {/* Animated Radar Pulse for Critical / Selected */}
+                          {isSelected && (
+                            <circle
+                              cx={fac.x}
+                              cy={fac.y}
+                              r="26"
+                              fill={isCritical ? "#DC2626" : "#0284c7"}
+                              fillOpacity="0.2"
+                            >
+                              <animate
+                                attributeName="r"
+                                values="14;30;14"
+                                dur="2s"
+                                repeatCount="indefinite"
+                              />
+                              <animate
+                                attributeName="fill-opacity"
+                                values="0.35;0.05;0.35"
+                                dur="2s"
+                                repeatCount="indefinite"
+                              />
+                            </circle>
+                          )}
+
+                          {/* Marker Pin Circle */}
+                          <circle
+                            cx={fac.x}
+                            cy={fac.y}
+                            r={isSelected ? "14" : "11"}
+                            fill={
+                              isCritical
+                                ? "#DC2626"
+                                : fac.severity === "high"
+                                ? "#ea580c"
+                                : "#0f172a"
+                            }
+                            stroke="#ffffff"
+                            strokeWidth={isSelected ? "3" : "2"}
+                            className="shadow-md"
+                          />
+
+                          {/* Marker Icon / Symbol */}
+                          {fac.category === "medical" && (
+                            <path
+                              d={`M ${fac.x - 4},${fac.y - 1.5} h 3 v -3 h 2 v 3 h 3 v 2 h -3 v 3 h -2 v -3 h -3 Z`}
+                              fill="#ffffff"
+                            />
+                          )}
+                          {fac.category === "fire" && (
+                            <circle
+                              cx={fac.x}
+                              cy={fac.y}
+                              r="3.5"
+                              fill="#ffffff"
+                            />
+                          )}
+                          {fac.category === "shelter" && (
+                            <path
+                              d={`M ${fac.x},${fac.y - 4} L ${fac.x + 4},${
+                                fac.y
+                              } L ${fac.x + 3},${fac.y + 4} L ${fac.x - 3},${
+                                fac.y + 4
+                              } L ${fac.x - 4},${fac.y} Z`}
+                              fill="#ffffff"
+                            />
+                          )}
+                          {fac.category === "security" && (
+                            <path
+                              d={`M ${fac.x - 3},${fac.y - 4} L ${fac.x + 3},${
+                                fac.y - 4
+                              } L ${fac.x + 3},${fac.y + 1} L ${fac.x},${
+                                fac.y + 4
+                              } L ${fac.x - 3},${fac.y + 1} Z`}
+                              fill="#ffffff"
+                            />
+                          )}
+                          {fac.category === "utilities" && (
+                            <path
+                              d={`M ${fac.x},${fac.y - 4} L ${fac.x - 3},${
+                                fac.y
+                              } L ${fac.x},${fac.y} L ${fac.x - 1},${
+                                fac.y + 4
+                              } L ${fac.x + 3},${fac.y} L ${fac.x},${fac.y} Z`}
+                              fill="#ffffff"
+                            />
+                          )}
+
+                          {/* Pin Label (Clean Dark Pill) */}
+                          <g
+                            transform={`translate(${fac.x + 14}, ${
+                              fac.y - 10
+                            })`}
+                            className="pointer-events-none"
+                          >
+                            <rect
+                              x="0"
+                              y="0"
+                              width={fac.name.length * 6.5 + 16}
+                              height="20"
+                              rx="4"
+                              fill="#0f172a"
+                              fillOpacity={isSelected ? "0.95" : "0.75"}
+                            />
+                            <text
+                              x="8"
+                              y="13"
+                              fill="#ffffff"
+                              fontSize="9.5"
+                              fontWeight={isSelected ? "bold" : "600"}
+                            >
+                              {fac.name.split(" (")[0]}
+                            </text>
+                          </g>
+                        </g>
+                      );
+                    })}
+
+                    {/* Focused Active Facility Dynamic Callout Card */}
+                    {activeFacility && (
+                      <g
+                        transform={`translate(${
+                          activeFacility.x > 500
+                            ? activeFacility.x - 240
+                            : activeFacility.x + 20
+                        }, ${
+                          activeFacility.y > 450
+                            ? activeFacility.y - 120
+                            : activeFacility.y - 30
+                        })`}
+                        className="transition-all"
+                      >
+                        {/* Shadow Container */}
+                        <rect
+                          x="0"
+                          y="0"
+                          width="230"
+                          height="108"
+                          rx="6"
+                          fill="#ffffff"
+                          stroke={
+                            activeFacility.severity === "critical"
+                              ? "#DC2626"
+                              : "#0f172a"
+                          }
+                          strokeWidth="1.5"
+                          filter="drop-shadow(0 4px 6px rgba(0,0,0,0.15))"
+                        />
+                        {/* Header Banner */}
+                        <rect
+                          x="0"
+                          y="0"
+                          width="230"
+                          height="22"
+                          rx="6"
+                          fill={
+                            activeFacility.severity === "critical"
+                              ? "#DC2626"
+                              : "#0f172a"
+                          }
+                        />
+                        <text
+                          x="8"
+                          y="15"
+                          fill="#ffffff"
+                          fontSize="9.5"
+                          fontWeight="bold"
+                          letterSpacing="0.4"
+                        >
+                          {activeFacility.name.toUpperCase()} · ZONE{" "}
+                          {activeFacility.zoneId}
+                        </text>
+
+                        {/* Onset countdown */}
+                        <text
+                          x="10"
+                          y="39"
+                          fill="#0f172a"
+                          fontSize="11"
+                          fontWeight="bold"
+                        >
+                          Onset: {activeFacility.onset} hrs ({activeFacility.timeText})
+                        </text>
+                        <text
+                          x="10"
+                          y="54"
+                          fill="#475569"
+                          fontSize="10"
+                          fontWeight="500"
+                        >
+                          Predicted Depth: {activeFacility.depth}
+                        </text>
+
+                        {/* Route status badge inside card */}
+                        <rect
+                          x="8"
+                          y="62"
+                          width="214"
+                          height="20"
+                          rx="3"
+                          fill={
+                            activeFacility.routeStatus === "Route Clear"
+                              ? "#ecfdf5"
+                              : "#fef2f2"
+                          }
+                          stroke={
+                            activeFacility.routeStatus === "Route Clear"
+                              ? "#a7f3d0"
+                              : "#fecaca"
+                          }
+                          strokeWidth="0.75"
+                        />
+                        <text
+                          x="14"
+                          y="76"
+                          fill={
+                            activeFacility.routeStatus === "Route Clear"
+                              ? "#065f46"
+                              : "#991b1b"
+                          }
+                          fontSize="9.5"
+                          fontWeight="bold"
+                        >
+                          {activeFacility.routeStatus === "Route Clear"
+                            ? "✓ Evacuation Corridors Intact"
+                            : "⚠️ NH-66 Cutoff Imminent · Reroute"}
+                        </text>
+
+                        {/* Click CTA */}
+                        <text
+                          x="10"
+                          y="98"
+                          fill="#0284c7"
+                          fontSize="9"
+                          fontWeight="bold"
+                        >
+                          Selected on map · Synchronized with incident list →
+                        </text>
+                      </g>
+                    )}
+                  </svg>
+                </div>
+
+                {/* Map Legend */}
+                <div className="absolute bottom-16 left-3 bg-white/95 backdrop-blur-sm p-2.5 rounded-md shadow-md border border-slate-200 z-20 space-y-1.5 text-[10px]">
+                  <div className="font-bold text-slate-900 uppercase tracking-wider pb-1 border-b border-slate-200">
+                    Facility Types
                   </div>
-                </footer>
-              </section>
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <span className="w-3.5 h-3.5 rounded-full bg-red-600 flex items-center justify-center text-white text-[9px] font-bold">
+                      +
+                    </span>
+                    <span>Hospital / Level-1 Trauma</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <span className="w-3.5 h-3.5 rounded-full bg-orange-600 flex items-center justify-center text-white text-[9px] font-bold">
+                      ●
+                    </span>
+                    <span>Fire / Police / Shelter</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <span className="w-3.5 h-3.5 rounded-full bg-slate-900 flex items-center justify-center text-white text-[9px] font-bold">
+                      ⚡
+                    </span>
+                    <span>Power / Utility Substation</span>
+                  </div>
+                </div>
+
+                {/* Zoom Controls */}
+                <div className="absolute bottom-16 right-3 flex flex-col gap-1 z-20">
+                  <button
+                    onClick={() => setMapZoom((z) => Math.min(z * 1.2, 2.5))}
+                    className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-900 rounded-md shadow-md border border-slate-200 flex items-center justify-center font-bold cursor-pointer"
+                    title="Zoom in"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setMapZoom((z) => Math.max(z * 0.8, 0.7))}
+                    className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-900 rounded-md shadow-md border border-slate-200 flex items-center justify-center font-bold cursor-pointer"
+                    title="Zoom out"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setMapZoom(1)}
+                    className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-900 rounded-md shadow-md border border-slate-200 flex items-center justify-center font-bold cursor-pointer"
+                    title="Reset view"
+                  >
+                    <Maximize className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Bottom Access Advisory Footer */}
+              <footer className="h-14 bg-white border-t border-slate-200 px-4 flex items-center justify-between z-30 shrink-0 shadow-xs">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <span className="p-1.5 bg-red-100 text-red-600 rounded flex items-center justify-center animate-pulse shrink-0">
+                    <Route className="w-4 h-4" />
+                  </span>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-red-700 font-bold uppercase tracking-wider shrink-0">
+                        Advisory DK-ROUTE-01:
+                      </span>
+                      <span className="text-xs text-slate-900 font-semibold truncate">
+                        NH-66 spur to City Hospital vulnerable at 14:50 — Emergency
+                        diversion via Port Beach Road active.
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 truncate">
+                      EOC Traffic HQ: Traffic diverted at Panambur Junction Circle
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() =>
+                      showNotification(
+                        "[DISPATCH BROADCAST] Route Advisory DK-ROUTE-01 broadcasted to Traffic Command and City Police dispatch."
+                      )
+                    }
+                    className="px-3 py-1.5 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <RadioTower className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Transmit Advisory</span>
+                  </button>
+                </div>
+              </footer>
             </div>
           </div>
-        </main>
+        </div>
       </div>
+
+      {/* Modals */}
+      <ShortcutsModal
+        open={shortcutsModalOpen}
+        onClose={() => setShortcutsModalOpen(false)}
+      />
+      <ScenarioModal
+        open={scenarioModalOpen}
+        onClose={() => setScenarioModalOpen(false)}
+      />
     </div>
   );
 }

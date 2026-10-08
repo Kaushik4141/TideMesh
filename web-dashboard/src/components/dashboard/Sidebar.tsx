@@ -21,24 +21,32 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function Sidebar() {
+import type { EventEnvironmentResponse } from '@/lib/api/types';
+
+interface SidebarProps {
+  environmentalData?: EventEnvironmentResponse['eventEnvironment'] | null;
+  onOpenScenario?: () => void;
+}
+
+export function Sidebar({ environmentalData, onOpenScenario }: SidebarProps = {}) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [engineOpen, setEngineOpen] = useState(false);
 
   const primaryNav = [
     { name: 'Overview', href: '/', icon: LayoutDashboard },
-    { name: 'Alerts', href: '/degraded-state', icon: Bell, badge: '3', badgeColor: 'bg-red-500/10 text-red-700 border-red-500/20' },
+    { name: 'Alerts', href: '/#alerts', icon: Bell, badge: '3', badgeColor: 'bg-red-500/10 text-red-700 border-red-500/20' },
     { name: 'Zones', href: '/zones', icon: Grid },
     { name: 'Critical Facilities', href: '/critical-facilities', icon: Hospital },
-    { name: 'Scenarios', href: '#scenarios', icon: Sliders },
+    { name: 'Scenarios', href: '#scenarios', icon: Sliders, onClick: onOpenScenario },
   ];
 
   const moreNav = [
     { name: 'Response & Actions', href: '#actions', icon: Siren, badge: '3 Pending', badgeColor: 'bg-red-500/10 text-red-700 border-red-500/20' },
     { name: 'Evacuation Routes', href: '#routes', icon: Route },
-    { name: 'Sensor Telemetry', href: '/degraded-state', icon: Radio },
+    { name: 'Sensor Telemetry', href: '#telemetry', icon: Radio },
     { name: 'Reports & Briefings', href: '#reports', icon: FileText },
+    { name: 'Degraded Mode (SOP Drill)', href: '/degraded-state', icon: Activity },
   ];
 
   return (
@@ -53,17 +61,9 @@ export function Sidebar() {
           {primaryNav.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center justify-between px-3 py-2 rounded-md transition-colors text-xs font-semibold group',
-                  isActive
-                    ? 'bg-slate-100 text-slate-900 border-l-4 border-slate-900 shadow-2xs font-bold'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-l-4 border-transparent'
-                )}
-              >
+
+            const content = (
+              <>
                 <div className="flex items-center gap-2.5 truncate">
                   <Icon
                     className={cn(
@@ -83,6 +83,33 @@ export function Sidebar() {
                     {item.badge}
                   </span>
                 )}
+              </>
+            );
+
+            if (item.onClick) {
+              return (
+                <button
+                  key={item.name}
+                  onClick={item.onClick}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-xs font-semibold group text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-l-4 border-transparent text-left"
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'flex items-center justify-between px-3 py-2 rounded-md transition-colors text-xs font-semibold group',
+                  isActive
+                    ? 'bg-slate-100 text-slate-900 border-l-4 border-slate-900 shadow-2xs font-bold'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-l-4 border-transparent'
+                )}
+              >
+                {content}
               </Link>
             );
           })}
@@ -169,15 +196,27 @@ export function Sidebar() {
             <div className="mt-2 pt-2 border-t border-slate-100 space-y-1 text-[11px] text-slate-600 animate-in fade-in-50">
               <div className="flex justify-between">
                 <span>Feed Status:</span>
-                <span className="font-bold text-slate-900 tabular-nums">99.8%</span>
+                <span className="font-bold text-slate-900 tabular-nums">99.8% (Live)</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Peak Rainfall:</span>
+                <span className="font-bold text-slate-900 tabular-nums">
+                  {environmentalData?.forcing?.rainfall?.peakRateMmHr != null
+                    ? `${environmentalData.forcing.rainfall.peakRateMmHr} mm/hr`
+                    : '75 mm/hr'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Peak Surge:</span>
+                <span className="font-bold text-slate-900 tabular-nums">
+                  {environmentalData?.forcing?.surge?.peakSurgeM != null
+                    ? `${environmentalData.forcing.surge.peakSurgeM} m`
+                    : '0.85 m'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Hydro Model:</span>
-                <span className="font-bold text-slate-900">v1.2 Active</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Last Run:</span>
-                <span className="font-bold text-slate-900 tabular-nums">14:24</span>
+                <span className="font-bold text-slate-900">SFINCS v2.4</span>
               </div>
             </div>
           )}
