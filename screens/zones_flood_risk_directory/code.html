@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "surface-container-low": "#f2f4f6", "secondary-fixed-dim": "#bcc7de", "tertiary-container": "#001d31", "inverse-surface": "#2d3133", "on-error": "#ffffff", "primary-fixed-dim": "#bec6e0", "secondary-container": "#d5e0f8", "outline": "#76777d", "surface-container-highest": "#e0e3e5", "surface-container-high": "#e6e8ea", "secondary": "#545f73", "surface-bright": "#f7f9fb", "on-tertiary-fixed": "#001d31", "error": "#ba1a1a", "tertiary-fixed": "#cce5ff", "on-tertiary": "#ffffff", "on-primary-container": "#7c839b", "on-secondary-fixed": "#111c2d", "on-primary": "#ffffff", "on-tertiary-fixed-variant": "#004b73", "on-primary-fixed-variant": "#3f465c", "on-secondary-fixed-variant": "#3c475a", "on-error-container": "#93000a", "surface-dim": "#d8dadc", "primary": "#000000", "on-primary-fixed": "#131b2e", "on-secondary-container": "#586377", "tertiary-fixed-dim": "#93ccff", "primary-container": "#131b2e", "on-surface": "#191c1e", "error-container": "#ffdad6", "secondary-fixed": "#d8e3fb", "inverse-on-surface": "#eff1f3", "surface-tint": "#565e74", "background": "#f7f9fb", "surface-container-lowest": "#ffffff", "surface-variant": "#e0e3e5", "tertiary": "#000000", "outline-variant": "#c6c6cd", "on-background": "#191c1e", "primary-fixed": "#dae2fd", "surface": "#f7f9fb", "on-tertiary-container": "#188ace", "surface-container": "#eceef0", "on-secondary": "#ffffff", "on-surface-variant": "#45464d", "inverse-primary": "#bec6e0" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "space-xl": "1.5rem", "space-md": "0.75rem", "margin-mobile": "0.75rem", "space-2xl": "2rem", "gutter": "1rem", "gutter-compact": "0.5rem", "space-xs": "0.25rem", "margin": "1.5rem", "space-lg": "1rem", "space-sm": "0.5rem" }, "fontFamily": { "body-lg": ["Inter"], "label-lg": ["Inter"], "headline-lg": ["Inter"], "body-sm": ["Inter"], "headline-xl-mobile": ["Inter"], "headline-xl": ["Inter"], "label-md": ["Inter"], "headline-sm": ["Inter"], "headline-md": ["Inter"], "label-sm": ["Inter"], "data-metric-lg": ["Inter"], "data-metric-md": ["Inter"], "body-md": ["Inter"] }, "fontSize": { "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "headline-xl-mobile": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600" }], "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "700" }], "data-metric-lg": ["28px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "data-metric-md": ["18px", { "lineHeight": "22px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }] } } } };</script></head><body class="bg-background font-body-md text-on-surface antialiased"><header class="fixed top-0 left-0 right-0 h-14 bg-surface-container-lowest border-b border-surface-container-highest z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-primary-container text-[22px]">shield</span><span class="font-headline-sm text-headline-sm text-primary tracking-tight">CoastShield AI</span></div><div class="h-4 w-px bg-outline-variant"></div><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-primary text-[18px]">flood</span><span class="font-label-lg text-label-lg text-primary-container font-bold">Coastal Flood Event — Mangaluru Coast</span></div></div><div class="hidden lg:flex items-center gap-space-md"><div class="flex items-center gap-space-xs bg-surface-container px-space-sm py-1 rounded"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-on-tertiary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-on-tertiary-container"></span></span><span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface">LIVE · Updated 14:26 (2 min ago)</span></div><div class="bg-surface-container-low px-space-sm py-1 rounded border border-surface-container-highest"><span class="font-label-sm text-label-sm text-secondary font-medium">Model: <strong class="text-on-surface font-semibold">v1.2</strong></span></div><div class="flex items-center bg-surface-container-low border border-surface-container-highest rounded px-space-sm py-1 text-on-surface text-label-sm font-label-sm"><span class="material-symbols-outlined text-[16px] mr-1 text-secondary">domain</span><span>EOC STATUS: FULL ACTIVATION</span></div></div><div class="flex items-center gap-space-md"><div class="relative flex items-center justify-center p-1.5 text-secondary hover:text-on-surface cursor-pointer rounded hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error text-on-error font-label-sm text-[9px] font-bold">3</span></div><div class="h-4 w-px bg-outline-variant"></div><div class="flex items-center gap-space-sm"><div class="flex flex-col text-right"><span class="font-label-md text-label-md text-on-surface">R. Shetty</span><span class="font-label-sm text-label-sm text-secondary">Duty Officer · EOC Shift 1</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><aside class="fixed left-0 top-14 bottom-0 w-[232px] bg-surface-container-lowest border-r border-surface-container-highest z-30 flex flex-col justify-between"><div class="flex flex-col pt-space-sm"><nav class="flex flex-col gap-0.5 px-space-xs" data-active-classes="bg-secondary-container text-on-secondary-fixed border-l-4 border-primary-container font-semibold"><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="overview" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">dashboard</span><span>Overview</span></div></a><a aria-current="page" class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT transition-colors bg-secondary-container text-on-secondary-fixed border-l-4 border-primary-container font-semibold" data-path="zones" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">grid_view</span><span>Zones</span></div><span class="px-1.5 py-0.5 bg-surface-container-high text-on-surface-variant rounded-DEFAULT font-label-sm text-label-sm">12</span></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="critical-facilities" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">local_hospital</span><span>Critical Facilities</span></div><span class="px-1.5 py-0.5 bg-surface-container-high text-on-surface-variant rounded-DEFAULT font-label-sm text-label-sm">7</span></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="response-actions" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">emergency_share</span><span>Response &amp; Actions</span></div><span class="px-1.5 py-0.5 bg-error-container text-on-error-container rounded-DEFAULT font-label-sm text-label-sm">3 Pending</span></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="evacuation-routes" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">alt_route</span><span>Evacuation Routes</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="sensor-telemetry" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">sensors</span><span>Sensor Telemetry</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="reports-briefings" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">description</span><span>Reports &amp; Briefings</span></div></a></nav></div><div class="p-space-sm m-space-xs mb-space-sm bg-surface-container border border-surface-container-highest rounded-lg"><div class="flex items-center justify-between pb-space-xs border-b border-surface-container-highest mb-space-xs"><span class="font-label-sm text-label-sm text-secondary uppercase">Data Engine</span><div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span><span class="font-label-sm text-label-sm text-on-surface font-semibold">ONLINE</span></div></div><div class="space-y-1 font-body-sm text-body-sm text-secondary"><div class="flex justify-between"><span>Telemetry Feed:</span><span class="font-label-sm text-label-sm text-on-surface">99.8%</span></div><div class="flex justify-between"><span>Hydro Model:</span><span class="font-label-sm text-label-sm text-on-surface">v1.2 Active</span></div><div class="flex justify-between"><span>Model Run:</span><span class="font-label-sm text-label-sm text-on-surface">14:24</span></div></div><div class="mt-space-sm pt-space-xs border-t border-surface-container-highest flex items-center justify-between"><span class="font-label-sm text-label-sm text-secondary">EOC Hotline:</span><span class="font-label-md text-label-md text-primary font-bold">1077</span></div></div></aside><div class="pl-[232px]"><main class="w-full pt-14 bg-background min-h-screen"><div class="flex flex-col w-full">
+<div class="px-space-lg py-space-md bg-surface-container-low border-b border-surface-container-highest flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+<div class="flex flex-col gap-0.5">
+<div class="flex items-center gap-space-xs">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-secondary">Operational Sector</span>
+<span class="text-outline-variant text-[12px]">•</span>
+<span class="font-label-sm text-label-sm font-semibold text-primary">Mangaluru Coast 12-Z</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">Zones</h1>
+<p class="font-body-sm text-body-sm text-secondary">
+<span class="font-semibold text-on-surface">12 zones monitored</span> · 
+        <span class="text-error font-semibold">1 critical</span> · 
+        <span class="text-[#c2410c] font-semibold">2 high</span> · 
+        <span class="text-[#854d0e] font-semibold">2 elevated</span> · 
+        <span class="text-[#0369a1] font-semibold">7 low</span> · Mangaluru Coastal Sector
+      </p>
+</div>
+<div class="flex items-center gap-space-sm flex-wrap">
+<div class="flex items-center bg-surface-container-lowest rounded-lg border border-surface-container-highest p-0.5 shadow-sm">
+<button class="flex items-center gap-1 px-space-sm py-1 rounded bg-primary-container text-on-primary font-label-sm text-label-sm" id="viewTableBtn">
+<span class="material-symbols-outlined text-[16px]">table_rows</span>
+<span>Dense Matrix</span>
+</button>
+<button class="flex items-center gap-1 px-space-sm py-1 rounded text-secondary hover:text-on-surface font-label-sm text-label-sm" id="viewSplitBtn">
+<span class="material-symbols-outlined text-[16px]">view_column</span>
+<span>Dual Mode</span>
+</button>
+</div>
+<button class="flex items-center gap-space-xs px-space-md py-1.5 rounded-lg bg-surface-container-lowest border border-surface-container-highest text-on-surface hover:bg-surface-container font-label-md text-label-md shadow-sm transition-colors" onclick="exportCSV()">
+<span class="material-symbols-outlined text-[18px] text-secondary">file_download</span>
+<span>Export Zones Matrix (CSV)</span>
+</button>
+<button class="flex items-center gap-space-xs px-space-md py-1.5 rounded-lg bg-error text-on-error hover:bg-[#b01616] font-label-md text-label-md shadow-sm transition-colors">
+<span class="material-symbols-outlined text-[18px]">broadcast_on_personal</span>
+<span>Broadcast Alert</span>
+</button>
+</div>
+</div>
+<div class="px-space-lg py-space-sm bg-surface-container-lowest border-b border-surface-container-highest flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-sm flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-2.5 top-2 text-[18px] text-secondary">search</span>
+<input class="w-full h-9 pl-9 pr-8 bg-surface-container-low border border-surface-container-highest rounded text-body-md font-body-md text-on-surface placeholder:text-secondary focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest transition-all" id="zoneSearchInput" placeholder="Search zone ID, ward name, or locality..." type="text"/>
+<span class="absolute right-2.5 top-2 text-[10px] bg-surface-container-high text-secondary px-1.5 py-0.5 rounded font-label-sm">⌘K</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm flex-wrap">
+<div class="flex items-center bg-surface-container-low p-0.5 rounded border border-surface-container-highest" id="severityFilterGroup">
+<button class="filter-btn px-2.5 py-1 text-label-sm font-label-sm rounded bg-surface-container-lowest font-bold text-on-surface shadow-xs" data-filter="ALL">ALL (12)</button>
+<button class="filter-btn px-2.5 py-1 text-label-sm font-label-sm rounded text-error hover:bg-surface-container font-medium" data-filter="CRITICAL">CRITICAL (1)</button>
+<button class="filter-btn px-2.5 py-1 text-label-sm font-label-sm rounded text-[#c2410c] hover:bg-surface-container font-medium" data-filter="HIGH">HIGH (2)</button>
+<button class="filter-btn px-2.5 py-1 text-label-sm font-label-sm rounded text-[#854d0e] hover:bg-surface-container font-medium" data-filter="ELEVATED">ELEVATED (2)</button>
+<button class="filter-btn px-2.5 py-1 text-label-sm font-label-sm rounded text-[#0369a1] hover:bg-surface-container font-medium" data-filter="LOW">LOW (7)</button>
+</div>
+<div class="h-4 w-px bg-surface-container-highest hidden sm:block"></div>
+<div class="flex items-center gap-1.5">
+<label class="font-label-sm text-label-sm text-secondary uppercase whitespace-nowrap" for="sortDropdown">Sort:</label>
+<select class="h-9 px-2.5 bg-surface-container-low border border-surface-container-highest rounded font-label-md text-label-md text-on-surface focus:outline-none focus:border-primary-container" id="sortDropdown">
+<option value="rank">Priority Rank (Highest)</option>
+<option value="probability">Flood Probability (Desc)</option>
+<option value="onset">Onset Time (Earliest)</option>
+<option value="population">Population Exposed (Desc)</option>
+</select>
+</div>
+</div>
+</div>
+<div class="p-space-lg grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
+<div class="xl:col-span-8 bg-surface-container-lowest border border-surface-container-highest rounded-lg shadow-sm overflow-hidden flex flex-col">
+<div class="px-space-md py-space-sm bg-surface-container-low border-b border-surface-container-highest flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-primary-container">table_view</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold uppercase tracking-wider">Hydro-Impact Priority Matrix</span>
+<span class="font-label-sm text-label-sm text-secondary">(Model Run 14:24 IST)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-secondary uppercase font-semibold">Tide Rising +1.42m</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse" id="zonesTable">
+<thead>
+<tr class="bg-surface-container-low text-secondary font-label-sm text-label-sm border-b border-surface-container-highest uppercase select-none">
+<th class="py-2.5 px-3 font-semibold text-center w-12">Rank</th>
+<th class="py-2.5 px-3 font-semibold min-w-[140px]">Zone &amp; Locality</th>
+<th class="py-2.5 px-3 font-semibold min-w-[110px]">Tier Alert</th>
+<th class="py-2.5 px-3 font-semibold min-w-[130px]">Flood Prob.</th>
+<th class="py-2.5 px-3 font-semibold min-w-[100px]">Depth Range</th>
+<th class="py-2.5 px-3 font-semibold min-w-[80px]">Onset</th>
+<th class="py-2.5 px-3 font-semibold min-w-[80px]">Peak</th>
+<th class="py-2.5 px-3 font-semibold min-w-[105px]">Pop. Exposed</th>
+<th class="py-2.5 px-3 font-semibold text-center w-16">Facil.</th>
+<th class="py-2.5 px-3 font-semibold text-center min-w-[90px]">4h Trend</th>
+<th class="py-2.5 px-3 font-semibold text-right pr-4">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-high font-body-sm text-body-sm text-on-surface" id="tableBody">
+<tr class="zone-row bg-surface-container-low/50 hover:bg-surface-container-high/60 cursor-pointer transition-colors border-l-4 border-error" data-severity="CRITICAL" data-zone-id="B">
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-primary-container text-on-primary font-label-sm text-label-sm font-bold">#1</span>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-label-md text-label-md text-on-surface font-bold">Zone B</div>
+<div class="text-secondary text-[11px] leading-tight">Panambur Coast</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#FEF2F2] border border-[#FCA5A5] text-error font-label-sm text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">report</span>
+                  CRITICAL
+                </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center justify-between font-label-md text-label-md font-bold text-on-surface mb-0.5">
+<span>84.7%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-error h-1.5 rounded-full" style="width: 84.7%"></div>
+</div>
+</td>
+<td class="py-2.5 px-3 font-mono text-[12px] font-semibold text-on-surface">
+                0.31–0.71 m
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-error font-bold">
+                14:30
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                15:10
+              </td>
+<td class="py-2.5 px-3">
+<span class="font-label-md text-label-md font-semibold text-on-surface">4,820</span>
+<span class="text-secondary text-[10px]">est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm font-bold text-error border border-error/20">3</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<svg class="w-20 h-5 inline-block" viewbox="0 0 80 20">
+<polyline fill="none" points="2,16 18,14 36,11 54,6 78,2" stroke="#ba1a1a" stroke-linecap="round" stroke-width="2"></polyline>
+<circle cx="78" cy="2" fill="#ba1a1a" r="2.5"></circle>
+</svg>
+</td>
+<td class="py-2.5 px-3 text-right pr-4">
+<button class="inspect-btn p-1 rounded hover:bg-surface-container-highest text-primary-container font-label-sm text-label-sm font-semibold flex items-center gap-0.5 ml-auto">
+<span>Inspect</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="zone-row hover:bg-surface-container/70 cursor-pointer transition-colors border-l-4 border-transparent" data-severity="HIGH" data-zone-id="F">
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm font-bold">#2</span>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-label-md text-label-md text-on-surface font-bold">Zone F</div>
+<div class="text-secondary text-[11px] leading-tight">Tannirbhavi</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#FFF7ED] border border-[#FDBA74] text-[#c2410c] font-label-sm text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">warning</span>
+                  HIGH
+                </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center justify-between font-label-md text-label-md font-bold text-on-surface mb-0.5">
+<span>72.0%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#c2410c] h-1.5 rounded-full" style="width: 72%"></div>
+</div>
+</td>
+<td class="py-2.5 px-3 font-mono text-[12px] font-medium text-on-surface">
+                0.22–0.55 m
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-[#c2410c] font-semibold">
+                14:50
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                15:30
+              </td>
+<td class="py-2.5 px-3">
+<span class="font-label-md text-label-md font-semibold text-on-surface">3,960</span>
+<span class="text-secondary text-[10px]">est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm font-semibold text-on-surface">2</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<svg class="w-20 h-5 inline-block" viewbox="0 0 80 20">
+<polyline fill="none" points="2,17 20,15 40,11 60,7 78,4" stroke="#c2410c" stroke-linecap="round" stroke-width="2"></polyline>
+<circle cx="78" cy="4" fill="#c2410c" r="2"></circle>
+</svg>
+</td>
+<td class="py-2.5 px-3 text-right pr-4">
+<button class="inspect-btn p-1 rounded hover:bg-surface-container text-secondary hover:text-on-surface font-label-sm text-label-sm font-semibold flex items-center gap-0.5 ml-auto">
+<span>Inspect</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="zone-row hover:bg-surface-container/70 cursor-pointer transition-colors border-l-4 border-transparent" data-severity="HIGH" data-zone-id="C">
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm font-bold">#3</span>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-label-md text-label-md text-on-surface font-bold">Zone C</div>
+<div class="text-secondary text-[11px] leading-tight">Surathkal Coastal</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#FFF7ED] border border-[#FDBA74] text-[#c2410c] font-label-sm text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">warning</span>
+                  HIGH
+                </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center justify-between font-label-md text-label-md font-bold text-on-surface mb-0.5">
+<span>61.0%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#c2410c] h-1.5 rounded-full" style="width: 61%"></div>
+</div>
+</td>
+<td class="py-2.5 px-3 font-mono text-[12px] font-medium text-on-surface">
+                0.18–0.46 m
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                15:05
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                15:45
+              </td>
+<td class="py-2.5 px-3">
+<span class="font-label-md text-label-md font-semibold text-on-surface">2,410</span>
+<span class="text-secondary text-[10px]">est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm font-semibold text-on-surface">1</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<svg class="w-20 h-5 inline-block" viewbox="0 0 80 20">
+<polyline fill="none" points="2,14 20,12 40,8 60,7 78,6" stroke="#c2410c" stroke-linecap="round" stroke-width="2"></polyline>
+<circle cx="78" cy="6" fill="#c2410c" r="2"></circle>
+</svg>
+</td>
+<td class="py-2.5 px-3 text-right pr-4">
+<button class="inspect-btn p-1 rounded hover:bg-surface-container text-secondary hover:text-on-surface font-label-sm text-label-sm font-semibold flex items-center gap-0.5 ml-auto">
+<span>Inspect</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="zone-row hover:bg-surface-container/70 cursor-pointer transition-colors border-l-4 border-transparent" data-severity="ELEVATED" data-zone-id="H">
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm font-bold">#4</span>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-label-md text-label-md text-on-surface font-bold">Zone H</div>
+<div class="text-secondary text-[11px] leading-tight">Bengre Spit</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#FEFCE8] border border-[#FDE047] text-[#854d0e] font-label-sm text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">info</span>
+                  ELEVATED
+                </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center justify-between font-label-md text-label-md font-bold text-on-surface mb-0.5">
+<span>38.0%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#854d0e] h-1.5 rounded-full" style="width: 38%"></div>
+</div>
+</td>
+<td class="py-2.5 px-3 font-mono text-[12px] font-medium text-on-surface">
+                0.08–0.25 m
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                15:40
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                16:15
+              </td>
+<td class="py-2.5 px-3">
+<span class="font-label-md text-label-md font-semibold text-on-surface">1,650</span>
+<span class="text-secondary text-[10px]">est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm font-semibold text-on-surface">1</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<svg class="w-20 h-5 inline-block" viewbox="0 0 80 20">
+<polyline fill="none" points="2,18 25,17 45,15 65,13 78,10" stroke="#854d0e" stroke-linecap="round" stroke-width="2"></polyline>
+<circle cx="78" cy="10" fill="#854d0e" r="2"></circle>
+</svg>
+</td>
+<td class="py-2.5 px-3 text-right pr-4">
+<button class="inspect-btn p-1 rounded hover:bg-surface-container text-secondary hover:text-on-surface font-label-sm text-label-sm font-semibold flex items-center gap-0.5 ml-auto">
+<span>Inspect</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="zone-row hover:bg-surface-container/70 cursor-pointer transition-colors border-l-4 border-transparent" data-severity="ELEVATED" data-zone-id="A">
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm font-bold">#5</span>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-label-md text-label-md text-on-surface font-bold">Zone A</div>
+<div class="text-secondary text-[11px] leading-tight">Ullal Estuary</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#FEFCE8] border border-[#FDE047] text-[#854d0e] font-label-sm text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">info</span>
+                  ELEVATED
+                </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center justify-between font-label-md text-label-md font-bold text-on-surface mb-0.5">
+<span>33.0%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#854d0e] h-1.5 rounded-full" style="width: 33%"></div>
+</div>
+</td>
+<td class="py-2.5 px-3 font-mono text-[12px] font-medium text-on-surface">
+                0.05–0.20 m
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                15:50
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                16:30
+              </td>
+<td class="py-2.5 px-3">
+<span class="font-label-md text-label-md font-semibold text-on-surface">1,120</span>
+<span class="text-secondary text-[10px]">est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-secondary">0</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<svg class="w-20 h-5 inline-block" viewbox="0 0 80 20">
+<polyline fill="none" points="2,18 22,17 42,16 62,14 78,12" stroke="#854d0e" stroke-linecap="round" stroke-width="2"></polyline>
+<circle cx="78" cy="12" fill="#854d0e" r="2"></circle>
+</svg>
+</td>
+<td class="py-2.5 px-3 text-right pr-4">
+<button class="inspect-btn p-1 rounded hover:bg-surface-container text-secondary hover:text-on-surface font-label-sm text-label-sm font-semibold flex items-center gap-0.5 ml-auto">
+<span>Inspect</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="zone-row hover:bg-surface-container/70 cursor-pointer transition-colors border-l-4 border-transparent" data-severity="LOW" data-zone-id="D">
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">#6</span>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-label-md text-label-md text-on-surface font-semibold">Zone D</div>
+<div class="text-secondary text-[11px] leading-tight">Kulur Bridge Sector</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#F0F9FF] border border-[#BAE6FD] text-[#0369a1] font-label-sm text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                  LOW
+                </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center justify-between font-label-md text-label-md font-semibold text-on-surface mb-0.5">
+<span>18.2%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#0369a1] h-1.5 rounded-full" style="width: 18.2%"></div>
+</div>
+</td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                &lt; 0.10 m
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                16:15
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                17:00
+              </td>
+<td class="py-2.5 px-3">
+<span class="font-label-md text-label-md text-on-surface">840</span>
+<span class="text-secondary text-[10px]">est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-secondary">0</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<svg class="w-20 h-5 inline-block" viewbox="0 0 80 20">
+<polyline fill="none" points="2,18 30,18 50,17 78,16" stroke="#0369a1" stroke-linecap="round" stroke-width="1.5"></polyline>
+</svg>
+</td>
+<td class="py-2.5 px-3 text-right pr-4">
+<button class="inspect-btn p-1 rounded hover:bg-surface-container text-secondary hover:text-on-surface font-label-sm text-label-sm font-semibold flex items-center gap-0.5 ml-auto">
+<span>Inspect</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="zone-row hover:bg-surface-container/70 cursor-pointer transition-colors border-l-4 border-transparent" data-severity="LOW" data-zone-id="E">
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">#7</span>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-label-md text-label-md text-on-surface font-semibold">Zone E</div>
+<div class="text-secondary text-[11px] leading-tight">Baikampady Industrial</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#F0F9FF] border border-[#BAE6FD] text-[#0369a1] font-label-sm text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                  LOW
+                </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center justify-between font-label-md text-label-md font-semibold text-on-surface mb-0.5">
+<span>14.5%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#0369a1] h-1.5 rounded-full" style="width: 14.5%"></div>
+</div>
+</td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                &lt; 0.10 m
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                16:30
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                17:15
+              </td>
+<td class="py-2.5 px-3">
+<span class="font-label-md text-label-md text-on-surface">1,450</span>
+<span class="text-secondary text-[10px]">est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-secondary">1</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<svg class="w-20 h-5 inline-block" viewbox="0 0 80 20">
+<polyline fill="none" points="2,19 30,18 60,18 78,17" stroke="#0369a1" stroke-linecap="round" stroke-width="1.5"></polyline>
+</svg>
+</td>
+<td class="py-2.5 px-3 text-right pr-4">
+<button class="inspect-btn p-1 rounded hover:bg-surface-container text-secondary hover:text-on-surface font-label-sm text-label-sm font-semibold flex items-center gap-0.5 ml-auto">
+<span>Inspect</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="zone-row hover:bg-surface-container/70 cursor-pointer transition-colors border-l-4 border-transparent" data-severity="LOW" data-zone-id="G">
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">#8</span>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-label-md text-label-md text-on-surface font-semibold">Zone G</div>
+<div class="text-secondary text-[11px] leading-tight">Kodialbail Urban</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#F0F9FF] border border-[#BAE6FD] text-[#0369a1] font-label-sm text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                  LOW
+                </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center justify-between font-label-md text-label-md font-semibold text-on-surface mb-0.5">
+<span>11.0%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#0369a1] h-1.5 rounded-full" style="width: 11%"></div>
+</div>
+</td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                Trace
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                17:00
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                17:40
+              </td>
+<td class="py-2.5 px-3">
+<span class="font-label-md text-label-md text-on-surface">3,200</span>
+<span class="text-secondary text-[10px]">est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-secondary">0</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<svg class="w-20 h-5 inline-block" viewbox="0 0 80 20">
+<polyline fill="none" points="2,19 40,19 60,18 78,18" stroke="#0369a1" stroke-linecap="round" stroke-width="1.5"></polyline>
+</svg>
+</td>
+<td class="py-2.5 px-3 text-right pr-4">
+<button class="inspect-btn p-1 rounded hover:bg-surface-container text-secondary hover:text-on-surface font-label-sm text-label-sm font-semibold flex items-center gap-0.5 ml-auto">
+<span>Inspect</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="zone-row hover:bg-surface-container/70 cursor-pointer transition-colors border-l-4 border-transparent" data-severity="LOW" data-zone-id="I">
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">#9</span>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-label-md text-label-md text-on-surface font-semibold">Zone I</div>
+<div class="text-secondary text-[11px] leading-tight">Bolar Ferry Point</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#F0F9FF] border border-[#BAE6FD] text-[#0369a1] font-label-sm text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                  LOW
+                </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center justify-between font-label-md text-label-md font-semibold text-on-surface mb-0.5">
+<span>8.4%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#0369a1] h-1.5 rounded-full" style="width: 8.4%"></div>
+</div>
+</td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                Trace
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                17:20
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                18:00
+              </td>
+<td class="py-2.5 px-3">
+<span class="font-label-md text-label-md text-on-surface">910</span>
+<span class="text-secondary text-[10px]">est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-secondary">0</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<svg class="w-20 h-5 inline-block" viewbox="0 0 80 20">
+<polyline fill="none" points="2,19 35,19 60,19 78,19" stroke="#0369a1" stroke-linecap="round" stroke-width="1.5"></polyline>
+</svg>
+</td>
+<td class="py-2.5 px-3 text-right pr-4">
+<button class="inspect-btn p-1 rounded hover:bg-surface-container text-secondary hover:text-on-surface font-label-sm text-label-sm font-semibold flex items-center gap-0.5 ml-auto">
+<span>Inspect</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</td>
+</tr>
+<tr class="zone-row hover:bg-surface-container/70 cursor-pointer transition-colors border-l-4 border-transparent" data-severity="LOW" data-zone-id="J">
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center w-6 h-6 rounded bg-surface-container-high text-secondary font-label-sm text-label-sm font-semibold">#10</span>
+</td>
+<td class="py-2.5 px-3">
+<div class="font-label-md text-label-md text-on-surface font-semibold">Zone J</div>
+<div class="text-secondary text-[11px] leading-tight">Kadri Hills Escarpment</div>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#F0F9FF] border border-[#BAE6FD] text-[#0369a1] font-label-sm text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                  LOW
+                </span>
+</td>
+<td class="py-2.5 px-3">
+<div class="flex items-center justify-between font-label-md text-label-md font-semibold text-on-surface mb-0.5">
+<span>5.1%</span>
+</div>
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#0369a1] h-1.5 rounded-full" style="width: 5.1%"></div>
+</div>
+</td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                Nominal
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                --:--
+              </td>
+<td class="py-2.5 px-3 font-mono text-[12px] text-secondary">
+                --:--
+              </td>
+<td class="py-2.5 px-3">
+<span class="font-label-md text-label-md text-on-surface">420</span>
+<span class="text-secondary text-[10px]">est.</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-secondary">0</span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<svg class="w-20 h-5 inline-block" viewbox="0 0 80 20">
+<line stroke="#0369a1" stroke-dasharray="2 2" stroke-width="1.5" x1="2" x2="78" y1="19" y2="19"></line>
+</svg>
+</td>
+<td class="py-2.5 px-3 text-right pr-4">
+<button class="inspect-btn p-1 rounded hover:bg-surface-container text-secondary hover:text-on-surface font-label-sm text-label-sm font-semibold flex items-center gap-0.5 ml-auto">
+<span>Inspect</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-space-md py-space-sm bg-surface-container-low border-t border-surface-container-highest flex items-center justify-between text-secondary font-label-sm text-label-sm">
+<div class="flex items-center gap-space-sm">
+<span>Showing 10 of 12 zones (2 buffer zones static)</span>
+<span class="text-outline-variant">•</span>
+<span class="flex items-center gap-1 text-on-surface font-semibold">
+<span class="material-symbols-outlined text-[14px] text-secondary">tune</span>
+            Hydro Calibration: 98.4%
+          </span>
+</div>
+<div class="flex items-center gap-1">
+<button class="px-2 py-1 rounded bg-surface-container-lowest border border-surface-container-highest text-secondary hover:text-on-surface disabled:opacity-50" disabled="">Previous</button>
+<span class="px-2 py-0.5 bg-primary-container text-on-primary rounded text-[11px] font-bold">1</span>
+<button class="px-2 py-1 rounded bg-surface-container-lowest border border-surface-container-highest text-secondary hover:text-on-surface">Next</button>
+</div>
+</div>
+</div>
+<div class="xl:col-span-4 flex flex-col gap-space-md">
+<div class="bg-surface-container-lowest border border-surface-container-highest rounded-lg shadow-sm overflow-hidden flex flex-col">
+<div class="p-space-md border-b border-surface-container-highest bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-error text-[20px]">farsight_digital</span>
+<div>
+<div class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Tactical Zone Inspector</div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold leading-tight" id="inspectorZoneTitle">Zone B — Panambur Coast</h2>
+</div>
+</div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#FEF2F2] border border-[#FCA5A5] text-error font-label-sm text-[10px] font-bold" id="inspectorBadge">
+<span class="material-symbols-outlined text-[12px]">report</span>
+            CRITICAL
+          </span>
+</div>
+<div class="p-space-md flex flex-col gap-space-md">
+<div class="relative w-full h-56 bg-surface-container-high rounded-lg overflow-hidden border border-surface-container-highest">
+<div class="w-full h-full bg-cover bg-center" data-location="Panambur Beach, Mangaluru, India" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCN-KPbU3UTNcMz7jMjoiYE-fERM1S8zj1LNt_L6KMUtU9rzWRHCkGMweipes9fs192uTISvmH4FBHtotx4Kp2OXS9MW4gAnAt-erNkCwv0BdrLmPUvjX8jKKeXxrXnKU9j3YSqJCn3mLSy5knGz-ryREKztvzT97jbQSIl7gLQVwx0ke2vyIEqBb2weKk_3MfNZdvbll9u5WJQfLBi0hbEZwA6ckbQg1mxyMo3JXo')"></div>
+<div class="absolute inset-0 bg-[#001d31]/20 pointer-events-none"></div>
+<svg class="absolute inset-0 w-full h-full pointer-events-none" preserveaspectratio="none" viewbox="0 0 320 220">
+<defs>
+<pattern height="8" id="redHatch" patterntransform="rotate(45 0 0)" patternunits="userSpaceOnUse" width="8">
+<line stroke="#DC2626" stroke-opacity="0.75" stroke-width="1.8" x1="0" x2="0" y1="0" y2="8"></line>
+</pattern>
+</defs>
+<polygon fill="url(#redHatch)" points="50,40 180,25 280,75 270,170 140,195 40,140" stroke="#DC2626" stroke-dasharray="4 2" stroke-width="2.5"></polygon>
+</svg>
+<div class="absolute top-8 left-16 group cursor-pointer">
+<div class="relative flex items-center justify-center w-6 h-6 rounded-full bg-error text-on-error shadow-md border-2 border-surface-container-lowest">
+<span class="material-symbols-outlined text-[13px]">local_hospital</span>
+</div>
+<span class="absolute left-7 top-0.5 bg-primary-container text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow">City Trauma Wing</span>
+</div>
+<div class="absolute top-24 left-36 group cursor-pointer">
+<div class="relative flex items-center justify-center w-6 h-6 rounded-full bg-primary-container text-on-primary shadow-md border-2 border-surface-container-lowest">
+<span class="material-symbols-outlined text-[13px]">electric_meter</span>
+</div>
+<span class="absolute left-7 top-0.5 bg-primary-container text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow">Substation 11kV</span>
+</div>
+<div class="absolute bottom-12 right-20 group cursor-pointer">
+<div class="relative flex items-center justify-center w-6 h-6 rounded-full bg-primary text-on-primary shadow-md border-2 border-surface-container-lowest">
+<span class="material-symbols-outlined text-[13px]">school</span>
+</div>
+<span class="absolute right-7 top-0.5 bg-primary-container text-on-primary text-[10px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow">Govt Model School (Shelter)</span>
+</div>
+<div class="absolute top-2 left-2 bg-surface-container-lowest/90 backdrop-blur-xs px-2 py-0.5 rounded border border-surface-container-highest text-[10px] font-mono text-on-surface">
+              Polygon Area: 4.82 km² · Grid 13.01N, 74.80E
+            </div>
+<div class="absolute bottom-2 right-2 flex items-center gap-1 bg-surface-container-lowest/90 px-1.5 py-0.5 rounded border border-surface-container-highest text-[10px] font-semibold text-error">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span>
+              3 Critical Infrastructure Assets at Risk
+            </div>
+</div>
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-sm text-label-sm text-secondary uppercase font-bold tracking-wider">Primary Flood Inundation Drivers</span>
+<span class="font-label-sm text-label-sm font-mono text-on-surface">Composite Score: 88/100</span>
+</div>
+<div class="space-y-2">
+<div>
+<div class="flex justify-between font-label-sm text-label-sm mb-1">
+<span class="text-on-surface font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-secondary">rainy</span> Heavy Coastal Rainfall
+                  </span>
+<span class="font-mono font-bold text-on-surface">41% weight</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-1.5">
+<div class="bg-primary-container h-1.5 rounded-full" style="width: 41%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between font-label-sm text-label-sm mb-1">
+<span class="text-on-surface font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-secondary">water</span> Astronomical High Tide Peak
+                  </span>
+<span class="font-mono font-bold text-on-surface">29% weight</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-1.5">
+<div class="bg-primary-container h-1.5 rounded-full" style="width: 29%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between font-label-sm text-label-sm mb-1">
+<span class="text-on-surface font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-secondary">landscape</span> Low Elevation Topography (0.8m MSL)
+                  </span>
+<span class="font-mono font-bold text-on-surface">19% weight</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-1.5">
+<div class="bg-primary-container h-1.5 rounded-full" style="width: 19%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between font-label-sm text-label-sm mb-1">
+<span class="text-on-surface font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-secondary">valve</span> Culvert Siltation &amp; Sluice Choke
+                  </span>
+<span class="font-mono font-bold text-on-surface">11% weight</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-1.5">
+<div class="bg-primary-container h-1.5 rounded-full" style="width: 11%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="p-space-sm bg-[#FEF2F2] border border-[#FCA5A5] rounded-lg flex flex-col gap-1.5">
+<div class="flex items-center gap-1.5 text-error font-label-sm text-label-sm font-bold uppercase tracking-wide">
+<span class="material-symbols-outlined text-[16px]">priority_high</span>
+<span>Prescribed Operational Action</span>
+</div>
+<p class="font-body-sm text-body-sm text-[#991b1b] font-medium leading-relaxed" id="actionRecommendationText">
+              Immediate deploy: Verify City Hospital access corridor via NH-66 bypass. Deploy 2 high-capacity dewatering pumps to Sluice Gate 4 immediately.
+            </p>
+<div class="flex items-center justify-between pt-1 border-t border-[#FCA5A5]/40 text-[11px] text-secondary">
+<span>Authority: NDMA SOP §4.2</span>
+<span class="font-semibold text-error">ETA to Inundation: 04 min</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-space-sm pt-1">
+<div class="p-2 bg-surface-container-low rounded border border-surface-container-highest">
+<span class="text-[10px] text-secondary uppercase font-semibold block">Max Predicted Surge</span>
+<span class="font-data-metric-md text-data-metric-md text-on-surface font-bold">0.71 m</span>
+<span class="text-[10px] text-error font-medium block">Over seawall crest</span>
+</div>
+<div class="p-2 bg-surface-container-low rounded border border-surface-container-highest">
+<span class="text-[10px] text-secondary uppercase font-semibold block">Resident Evac Status</span>
+<span class="font-data-metric-md text-data-metric-md text-on-surface font-bold">18% Compliant</span>
+<span class="text-[10px] text-[#c2410c] font-medium block">868 moved to shelter</span>
+</div>
+</div>
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<button class="w-full h-9 bg-primary-container hover:bg-[#1f2b48] text-on-primary rounded font-label-md text-label-md font-semibold flex items-center justify-center gap-space-xs transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">folder_shared</span>
+<span>View Dedicated Zone Dossier</span>
+</button>
+<button class="w-full h-8 bg-surface-container-lowest border border-surface-container-highest hover:bg-surface-container-low text-on-surface rounded font-label-sm text-label-sm font-medium flex items-center justify-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[16px] text-secondary">notifications_active</span>
+<span>Dispatch SMS Broadcast to Sector (4,820 Residents)</span>
+</button>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-surface-container-highest rounded-lg p-space-md shadow-sm flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-secondary">sensors</span>
+<span class="font-label-sm text-label-sm uppercase font-bold text-on-surface">Sector Telemetry Node Health</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">8/8 Gauges Active</span>
+</div>
+<div class="grid grid-cols-4 gap-2 text-center">
+<div class="bg-surface-container-low p-1.5 rounded border border-surface-container-highest">
+<span class="block text-[10px] text-secondary uppercase">Tide Buoy 01</span>
+<span class="font-mono text-[12px] font-bold text-error">CRIT</span>
+</div>
+<div class="bg-surface-container-low p-1.5 rounded border border-surface-container-highest">
+<span class="block text-[10px] text-secondary uppercase">Tide Buoy 02</span>
+<span class="font-mono text-[12px] font-bold text-[#c2410c]">HIGH</span>
+</div>
+<div class="bg-surface-container-low p-1.5 rounded border border-surface-container-highest">
+<span class="block text-[10px] text-secondary uppercase">Rain Stn A</span>
+<span class="font-mono text-[12px] font-bold text-error">94mm/h</span>
+</div>
+<div class="bg-surface-container-low p-1.5 rounded border border-surface-container-highest">
+<span class="block text-[10px] text-secondary uppercase">Doppler S2</span>
+<span class="font-mono text-[12px] font-bold text-on-surface">OK</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+    const zoneData = {
+      'B': {
+        title: 'Zone B — Panambur Coast',
+        badge: 'CRITICAL',
+        badgeClass: 'bg-[#FEF2F2] border-[#FCA5A5] text-error',
+        badgeIcon: 'report',
+        recommendation: 'Immediate deploy: Verify City Hospital access corridor via NH-66 bypass. Deploy 2 high-capacity dewatering pumps to Sluice Gate 4 immediately.'
+      },
+      'F': {
+        title: 'Zone F — Tannirbhavi',
+        badge: 'HIGH',
+        badgeClass: 'bg-[#FFF7ED] border-[#FDBA74] text-[#c2410c]',
+        badgeIcon: 'warning',
+        recommendation: 'Alert Ferry Terminal staff. Stand by bus evac units along Tannirbhavi Main Road. Coordinate with Coastal Security Police.'
+      },
+      'C': {
+        title: 'Zone C — Surathkal Coastal',
+        badge: 'HIGH',
+        badgeClass: 'bg-[#FFF7ED] border-[#FDBA74] text-[#c2410c]',
+        badgeIcon: 'warning',
+        recommendation: 'Pre-position earth-moving units at Light House culvert. Stage rescue rafts at NITK Beach access corridor.'
+      },
+      'H': {
+        title: 'Zone H — Bengre Spit',
+        badge: 'ELEVATED',
+        badgeClass: 'bg-[#FEFCE8] border-[#FDE047] text-[#854d0e]',
+        badgeIcon: 'info',
+        recommendation: 'Monitor Gurupura river backwater confluence. Prepare temporary barrier sandbags at fish landing harbour.'
+      },
+      'A': {
+        title: 'Zone A — Ullal Estuary',
+        badge: 'ELEVATED',
+        badgeClass: 'bg-[#FEFCE8] border-[#FDE047] text-[#854d0e]',
+        badgeIcon: 'info',
+        recommendation: 'Verify groynes stability. Maintain hourly drone check on sandbar breach threat near sea-wall breach points.'
+      },
+      'D': {
+        title: 'Zone D — Kulur Bridge Sector',
+        badge: 'LOW',
+        badgeClass: 'bg-[#F0F9FF] border-[#BAE6FD] text-[#0369a1]',
+        badgeIcon: 'check_circle',
+        recommendation: 'Routine radar surveillance. Road traffic flow normal on NH-66 bypass.'
+      },
+      'E': {
+        title: 'Zone E — Baikampady Industrial',
+        badge: 'LOW',
+        badgeClass: 'bg-[#F0F9FF] border-[#BAE6FD] text-[#0369a1]',
+        badgeIcon: 'check_circle',
+        recommendation: 'Inform chemical manufacturing units to seal lower floor hazardous store intakes.'
+      },
+      'G': {
+        title: 'Zone G — Kodialbail Urban',
+        badge: 'LOW',
+        badgeClass: 'bg-[#F0F9FF] border-[#BAE6FD] text-[#0369a1]',
+        badgeIcon: 'check_circle',
+        recommendation: 'Storm drains functioning at 45% load. Standby urban vacuum tankers.'
+      },
+      'I': {
+        title: 'Zone I — Bolar Ferry Point',
+        badge: 'LOW',
+        badgeClass: 'bg-[#F0F9FF] border-[#BAE6FD] text-[#0369a1]',
+        badgeIcon: 'check_circle',
+        recommendation: 'Netravati outflow monitoring normal. No civilian restrictions enforced.'
+      },
+      'J': {
+        title: 'Zone J — Kadri Hills Escarpment',
+        badge: 'LOW',
+        badgeClass: 'bg-[#F0F9FF] border-[#BAE6FD] text-[#0369a1]',
+        badgeIcon: 'check_circle',
+        recommendation: 'Topographic ridge safe. Monitor for minor soil slumping near NH edge.'
+      }
+    };
+
+    const rows = document.querySelectorAll('.zone-row');
+    rows.forEach(row => {
+      row.addEventListener('click', () => {
+        rows.forEach(r => {
+          r.classList.remove('border-error', 'border-[#c2410c]', 'border-[#854d0e]', 'border-[#0369a1]', 'bg-surface-container-low/50');
+          r.classList.add('border-transparent');
+        });
+
+        const zoneId = row.getAttribute('data-zone-id');
+        const info = zoneData[zoneId];
+        if (!info) return;
+
+        if (info.badge === 'CRITICAL') row.classList.add('border-error');
+        else if (info.badge === 'HIGH') row.classList.add('border-[#c2410c]');
+        else if (info.badge === 'ELEVATED') row.classList.add('border-[#854d0e]');
+        else row.classList.add('border-[#0369a1]');
+
+        row.classList.add('bg-surface-container-low/50');
+
+        document.getElementById('inspectorZoneTitle').textContent = info.title;
+        document.getElementById('actionRecommendationText').textContent = info.recommendation;
+
+        const badgeEl = document.getElementById('inspectorBadge');
+        badgeEl.className = `inline-flex items-center gap-1 px-2 py-0.5 rounded border font-label-sm text-[10px] font-bold ${info.badgeClass}`;
+        badgeEl.innerHTML = `<span class="material-symbols-outlined text-[12px]">${info.badgeIcon}</span> ${info.badge}`;
+      });
+    });
+
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterButtons.forEach(b => {
+          b.classList.remove('bg-surface-container-lowest', 'font-bold', 'text-on-surface', 'shadow-xs');
+          b.classList.add('font-medium');
+        });
+        btn.classList.add('bg-surface-container-lowest', 'font-bold', 'text-on-surface', 'shadow-xs');
+
+        const filter = btn.getAttribute('data-filter');
+        rows.forEach(r => {
+          const rowSev = r.getAttribute('data-severity');
+          if (filter === 'ALL' || rowSev === filter) {
+            r.style.display = '';
+          } else {
+            r.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    const searchInput = document.getElementById('zoneSearchInput');
+    searchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      rows.forEach(r => {
+        const text = r.textContent.toLowerCase();
+        if (text.includes(q)) {
+          r.style.display = '';
+        } else {
+          r.style.display = 'none';
+        }
+      });
+    });
+
+    function exportCSV() {
+      const headers = ['Rank', 'Zone', 'Locality', 'Severity', 'Probability', 'Depth_Range', 'Onset', 'Peak', 'Population_Exposed', 'Critical_Facilities'];
+      const dataRows = [
+        ['1', 'Zone B', 'Panambur Coast', 'CRITICAL', '84.7%', '0.31-0.71m', '14:30', '15:10', '4820', '3'],
+        ['2', 'Zone F', 'Tannirbhavi', 'HIGH', '72.0%', '0.22-0.55m', '14:50', '15:30', '3960', '2'],
+        ['3', 'Zone C', 'Surathkal', 'HIGH', '61.0%', '0.18-0.46m', '15:05', '15:45', '2410', '1'],
+        ['4', 'Zone H', 'Bengre', 'ELEVATED', '38.0%', '0.08-0.25m', '15:40', '16:15', '1650', '1'],
+        ['5', 'Zone A', 'Ullal', 'ELEVATED', '33.0%', '0.05-0.20m', '15:50', '16:30', '1120', '0'],
+        ['6', 'Zone D', 'Kulur', 'LOW', '18.2%', '<0.10m', '16:15', '17:00', '840', '0'],
+        ['7', 'Zone E', 'Baikampady', 'LOW', '14.5%', '<0.10m', '16:30', '17:15', '1450', '1'],
+        ['8', 'Zone G', 'Kodialbail', 'LOW', '11.0%', 'Trace', '17:00', '17:40', '3200', '0'],
+        ['9', 'Zone I', 'Bolar', 'LOW', '8.4%', 'Trace', '17:20', '18:00', '910', '0'],
+        ['10', 'Zone J', 'Kadri', 'LOW', '5.1%', 'Nominal', '--:--', '--:--', '420', '0']
+      ];
+      let csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...dataRows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', 'CoastShield_Mangaluru_Zones_Matrix.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</div></main></div></body></html>

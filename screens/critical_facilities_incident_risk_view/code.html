@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "surface-container-low": "#f2f4f6", "secondary-fixed-dim": "#bcc7de", "tertiary-container": "#001d31", "inverse-surface": "#2d3133", "on-error": "#ffffff", "primary-fixed-dim": "#bec6e0", "secondary-container": "#d5e0f8", "outline": "#76777d", "surface-container-highest": "#e0e3e5", "surface-container-high": "#e6e8ea", "secondary": "#545f73", "surface-bright": "#f7f9fb", "on-tertiary-fixed": "#001d31", "error": "#ba1a1a", "tertiary-fixed": "#cce5ff", "on-tertiary": "#ffffff", "on-primary-container": "#7c839b", "on-secondary-fixed": "#111c2d", "on-primary": "#ffffff", "on-tertiary-fixed-variant": "#004b73", "on-primary-fixed-variant": "#3f465c", "on-secondary-fixed-variant": "#3c475a", "on-error-container": "#93000a", "surface-dim": "#d8dadc", "primary": "#000000", "on-primary-fixed": "#131b2e", "on-secondary-container": "#586377", "tertiary-fixed-dim": "#93ccff", "primary-container": "#131b2e", "on-surface": "#191c1e", "error-container": "#ffdad6", "secondary-fixed": "#d8e3fb", "inverse-on-surface": "#eff1f3", "surface-tint": "#565e74", "background": "#f7f9fb", "surface-container-lowest": "#ffffff", "surface-variant": "#e0e3e5", "tertiary": "#000000", "outline-variant": "#c6c6cd", "on-background": "#191c1e", "primary-fixed": "#dae2fd", "surface": "#f7f9fb", "on-tertiary-container": "#188ace", "surface-container": "#eceef0", "on-secondary": "#ffffff", "on-surface-variant": "#45464d", "inverse-primary": "#bec6e0" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "space-xl": "1.5rem", "space-md": "0.75rem", "margin-mobile": "0.75rem", "space-2xl": "2rem", "gutter": "1rem", "gutter-compact": "0.5rem", "space-xs": "0.25rem", "margin": "1.5rem", "space-lg": "1rem", "space-sm": "0.5rem" }, "fontFamily": { "body-lg": ["Inter"], "label-lg": ["Inter"], "headline-lg": ["Inter"], "body-sm": ["Inter"], "headline-xl-mobile": ["Inter"], "headline-xl": ["Inter"], "label-md": ["Inter"], "headline-sm": ["Inter"], "headline-md": ["Inter"], "label-sm": ["Inter"], "data-metric-lg": ["Inter"], "data-metric-md": ["Inter"], "body-md": ["Inter"] }, "fontSize": { "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "headline-xl-mobile": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600" }], "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "700" }], "data-metric-lg": ["28px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "data-metric-md": ["18px", { "lineHeight": "22px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }] } } } };</script></head><body class="bg-background font-body-md text-on-surface antialiased"><header class="fixed top-0 left-0 right-0 h-14 bg-surface-container-lowest border-b border-surface-container-highest z-40 flex items-center justify-between px-space-lg"><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-primary-container text-[22px]">shield</span><span class="font-headline-sm text-headline-sm text-primary tracking-tight">CoastShield AI</span></div><div class="h-4 w-px bg-outline-variant"></div><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-primary text-[18px]">flood</span><span class="font-label-lg text-label-lg text-primary-container font-bold">Coastal Flood Event — Mangaluru Coast</span></div></div><div class="hidden lg:flex items-center gap-space-md"><div class="flex items-center gap-space-xs bg-surface-container px-space-sm py-1 rounded"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-on-tertiary-container opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-on-tertiary-container"></span></span><span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface">LIVE · Updated 14:26 (2 min ago)</span></div><div class="bg-surface-container-low px-space-sm py-1 rounded border border-surface-container-highest"><span class="font-label-sm text-label-sm text-secondary font-medium">Model: <strong class="text-on-surface font-semibold">v1.2</strong></span></div><div class="flex items-center bg-surface-container-low border border-surface-container-highest rounded px-space-sm py-1 text-on-surface text-label-sm font-label-sm"><span class="material-symbols-outlined text-[16px] mr-1 text-secondary">domain</span><span>EOC STATUS: FULL ACTIVATION</span></div></div><div class="flex items-center gap-space-md"><div class="relative flex items-center justify-center p-1.5 text-secondary hover:text-on-surface cursor-pointer rounded hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error text-on-error font-label-sm text-[9px] font-bold">3</span></div><div class="h-4 w-px bg-outline-variant"></div><div class="flex items-center gap-space-sm"><div class="flex flex-col text-right"><span class="font-label-md text-label-md text-on-surface">R. Shetty</span><span class="font-label-sm text-label-sm text-secondary">Duty Officer · EOC Shift 1</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><aside class="fixed left-0 top-14 bottom-0 w-[232px] bg-surface-container-lowest border-r border-surface-container-highest z-30 flex flex-col justify-between"><div class="flex flex-col pt-space-sm"><nav class="flex flex-col gap-0.5 px-space-xs" data-active-classes="bg-secondary-container text-on-secondary-fixed border-l-4 border-primary-container font-semibold"><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="overview" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">dashboard</span><span>Overview</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="zones" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">grid_view</span><span>Zones</span></div><span class="px-1.5 py-0.5 bg-surface-container-high text-on-surface-variant rounded-DEFAULT font-label-sm text-label-sm">12</span></a><a aria-current="page" class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT transition-colors bg-secondary-container text-on-secondary-fixed border-l-4 border-primary-container font-semibold" data-path="critical-facilities" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">local_hospital</span><span>Critical Facilities</span></div><span class="px-1.5 py-0.5 bg-surface-container-high text-on-surface-variant rounded-DEFAULT font-label-sm text-label-sm">7</span></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="response-actions" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">emergency_share</span><span>Response &amp; Actions</span></div><span class="px-1.5 py-0.5 bg-error-container text-on-error-container rounded-DEFAULT font-label-sm text-label-sm">3 Pending</span></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="evacuation-routes" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">alt_route</span><span>Evacuation Routes</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="sensor-telemetry" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">sensors</span><span>Sensor Telemetry</span></div></a><a class="flex items-center justify-between px-space-md py-space-sm rounded-DEFAULT text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-label-md text-label-md border-l-4 border-transparent" data-path="reports-briefings" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[18px]">description</span><span>Reports &amp; Briefings</span></div></a></nav></div><div class="p-space-sm m-space-xs mb-space-sm bg-surface-container border border-surface-container-highest rounded-lg"><div class="flex items-center justify-between pb-space-xs border-b border-surface-container-highest mb-space-xs"><span class="font-label-sm text-label-sm text-secondary uppercase">Data Engine</span><div class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span><span class="font-label-sm text-label-sm text-on-surface font-semibold">ONLINE</span></div></div><div class="space-y-1 font-body-sm text-body-sm text-secondary"><div class="flex justify-between"><span>Telemetry Feed:</span><span class="font-label-sm text-label-sm text-on-surface">99.8%</span></div><div class="flex justify-between"><span>Hydro Model:</span><span class="font-label-sm text-label-sm text-on-surface">v1.2 Active</span></div><div class="flex justify-between"><span>Model Run:</span><span class="font-label-sm text-label-sm text-on-surface">14:24</span></div></div><div class="mt-space-sm pt-space-xs border-t border-surface-container-highest flex items-center justify-between"><span class="font-label-sm text-label-sm text-secondary">EOC Hotline:</span><span class="font-label-md text-label-md text-primary font-bold">1077</span></div></div></aside><div class="pl-[232px]"><main class="w-full pt-14 bg-background min-h-screen"><div class="flex flex-col w-full">
+<!-- Command Header & Breadcrumb Stream -->
+<div class="px-space-lg pt-space-md pb-space-sm bg-surface-container-lowest shadow-sm">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-sm pb-space-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs font-label-sm text-label-sm uppercase tracking-wider text-secondary">
+<span>Operational Grid</span>
+<span>/</span>
+<span>Coastal Sector DK-04</span>
+<span>/</span>
+<span class="text-error font-bold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+            Tier-1 Hydro Watch
+          </span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight mt-0.5">Critical Facilities</h1>
+<p class="font-body-md text-body-md text-secondary">7 facilities in flood risk zones · Mangaluru Emergency Sector</p>
+</div>
+<!-- Quick Triage Metric Badges -->
+<div class="flex items-center gap-space-xs flex-wrap">
+<div class="flex items-center gap-space-xs px-space-sm py-1 bg-surface-container rounded shadow-sm">
+<span class="font-label-sm text-label-sm text-secondary uppercase">ICU Capacity</span>
+<span class="font-data-metric-md text-data-metric-md text-on-surface">142 Beds</span>
+<span class="px-1 py-0.2 bg-error text-on-error rounded font-label-sm text-[9px] uppercase">Active Watch</span>
+</div>
+<div class="flex items-center gap-space-xs px-space-sm py-1 bg-surface-container rounded shadow-sm">
+<span class="font-label-sm text-label-sm text-secondary uppercase">Shelter Avail.</span>
+<span class="font-data-metric-md text-data-metric-md text-on-surface">1,850 Cap</span>
+<span class="font-label-sm text-label-sm text-secondary">82% Operational</span>
+</div>
+<div class="flex items-center gap-space-xs px-space-sm py-1 bg-primary text-on-primary rounded shadow-sm">
+<span class="material-symbols-outlined text-[16px]">sync</span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider">Telemetry Live · Delta 12s</span>
+</div>
+</div>
+</div>
+<!-- Filter Bar & Search Utility -->
+<div class="pt-space-sm flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-space-sm">
+<!-- Filter Chips -->
+<div class="flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0" id="filterContainer">
+<button class="filter-btn active-filter px-3 py-1.5 rounded font-label-md text-label-md bg-primary-container text-on-primary transition-colors flex items-center gap-1.5 whitespace-nowrap" onclick="filterFacilities('all')">
+<span>All Facilities</span>
+<span class="px-1.5 py-0.2 bg-on-primary-container text-on-primary rounded font-label-sm text-[10px]">7</span>
+</button>
+<button class="filter-btn px-3 py-1.5 rounded font-label-md text-label-md bg-surface-container text-secondary hover:bg-surface-container-high transition-colors flex items-center gap-1.5 whitespace-nowrap" onclick="filterFacilities('medical')">
+<span>Hospitals &amp; Medical</span>
+<span class="px-1.5 py-0.2 bg-surface-container-highest text-on-surface rounded font-label-sm text-[10px]">2</span>
+</button>
+<button class="filter-btn px-3 py-1.5 rounded font-label-md text-label-md bg-surface-container text-secondary hover:bg-surface-container-high transition-colors flex items-center gap-1.5 whitespace-nowrap" onclick="filterFacilities('fire')">
+<span>Fire &amp; Rescue</span>
+<span class="px-1.5 py-0.2 bg-surface-container-highest text-on-surface rounded font-label-sm text-[10px]">1</span>
+</button>
+<button class="filter-btn px-3 py-1.5 rounded font-label-md text-label-md bg-surface-container text-secondary hover:bg-surface-container-high transition-colors flex items-center gap-1.5 whitespace-nowrap" onclick="filterFacilities('security')">
+<span>Police &amp; Security</span>
+<span class="px-1.5 py-0.2 bg-surface-container-highest text-on-surface rounded font-label-sm text-[10px]">1</span>
+</button>
+<button class="filter-btn px-3 py-1.5 rounded font-label-md text-label-md bg-surface-container text-secondary hover:bg-surface-container-high transition-colors flex items-center gap-1.5 whitespace-nowrap" onclick="filterFacilities('shelter')">
+<span>Schools &amp; Shelters</span>
+<span class="px-1.5 py-0.2 bg-surface-container-highest text-on-surface rounded font-label-sm text-[10px]">2</span>
+</button>
+<button class="filter-btn px-3 py-1.5 rounded font-label-md text-label-md bg-surface-container text-secondary hover:bg-surface-container-high transition-colors flex items-center gap-1.5 whitespace-nowrap" onclick="filterFacilities('utilities')">
+<span>Power &amp; Utilities</span>
+<span class="px-1.5 py-0.2 bg-surface-container-highest text-on-surface rounded font-label-sm text-[10px]">1</span>
+</button>
+</div>
+<!-- Search & Sort Row -->
+<div class="flex items-center gap-space-sm flex-wrap sm:flex-nowrap">
+<div class="relative flex-1 sm:w-80">
+<span class="material-symbols-outlined absolute left-2.5 top-2 text-[18px] text-secondary">search</span>
+<input class="w-full pl-8 pr-3 py-1.5 bg-surface-container-low rounded font-body-md text-body-md text-on-surface placeholder-secondary focus:outline-none focus:bg-surface-container-lowest shadow-sm" id="facilitySearch" onkeyup="handleSearch()" placeholder="Search facility name, type, or zone..." type="text"/>
+</div>
+<div class="flex items-center gap-1 bg-surface-container-low px-2 py-1.5 rounded shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-secondary">sort</span>
+<select class="bg-transparent font-label-sm text-label-sm text-on-surface focus:outline-none cursor-pointer" id="sortSelect" onchange="handleSort()">
+<option value="severity">Sort by: Severity then Onset (Earliest first)</option>
+<option value="onset">Sort by: Estimated Onset only</option>
+<option value="depth">Sort by: Predicted Depth (Peak)</option>
+<option value="zone">Sort by: Operational Zone (A-H)</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<!-- Operational Two-Column Workspace -->
+<div class="grid grid-cols-1 lg:grid-cols-10 gap-0 h-[calc(100vh-188px)] overflow-hidden">
+<!-- LEFT COLUMN: Facility Cards List (45% -> 4.5 cols = 5 cols in 11 or lg:col-span-4 lg:w-[45%]) -->
+<section class="lg:col-span-5 xl:col-span-4 h-full overflow-y-auto p-space-md space-y-space-sm bg-surface-container-low" id="facilityListPane">
+<!-- Facility Card 1 (CRITICAL - SELECTED) -->
+<article class="facility-card active-card bg-surface-container-lowest rounded shadow-md overflow-hidden transition-all relative" data-category="medical" data-facility="city-hospital" data-onset="14:40" data-severity="critical">
+<!-- Structural Left Accent Bar -->
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-error"></div>
+<div class="pl-4 pr-3.5 py-3">
+<!-- Card Header Line -->
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-error text-[18px]">local_hospital</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold tracking-tight">City Hospital</h2>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">Hospital / Level-1 Trauma Center · <span class="font-semibold text-on-surface">Zone B (Panambur Coast)</span></p>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="px-2 py-0.5 bg-error text-on-error rounded font-label-sm text-label-sm font-bold tracking-wider flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[12px]">warning</span>
+                CRITICAL
+              </span>
+<span class="font-label-sm text-label-sm text-error font-semibold">T-Minus 14 Min</span>
+</div>
+</div>
+<!-- Key Metrics Grid -->
+<div class="grid grid-cols-3 gap-2 mt-3 p-2 bg-surface-container rounded">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase">Expected Depth</span>
+<span class="font-data-metric-md text-data-metric-md text-error tracking-tight font-bold">0.4 – 0.7 m</span>
+<span class="font-body-sm text-body-sm text-secondary">Basement Sump At Risk</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase">Est. Inundation Onset</span>
+<span class="font-data-metric-md text-data-metric-md text-on-surface font-bold">14:40 hrs</span>
+<span class="font-body-sm text-body-sm text-error font-medium">(in 14 min)</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase">Peak Hydro Window</span>
+<span class="font-data-metric-md text-data-metric-md text-on-surface font-bold">15:15 hrs</span>
+<span class="font-body-sm text-body-sm text-secondary">Duration ~85m</span>
+</div>
+</div>
+<!-- Route Access Status Alert Strip -->
+<div class="mt-2.5 p-2 bg-error-container text-on-error-container rounded flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-[18px]">warning_amber</span>
+<span class="font-label-md text-label-md font-bold">⚠️ Potentially Affected</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-error-container">NH-66 North spur inundation predicted at 14:50</span>
+</div>
+<!-- Risk Rationale -->
+<div class="mt-2.5 text-secondary font-body-sm text-body-sm leading-relaxed">
+<span class="font-label-sm text-label-sm text-on-surface uppercase font-bold tracking-wider">Hydrologic Vector:</span>
+            Low surface elevation (1.8m AMSL), immediate proximity to Gurupura backwaters, local stormwater culvert discharge capacity exceeded by 210%.
+          </div>
+<!-- Active Contingency Box -->
+<div class="mt-2.5 p-2 bg-surface-container-high rounded flex items-start gap-2">
+<span class="material-symbols-outlined text-secondary text-[16px] mt-0.5">shield</span>
+<div class="font-body-sm text-body-sm text-on-surface">
+<strong class="font-label-sm text-label-sm uppercase text-secondary">Active Contingency:</strong>
+              Backup diesel power generators on ground floor elevated 0.5m pad. ICU on 2nd floor secure; ground ER triaging transfer protocols.
+            </div>
+</div>
+<!-- Operational Dispatch Trigger Actions -->
+<div class="mt-3 flex items-center justify-end gap-2 pt-2">
+<button class="px-3 py-1.5 bg-error text-on-error rounded font-label-md text-label-md font-semibold hover:bg-on-error-container transition-colors flex items-center gap-1.5 shadow-sm" onclick="triggerBarrierDeployment('City Hospital')">
+<span class="material-symbols-outlined text-[16px]">emergency</span>
+              Deploy Flood Barriers
+            </button>
+<button class="px-3 py-1.5 bg-surface-container-highest text-on-surface rounded font-label-md text-label-md font-semibold hover:bg-surface-variant transition-colors flex items-center gap-1" onclick="centerMapOn('city-hospital')">
+<span class="material-symbols-outlined text-[16px]">alt_route</span>
+              View Route Status
+            </button>
+</div>
+</div>
+</article>
+<!-- Facility Card 2 (HIGH) -->
+<article class="facility-card bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-all relative" data-category="fire" data-facility="panambur-fire" data-onset="14:55" data-severity="high">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary-container"></div>
+<div class="pl-4 pr-3.5 py-3">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[18px]">local_fire_department</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">Panambur Fire Station</h2>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">Fire &amp; Rescue Logistics · <span class="font-semibold text-on-surface">Zone B (Harbor Perimeter)</span></p>
+</div>
+<span class="px-2 py-0.5 bg-surface-container-highest text-on-surface rounded font-label-sm text-label-sm font-bold tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-primary">arrow_upward</span>
+              HIGH
+            </span>
+</div>
+<div class="grid grid-cols-3 gap-2 mt-2.5 p-2 bg-surface-container rounded">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Expected Depth</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">0.2 – 0.5 m</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Est. Onset</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">14:55 hrs</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Access Corridor</span>
+<p class="font-label-sm text-label-sm text-on-surface font-bold text-tertiary-fixed-dim bg-tertiary-container px-1 py-0.5 rounded text-center mt-1">✓ Route Clear</p>
+</div>
+</div>
+<p class="mt-2 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Rationale:</span> Surface runoff accumulation on station vehicle yard. Heavy responder deployment bays fully operational; Zodiac boats pre-staged.
+          </p>
+<div class="mt-2.5 flex justify-end gap-2">
+<button class="px-2.5 py-1 bg-surface-container text-on-surface rounded font-label-sm text-label-sm font-semibold hover:bg-surface-container-high" onclick="centerMapOn('panambur-fire')">
+              Focus Geometry
+            </button>
+</div>
+</div>
+</article>
+<!-- Facility Card 3 (HIGH) -->
+<article class="facility-card bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-all relative" data-category="shelter" data-facility="govt-school-4" data-onset="15:00" data-severity="high">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary-container"></div>
+<div class="pl-4 pr-3.5 py-3">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[18px]">night_shelter</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">Govt. Higher Primary School (Designated Shelter #4)</h2>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">School / Evacuation Shelter · <span class="font-semibold text-on-surface">Zone B</span></p>
+</div>
+<span class="px-2 py-0.5 bg-surface-container-highest text-on-surface rounded font-label-sm text-label-sm font-bold tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-primary">arrow_upward</span>
+              HIGH
+            </span>
+</div>
+<div class="grid grid-cols-4 gap-2 mt-2.5 p-2 bg-surface-container rounded">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Expected Depth</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">0.15 – 0.4 m</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Est. Onset</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">15:00 hrs</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Cap Intake</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">600 PAX</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Route Status</span>
+<p class="font-label-sm text-label-sm text-tertiary-fixed-dim bg-tertiary-container px-1 py-0.5 rounded text-center mt-1">✓ Route Clear</p>
+</div>
+</div>
+<p class="mt-2 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Rationale:</span> Ground floor courtyard vulnerable to shallow pooling. Shelter multi-purpose hall on 1st floor certified secure for displaced residents.
+          </p>
+<div class="mt-2.5 flex justify-end gap-2">
+<button class="px-2.5 py-1 bg-surface-container text-on-surface rounded font-label-sm text-label-sm font-semibold hover:bg-surface-container-high" onclick="centerMapOn('govt-school-4')">
+              Focus Geometry
+            </button>
+</div>
+</div>
+</article>
+<!-- Facility Card 4 (HIGH) -->
+<article class="facility-card bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-all relative" data-category="security" data-facility="tannirbhavi-cg" data-onset="15:10" data-severity="high">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary-container"></div>
+<div class="pl-4 pr-3.5 py-3">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[18px]">security</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">Tannirbhavi Coast Guard Station</h2>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">Security &amp; Marine Defense · <span class="font-semibold text-on-surface">Zone F (Sand Spit Sector)</span></p>
+</div>
+<span class="px-2 py-0.5 bg-surface-container-highest text-on-surface rounded font-label-sm text-label-sm font-bold tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-primary">arrow_upward</span>
+              HIGH
+            </span>
+</div>
+<div class="grid grid-cols-3 gap-2 mt-2.5 p-2 bg-surface-container rounded">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Expected Depth</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">0.25 – 0.45 m</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Est. Onset</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">15:10 hrs</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Route Access</span>
+<p class="font-label-sm text-label-sm text-error bg-error-container px-1 py-0.5 rounded text-center mt-1">⚠️ At Risk</p>
+</div>
+</div>
+<p class="mt-2 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Rationale:</span> Wave overtopping along Bengre peninsula roadway. Marine jetty operations unaffected; land bridge vulnerable after 15:30.
+          </p>
+<div class="mt-2.5 flex justify-end gap-2">
+<button class="px-2.5 py-1 bg-surface-container text-on-surface rounded font-label-sm text-label-sm font-semibold hover:bg-surface-container-high" onclick="centerMapOn('tannirbhavi-cg')">
+              Focus Geometry
+            </button>
+</div>
+</div>
+</article>
+<!-- Facility Card 5 (HIGH) -->
+<article class="facility-card bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-all relative" data-category="utilities" data-facility="surathkal-substation" data-onset="15:20" data-severity="high">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-primary-container"></div>
+<div class="pl-4 pr-3.5 py-3">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[18px]">bolt</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">Surathkal Sub-Station 110kV</h2>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">Critical Power Utility · <span class="font-semibold text-on-surface">Zone C (North Industrial Grid)</span></p>
+</div>
+<span class="px-2 py-0.5 bg-surface-container-highest text-on-surface rounded font-label-sm text-label-sm font-bold tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-primary">arrow_upward</span>
+              HIGH
+            </span>
+</div>
+<div class="grid grid-cols-3 gap-2 mt-2.5 p-2 bg-surface-container rounded">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Expected Depth</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">0.20 – 0.40 m</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Est. Onset</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">15:20 hrs</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Route Access</span>
+<p class="font-label-sm text-label-sm text-tertiary-fixed-dim bg-tertiary-container px-1 py-0.5 rounded text-center mt-1">✓ Route Clear</p>
+</div>
+</div>
+<p class="mt-2 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Rationale:</span> Switchyard drainage trenches at 88% capacity. Automated high-voltage breaker isolation staged if threshold breaches 0.45m.
+          </p>
+<div class="mt-2.5 flex justify-end gap-2">
+<button class="px-2.5 py-1 bg-surface-container text-on-surface rounded font-label-sm text-label-sm font-semibold hover:bg-surface-container-high" onclick="centerMapOn('surathkal-substation')">
+              Focus Geometry
+            </button>
+</div>
+</div>
+</article>
+<!-- Facility Card 6 (ELEVATED) -->
+<article class="facility-card bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-all relative" data-category="medical" data-facility="bengre-chc" data-onset="15:55" data-severity="elevated">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary"></div>
+<div class="pl-4 pr-3.5 py-3">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-[18px]">medical_services</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">Bengre Community Health Center</h2>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">Primary Medical Clinic · <span class="font-semibold text-on-surface">Zone H (Estuary South)</span></p>
+</div>
+<span class="px-2 py-0.5 bg-surface-container-high text-secondary rounded font-label-sm text-label-sm font-bold tracking-wider flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+              ELEVATED
+            </span>
+</div>
+<div class="grid grid-cols-3 gap-2 mt-2.5 p-2 bg-surface-container rounded">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Expected Depth</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">0.10 – 0.25 m</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Est. Onset</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">15:55 hrs</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Route Access</span>
+<p class="font-label-sm text-label-sm text-tertiary-fixed-dim bg-tertiary-container px-1 py-0.5 rounded text-center mt-1">✓ Route Clear</p>
+</div>
+</div>
+<p class="mt-2 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Rationale:</span> High tide harmonic back-flow via fishing harbor basin. Facility threshold elevated by 0.35m steps; patient triage operational.
+          </p>
+<div class="mt-2.5 flex justify-end gap-2">
+<button class="px-2.5 py-1 bg-surface-container text-on-surface rounded font-label-sm text-label-sm font-semibold hover:bg-surface-container-high" onclick="centerMapOn('bengre-chc')">
+              Focus Geometry
+            </button>
+</div>
+</div>
+</article>
+<!-- Facility Card 7 (ELEVATED - Shelter #2) -->
+<article class="facility-card bg-surface-container-lowest rounded shadow-sm hover:shadow-md transition-all relative" data-category="shelter" data-facility="st-aloysius-hall" data-onset="16:10" data-severity="elevated">
+<div class="absolute left-0 top-0 bottom-0 w-1.5 bg-secondary"></div>
+<div class="pl-4 pr-3.5 py-3">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-[18px]">domain</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">Kodialbail Community Relief Center</h2>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">Secondary Shelter Reserve · <span class="font-semibold text-on-surface">Zone A (Urban Buffer)</span></p>
+</div>
+<span class="px-2 py-0.5 bg-surface-container-high text-secondary rounded font-label-sm text-label-sm font-bold tracking-wider flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+              ELEVATED
+            </span>
+</div>
+<div class="grid grid-cols-4 gap-2 mt-2.5 p-2 bg-surface-container rounded">
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Expected Depth</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">0.05 – 0.15 m</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Est. Onset</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">16:10 hrs</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Cap Intake</span>
+<p class="font-data-metric-md text-data-metric-md text-on-surface font-semibold">1,250 PAX</p>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Route Access</span>
+<p class="font-label-sm text-label-sm text-tertiary-fixed-dim bg-tertiary-container px-1 py-0.5 rounded text-center mt-1">✓ Route Clear</p>
+</div>
+</div>
+<p class="mt-2 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">Rationale:</span> Storm drain surge capacity optimal. Standby emergency kitchen, generator units fueled for 72hr sustained operation.
+          </p>
+<div class="mt-2.5 flex justify-end gap-2">
+<button class="px-2.5 py-1 bg-surface-container text-on-surface rounded font-label-sm text-label-sm font-semibold hover:bg-surface-container-high" onclick="centerMapOn('st-aloysius-hall')">
+              Focus Geometry
+            </button>
+</div>
+</div>
+</article>
+</section>
+<!-- RIGHT COLUMN: Cartographic Tactical Map (55% width -> col-span-5 or xl:col-span-6) -->
+<section class="lg:col-span-5 xl:col-span-6 h-full flex flex-col bg-surface-container-high relative overflow-hidden">
+<!-- Spatial Map Controls & Tactical Layers Header -->
+<div class="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
+<!-- Floating Layer Toggles -->
+<div class="flex items-center gap-1.5 bg-surface-container-lowest/95 backdrop-blur-sm p-1.5 rounded shadow-md pointer-events-auto">
+<span class="font-label-sm text-label-sm text-secondary px-2 uppercase font-bold">Layers:</span>
+<button class="px-2 py-1 bg-primary text-on-primary rounded font-label-sm text-label-sm font-semibold flex items-center gap-1 transition-colors" id="toggleRoutesBtn" onclick="toggleLayer('routes')">
+<span class="material-symbols-outlined text-[14px]">alt_route</span>
+            Evacuation Corridors
+          </button>
+<button class="px-2 py-1 bg-surface-container text-on-surface rounded font-label-sm text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-1 transition-colors" id="toggleContoursBtn" onclick="toggleLayer('contours')">
+<span class="material-symbols-outlined text-[14px]">waves</span>
+            Terrain Contours
+          </button>
+<button class="px-2 py-1 bg-surface-container text-on-surface rounded font-label-sm text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-1 transition-colors" id="toggleHydroMaskBtn" onclick="toggleLayer('hydro')">
+<span class="material-symbols-outlined text-[14px]">flood</span>
+            Hydro Depth Model
+          </button>
+</div>
+<!-- Scale & Coordinate HUD -->
+<div class="bg-surface-container-lowest/95 backdrop-blur-sm px-2.5 py-1.5 rounded shadow-md flex items-center gap-3 pointer-events-auto">
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-on-surface font-bold tracking-tight">12°54'18"N · 74°49'42"E</span>
+<span class="font-label-sm text-[9px] text-secondary">DATUM: WGS84 · EPSG:4326</span>
+</div>
+<div class="h-5 w-px bg-surface-container-highest"></div>
+<div class="flex flex-col items-center">
+<span class="font-label-sm text-[9px] text-secondary uppercase font-bold">Scale</span>
+<div class="w-12 h-1 bg-on-surface relative mt-0.5">
+<span class="absolute -top-3.5 left-1/2 -translate-x-1/2 font-label-sm text-[9px] text-on-surface font-semibold">500m</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Tactical SVG Cartographic Canvas -->
+<div class="w-full flex-1 relative bg-surface-container overflow-hidden select-none" id="tacticalMapContainer">
+<!-- Cartographic Vector Surface -->
+<svg class="w-full h-full object-cover" viewbox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<!-- Water Pattern -->
+<pattern height="40" id="coastalGrid" patternunits="userSpaceOnUse" width="40">
+<path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d5e0f8" stroke-dasharray="2 2" stroke-width="0.75"></path>
+</pattern>
+<!-- Elevation Contour Pattern -->
+<lineargradient id="depthGradient" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#ba1a1a" stop-opacity="0.25"></stop>
+<stop offset="50%" stop-color="#545f73" stop-opacity="0.15"></stop>
+<stop offset="100%" stop-color="#d5e0f8" stop-opacity="0.3"></stop>
+</lineargradient>
+<!-- Water Fill Gradient -->
+<lineargradient id="seaWater" x1="0%" x2="100%" y1="0%" y2="0%">
+<stop offset="0%" stop-color="#d5e0f8"></stop>
+<stop offset="100%" stop-color="#bcc7de"></stop>
+</lineargradient>
+</defs>
+<!-- Arabian Sea (West Body) -->
+<path d="M 0,0 L 260,0 Q 240,150 250,280 Q 260,420 220,530 Q 180,620 210,700 L 0,700 Z" fill="url(#seaWater)" opacity="0.8"></path>
+<!-- Netravati & Gurupura Estuary Waterways -->
+<!-- Gurupura River entering from North-East and wrapping South -->
+<path d="M 1000,140 Q 650,150 480,180 Q 340,210 270,270 Q 245,330 250,420 Q 255,510 320,570 Q 450,600 680,630 L 700,680 Q 420,650 280,610 Q 210,540 215,410 Q 220,310 260,240 Q 340,170 510,140 Q 700,110 1000,100 Z" fill="#93ccff" opacity="0.65"></path>
+<!-- Netravati River entering from South-East -->
+<path d="M 1000,580 Q 750,560 550,580 Q 380,600 240,650 L 220,700 L 1000,700 Z" fill="#93ccff" opacity="0.6"></path>
+<!-- Background Landmass Grid -->
+<rect fill="url(#coastalGrid)" height="700" opacity="0.4" width="750" x="250" y="0"></rect>
+<!-- Elevation Contours (2m, 5m, 10m AMSL) -->
+<g id="terrainContoursLayer" opacity="0.7">
+<path d="M 280,0 Q 320,180 340,300 Q 360,460 310,600 L 330,700" fill="none" stroke="#76777d" stroke-dasharray="4 3" stroke-width="1"></path>
+<path d="M 390,0 Q 430,220 460,340 Q 480,500 420,700" fill="none" stroke="#76777d" stroke-dasharray="6 4" stroke-width="1.2"></path>
+<path d="M 520,0 Q 560,250 580,380 Q 610,540 570,700" fill="none" stroke="#76777d" stroke-dasharray="8 4" stroke-width="1.5"></path>
+<text fill="#545f73" font-family="Inter" font-size="9" font-weight="600" x="345" y="120">+2.0m</text>
+<text fill="#545f73" font-family="Inter" font-size="9" font-weight="600" x="465" y="160">+5.0m</text>
+<text fill="#545f73" font-family="Inter" font-size="9" font-weight="600" x="585" y="200">+10.0m</text>
+</g>
+<!-- Zone Risk Polygons -->
+<!-- Zone B Polygon (Critical Panambur Coastal Basin) -->
+<polygon fill="#ba1a1a" fill-opacity="0.14" points="260,140 450,150 490,320 330,370 260,310" stroke="#ba1a1a" stroke-dasharray="4 2" stroke-width="1.5"></polygon>
+<text fill="#ba1a1a" font-family="Inter" font-size="12" font-weight="700" letter-spacing="1" x="330" y="175">ZONE B (PANAMBUR)</text>
+<!-- Zone F Polygon (Tannirbhavi Spit) -->
+<polygon fill="#131b2e" fill-opacity="0.12" points="215,310 260,310 250,520 200,530" stroke="#131b2e" stroke-dasharray="3 3" stroke-width="1.5"></polygon>
+<text fill="#131b2e" font-family="Inter" font-size="10" font-weight="700" x="210" y="440">ZONE F</text>
+<!-- Zone C Polygon (Surathkal Industrial) -->
+<polygon fill="#131b2e" fill-opacity="0.08" points="310,20 620,10 650,140 420,140" stroke="#131b2e" stroke-width="1"></polygon>
+<text fill="#191c1e" font-family="Inter" font-size="11" font-weight="700" x="460" y="55">ZONE C (SURATHKAL)</text>
+<!-- Zone H Polygon (Bengre Estuary) -->
+<polygon fill="#545f73" fill-opacity="0.1" points="220,530 330,550 360,650 240,680" stroke="#545f73" stroke-width="1"></polygon>
+<text fill="#545f73" font-family="Inter" font-size="10" font-weight="700" x="260" y="620">ZONE H</text>
+<!-- Zone A Polygon (Inland Buffer) -->
+<polygon fill="#131b2e" fill-opacity="0.05" points="500,260 880,240 850,520 480,520" stroke="#131b2e" stroke-width="1"></polygon>
+<text fill="#545f73" font-family="Inter" font-size="11" font-weight="700" x="640" y="320">ZONE A (KODIALBAIL BUFFER)</text>
+<!-- Major Highways & Evacuation Corridors -->
+<!-- NH-66 Corridor -->
+<path d="M 440,0 L 410,180 L 390,260 L 380,360 L 410,520 L 430,700" fill="none" stroke="#131b2e" stroke-width="3.5"></path>
+<!-- Beach Road Bypass -->
+<path d="M 330,120 L 320,240 L 300,380 L 340,490 L 380,520" fill="none" stroke="#188ace" stroke-dasharray="6 3" stroke-width="2.5"></path>
+<!-- Inundated Spur Indicator along NH-66 -->
+<path d="M 405,220 L 395,290" fill="none" stroke="#ba1a1a" stroke-dasharray="2 3" stroke-linecap="round" stroke-width="5"></path>
+<text fill="#ba1a1a" font-family="Inter" font-size="9" font-weight="700" x="415" y="270">NH-66 BREACH SPOT (14:50)</text>
+<!-- Evacuation Route Arrows & Symbols Layer -->
+<g id="evacuationRoutesLayer">
+<!-- Alternative Bypass Route Animation -->
+<path d="M 370,250 L 320,260 L 305,360 L 350,450" fill="none" marker-end="url(#arrow)" stroke="#188ace" stroke-width="2"></path>
+<text fill="#188ace" font-family="Inter" font-size="9" font-weight="700" x="270" y="325">ACTIVE BYPASS: BEACH RD</text>
+</g>
+<!-- ================= MAP FACILITY MARKERS ================= -->
+<!-- MARKER 1: City Hospital (CRITICAL - Active Red Pulsing Ring & Callout Box) -->
+<g class="cursor-pointer" id="marker-city-hospital" onclick="selectFacilityCard('city-hospital')">
+<!-- Pulsing alert rings -->
+<circle cx="370" cy="250" fill="#ba1a1a" fill-opacity="0.25" r="28">
+<animate attributename="r" dur="2.2s" repeatcount="indefinite" values="16;34;16"></animate>
+<animate attributename="fill-opacity" dur="2.2s" repeatcount="indefinite" values="0.4;0.05;0.4"></animate>
+</circle>
+<circle cx="370" cy="250" fill="#ba1a1a" r="16" stroke="#ffffff" stroke-width="2.5"></circle>
+<!-- Hospital Cross Icon -->
+<path d="M 367,243 L 373,243 L 373,247 L 377,247 L 377,253 L 373,253 L 373,257 L 367,257 L 367,253 L 363,253 L 363,247 L 367,247 Z" fill="#ffffff"></path>
+<!-- Live Open Callout Box for City Hospital -->
+<g transform="translate(395, 175)">
+<rect fill="#ffffff" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.15))" height="100" rx="4" stroke="#ba1a1a" stroke-width="1.5" width="230" x="0" y="0"></rect>
+<rect fill="#ba1a1a" height="22" rx="4" width="230" x="0" y="0"></rect>
+<text fill="#ffffff" font-family="Inter" font-size="10" font-weight="700" letter-spacing="0.5" x="8" y="15">CITY HOSPITAL · SIMULATION ACTIVE</text>
+<text fill="#191c1e" font-family="Inter" font-size="11" font-weight="700" x="8" y="38">Onset in 14 min (14:40)</text>
+<text fill="#545f73" font-family="Inter" font-size="10" x="8" y="52">Predicted Crest: 0.62m at 15:15</text>
+<!-- Route Sim Line in Callout -->
+<rect fill="#ffdad6" height="20" rx="2" width="214" x="8" y="60"></rect>
+<text fill="#93000a" font-family="Inter" font-size="9" font-weight="700" x="14" y="74">NH-66 Cutoff @ 14:50 · Reroute via Beach Rd</text>
+<text fill="#188ace" font-family="Inter" font-size="9" font-weight="600" x="8" y="92">Click to deploy primary barrier teams →</text>
+</g>
+</g>
+<!-- MARKER 2: Panambur Fire Station -->
+<g class="cursor-pointer" id="marker-panambur-fire" onclick="selectFacilityCard('panambur-fire')" transform="translate(350, 190)">
+<circle cx="0" cy="0" fill="#131b2e" r="14" stroke="#ffffff" stroke-width="2"></circle>
+<!-- Flame Icon (Material Flame replica) -->
+<path d="M-3,4 C-5,2 -5,-2 -2,-6 C-1,-4 0,-3 1,-2 C2,-4 2,-7 1,-9 C4,-6 6,-2 4,3 C3,6 -1,7 -3,4 Z" fill="#ffffff"></path>
+<rect fill="#ffffff" height="24" rx="2" stroke="#e0e3e5" stroke-width="1" width="130" x="18" y="-12"></rect>
+<text fill="#191c1e" font-family="Inter" font-size="10" font-weight="700" x="24" y="4">Panambur Fire Stn</text>
+</g>
+<!-- MARKER 3: Govt School / Designated Shelter #4 -->
+<g class="cursor-pointer" id="marker-govt-school-4" onclick="selectFacilityCard('govt-school-4')" transform="translate(420, 310)">
+<circle cx="0" cy="0" fill="#131b2e" r="14" stroke="#ffffff" stroke-width="2"></circle>
+<!-- School / Shield Icon -->
+<path d="M 0,-7 L 6,-3 L 6,2 C 6,5 3,7 0,8 C -3,7 -6,5 -6,2 L -6,-3 Z" fill="#ffffff"></path>
+<rect fill="#ffffff" height="24" rx="2" stroke="#e0e3e5" stroke-width="1" width="145" x="18" y="-12"></rect>
+<text fill="#191c1e" font-family="Inter" font-size="10" font-weight="700" x="24" y="4">Govt Primary Shelter #4</text>
+</g>
+<!-- MARKER 4: Tannirbhavi Coast Guard -->
+<g class="cursor-pointer" id="marker-tannirbhavi-cg" onclick="selectFacilityCard('tannirbhavi-cg')" transform="translate(230, 440)">
+<circle cx="0" cy="0" fill="#131b2e" r="14" stroke="#ffffff" stroke-width="2"></circle>
+<!-- Security Anchor / Shield -->
+<circle cx="0" cy="-2" fill="none" r="3" stroke="#ffffff" stroke-width="1.5"></circle>
+<path d="M -5,3 L 5,3 M 0,0 L 0,6 M -4,6 C -2,8 2,8 4,6" fill="none" stroke="#ffffff" stroke-width="1.5"></path>
+<rect fill="#ffffff" height="24" rx="2" stroke="#e0e3e5" stroke-width="1" width="125" x="-140" y="-12"></rect>
+<text fill="#191c1e" font-family="Inter" font-size="10" font-weight="700" x="-132" y="4">Tannirbhavi CG Stn</text>
+</g>
+<!-- MARKER 5: Surathkal Sub-Station 110kV -->
+<g class="cursor-pointer" id="marker-surathkal-substation" onclick="selectFacilityCard('surathkal-substation')" transform="translate(480, 80)">
+<circle cx="0" cy="0" fill="#131b2e" r="14" stroke="#ffffff" stroke-width="2"></circle>
+<!-- Lightning Bolt -->
+<polygon fill="#ffffff" points="-2,-7 3,-7 0,-1 4,-1 -3,7 -1,1 -4,1"></polygon>
+<rect fill="#ffffff" height="24" rx="2" stroke="#e0e3e5" stroke-width="1" width="145" x="18" y="-12"></rect>
+<text fill="#191c1e" font-family="Inter" font-size="10" font-weight="700" x="24" y="4">Surathkal Sub-Stn 110kV</text>
+</g>
+<!-- MARKER 6: Bengre CHC -->
+<g class="cursor-pointer" id="marker-bengre-chc" onclick="selectFacilityCard('bengre-chc')" transform="translate(280, 600)">
+<circle cx="0" cy="0" fill="#545f73" r="13" stroke="#ffffff" stroke-width="2"></circle>
+<path d="M -2,-5 L 2,-5 L 2,-2 L 5,-2 L 5,2 L 2,2 L 2,5 L -2,5 L -2,2 L -5,2 L -5,-2 L -2,-2 Z" fill="#ffffff"></path>
+<rect fill="#ffffff" height="24" rx="2" stroke="#e0e3e5" stroke-width="1" width="130" x="18" y="-12"></rect>
+<text fill="#191c1e" font-family="Inter" font-size="10" font-weight="700" x="24" y="4">Bengre Health Center</text>
+</g>
+<!-- MARKER 7: Kodialbail Relief Center -->
+<g class="cursor-pointer" id="marker-st-aloysius-hall" onclick="selectFacilityCard('st-aloysius-hall')" transform="translate(680, 360)">
+<circle cx="0" cy="0" fill="#545f73" r="13" stroke="#ffffff" stroke-width="2"></circle>
+<!-- Shelter Icon -->
+<polygon fill="#ffffff" points="0,-6 6,0 4,0 4,6 -4,6 -4,0 -6,0"></polygon>
+<rect fill="#ffffff" height="24" rx="2" stroke="#e0e3e5" stroke-width="1" width="150" x="18" y="-12"></rect>
+<text fill="#191c1e" font-family="Inter" font-size="10" font-weight="700" x="24" y="4">Kodialbail Relief Center</text>
+</g>
+</svg>
+<!-- Dynamic Facility Legend (Bottom Left of Canvas) -->
+<div class="absolute bottom-16 left-3 bg-surface-container-lowest/95 backdrop-blur-sm p-2.5 rounded shadow-md z-20 space-y-1.5 font-label-sm text-label-sm">
+<div class="font-bold text-on-surface uppercase text-[10px] tracking-wider pb-1 border-b border-surface-container-highest">Facility Categorization</div>
+<div class="flex items-center gap-2 text-secondary">
+<span class="w-3.5 h-3.5 rounded-full bg-error flex items-center justify-center text-white text-[9px] font-bold">+</span>
+<span>Hospital / Medical Facility</span>
+</div>
+<div class="flex items-center gap-2 text-secondary">
+<span class="w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center text-white text-[9px] font-bold">▲</span>
+<span>Fire &amp; Emergency Stations</span>
+</div>
+<div class="flex items-center gap-2 text-secondary">
+<span class="w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center text-white text-[9px] font-bold">⌂</span>
+<span>Civil Protection Shelters</span>
+</div>
+<div class="flex items-center gap-2 text-secondary">
+<span class="w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center text-white text-[9px] font-bold">⚡</span>
+<span>Critical Grid / Utility Nodes</span>
+</div>
+<div class="flex items-center gap-2 text-secondary pt-1 border-t border-surface-container-highest">
+<span class="w-4 h-1 bg-error"></span>
+<span class="text-error font-semibold">At-Risk Inundation Corridor</span>
+</div>
+</div>
+<!-- Zoom / Recenter HUD Buttons (Bottom Right of Canvas) -->
+<div class="absolute bottom-16 right-3 flex flex-col gap-1 z-20">
+<button class="w-8 h-8 bg-surface-container-lowest hover:bg-surface-container text-on-surface rounded shadow-md flex items-center justify-center font-bold" onclick="zoomMap(1.15)" title="Zoom In">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+<button class="w-8 h-8 bg-surface-container-lowest hover:bg-surface-container text-on-surface rounded shadow-md flex items-center justify-center font-bold" onclick="zoomMap(0.85)" title="Zoom Out">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<button class="w-8 h-8 bg-surface-container-lowest hover:bg-surface-container text-on-surface rounded shadow-md flex items-center justify-center font-bold" onclick="resetMap()" title="Recenter View">
+<span class="material-symbols-outlined text-[18px]">crop_free</span>
+</button>
+</div>
+</div>
+<!-- Live Route Status Advisory Bar (Pinned to Map Bottom) -->
+<footer class="h-14 bg-surface-container-lowest px-space-md flex items-center justify-between z-30 shadow-md">
+<div class="flex items-center gap-2.5 overflow-hidden">
+<span class="p-1.5 bg-error-container text-error rounded flex items-center justify-center animate-pulse">
+<span class="material-symbols-outlined text-[18px]">alt_route</span>
+</span>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-label-sm text-label-sm text-error font-bold uppercase tracking-wider">Access Advisory DK-ROUTE-01:</span>
+<span class="font-body-sm text-body-sm text-on-surface font-semibold truncate">
+                Access corridor NH-66 to City Hospital at risk in 24 min — Alternative bypass via Beach Road recommended.
+              </span>
+</div>
+<span class="font-label-sm text-[10px] text-secondary">EOC Traffic Command: Traffic diverted at Panambur Junction Circle</span>
+</div>
+</div>
+<!-- Action Dispatch Confirmation -->
+<div class="flex items-center gap-2 flex-shrink-0">
+<button class="px-3 py-1.5 bg-primary text-on-primary rounded font-label-md text-label-md font-semibold hover:bg-on-secondary-fixed transition-colors flex items-center gap-1 shadow-sm" onclick="dispatchTrafficAdvisory()">
+<span class="material-symbols-outlined text-[16px]">broadcast_on_home</span>
+            Transmit Route Advisory
+          </button>
+</div>
+</footer>
+</section>
+</div>
+</div>
+<script>
+  // Filter Facility Category Functionality
+  function filterFacilities(category) {
+    const cards = document.querySelectorAll('.facility-card');
+    const buttons = document.querySelectorAll('.filter-btn');
+
+    // Update active button state
+    buttons.forEach(btn => {
+      btn.classList.remove('bg-primary-container', 'text-on-primary');
+      btn.classList.add('bg-surface-container', 'text-secondary');
+    });
+
+    // Mark current target button as active
+    event.currentTarget.classList.remove('bg-surface-container', 'text-secondary');
+    event.currentTarget.classList.add('bg-primary-container', 'text-on-primary');
+
+    cards.forEach(card => {
+      const cardCategory = card.getAttribute('data-category');
+      if (category === 'all' || cardCategory === category) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  // Live Instant Text Search Filter
+  function handleSearch() {
+    const query = document.getElementById('facilitySearch').value.toLowerCase();
+    const cards = document.querySelectorAll('.facility-card');
+
+    cards.forEach(card => {
+      const text = card.innerText.toLowerCase();
+      if (text.includes(query)) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  // Multi-attribute Sorting Handler
+  function handleSort() {
+    const sortVal = document.getElementById('sortSelect').value;
+    const container = document.getElementById('facilityListPane');
+    const cards = Array.from(document.querySelectorAll('.facility-card'));
+
+    cards.sort((a, b) => {
+      if (sortVal === 'severity') {
+        const rank = { critical: 1, high: 2, elevated: 3 };
+        return rank[a.getAttribute('data-severity')] - rank[b.getAttribute('data-severity')];
+      } else if (sortVal === 'onset') {
+        return a.getAttribute('data-onset').localeCompare(b.getAttribute('data-onset'));
+      }
+      return 0;
+    });
+
+    cards.forEach(card => container.appendChild(card));
+  }
+
+  // Interactive Card Selection from Map & Vice Versa
+  function selectFacilityCard(facilityId) {
+    const cards = document.querySelectorAll('.facility-card');
+    cards.forEach(c => {
+      c.classList.remove('active-card', 'shadow-md');
+      c.classList.add('shadow-sm');
+    });
+
+    const targetCard = document.querySelector(`[data-facility="${facilityId}"]`);
+    if (targetCard) {
+      targetCard.classList.add('active-card', 'shadow-md');
+      targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function centerMapOn(facilityId) {
+    selectFacilityCard(facilityId);
+    const marker = document.getElementById(`marker-${facilityId}`);
+    if (marker) {
+      marker.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }
+
+  // Layer Toggles
+  function toggleLayer(layerType) {
+    if (layerType === 'routes') {
+      const el = document.getElementById('evacuationRoutesLayer');
+      const btn = document.getElementById('toggleRoutesBtn');
+      const isVisible = el.getAttribute('opacity') !== '0';
+      el.setAttribute('opacity', isVisible ? '0' : '1');
+      btn.classList.toggle('bg-primary');
+      btn.classList.toggle('text-on-primary');
+      btn.classList.toggle('bg-surface-container');
+      btn.classList.toggle('text-on-surface');
+    } else if (layerType === 'contours') {
+      const el = document.getElementById('terrainContoursLayer');
+      const btn = document.getElementById('toggleContoursBtn');
+      const isVisible = el.getAttribute('opacity') !== '0';
+      el.setAttribute('opacity', isVisible ? '0' : '0.7');
+      btn.classList.toggle('bg-primary');
+      btn.classList.toggle('text-on-primary');
+      btn.classList.toggle('bg-surface-container');
+      btn.classList.toggle('text-on-surface');
+    }
+  }
+
+  // Operational Action Dispatches
+  function triggerBarrierDeployment(facilityName) {
+    alert(`[EOC DEPLOYMENT ORDER ACTIVATED]\n\nDispatching Mobile Hydrologic Inflatable Barrier Units (Pack 4) to: ${facilityName}.\nEstimated Deployment ETA: 8 minutes.\nCrew Frequency: 156.800 MHz.`);
+  }
+
+  function dispatchTrafficAdvisory() {
+    alert(`[RADIO & POLICE NOTIFICATION SENT]\n\nAdvisory DK-ROUTE-01 transmitted to Mangaluru Traffic HQ and public SMS alert corridor for NH-66 North spur diversion.`);
+  }
+
+  // Map Zoom Simulators
+  let currentZoom = 1;
+  function zoomMap(factor) {
+    currentZoom *= factor;
+    const svg = document.querySelector('#tacticalMapContainer svg');
+    svg.style.transform = `scale(${currentZoom})`;
+    svg.style.transformOrigin = 'center center';
+    svg.style.transition = 'transform 0.25s ease-out';
+  }
+
+  function resetMap() {
+    currentZoom = 1;
+    const svg = document.querySelector('#tacticalMapContainer svg');
+    svg.style.transform = 'scale(1)';
+  }
+</script></main></div></body></html>
