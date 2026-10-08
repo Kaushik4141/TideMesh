@@ -1,4 +1,4 @@
-# CoastShield AI
+# TideMesh
 ## Product Context & Development Brief
 
 > **Purpose:** This file is the canonical product context for the codebase.  
@@ -8,7 +8,7 @@
 
 ## 1. Product Overview
 
-**CoastShield AI** is an AI-powered **coastal flood intelligence and emergency response platform**.
+**TideMesh** is an AI-powered **coastal flood intelligence and emergency response platform**.
 
 The product is designed to answer four practical questions:
 
@@ -46,7 +46,7 @@ Traditional warnings often stop at broad statements such as:
 
 That is not enough for a citizen, emergency responder, or municipal authority to make a timely decision.
 
-CoastShield AI should instead provide:
+TideMesh should instead provide:
 
 - Location-specific flood probability
 - Expected flood onset time
@@ -708,7 +708,7 @@ Review prediction confidence
 
 ```text
 +------------------------------------------------+
-| COASTSHIELD AI                                 |
+| TIDEMESH                                       |
 |                                                |
 | 📍 Zone B                                      |
 |                                                |
@@ -733,7 +733,7 @@ Review prediction confidence
 
 ```text
 +------------------------------------------------+
-| COASTSHIELD COMMAND CENTER             ● LIVE  |
+| TIDEMESH COMMAND CENTER                ● LIVE  |
 +-------------------------------+----------------+
 |                               | PRIORITY       |
 |         LIVE FLOOD MAP        |                |
@@ -1104,7 +1104,7 @@ This should feel like a real incident unfolding rather than a collection of disc
 
 # 18. Product Differentiation
 
-CoastShield AI should differentiate itself through the combination of:
+TideMesh should differentiate itself through the combination of:
 
 ### 1. Compound flood modeling
 
@@ -1271,7 +1271,7 @@ The final product should make a user feel:
 
 ## 24. Final Product Statement
 
-**CoastShield AI is a compound coastal flood intelligence platform that transforms live environmental and geospatial data into neighborhood-level predictions, impact maps, explainable risk, emergency priorities, safe routing, and actionable alerts for citizens, responders, and authorities.**
+**TideMesh is a compound coastal flood intelligence platform that transforms live environmental and geospatial data into neighborhood-level predictions, impact maps, explainable risk, emergency priorities, safe routing, and actionable alerts for citizens, responders, and authorities.**
 
 ### Core promise
 
