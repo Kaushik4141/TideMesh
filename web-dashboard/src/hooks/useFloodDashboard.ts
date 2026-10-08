@@ -137,11 +137,28 @@ export function useFloodDashboard() {
     return activeTimestep?.floodExtent || null;
   }, [activeTimestep]);
 
+  // Dynamic playback toggle with instant feedback
+  const togglePlay = useCallback(() => {
+    setIsPlaying((prev) => {
+      const nextPlaying = !prev;
+      return nextPlaying;
+    });
+    if (!isPlaying) {
+      setCurrentTime((curr) => {
+        const idx = availableTimestamps.indexOf(curr);
+        if (idx === -1 || idx >= availableTimestamps.length - 1) {
+          return availableTimestamps[0];
+        }
+        return availableTimestamps[idx + 1];
+      });
+    }
+  }, [isPlaying, availableTimestamps]);
+
   // Playback timer loop
   useEffect(() => {
     if (!isPlaying || availableTimestamps.length === 0) return;
 
-    const intervalMs = playbackSpeed === 5 ? 400 : playbackSpeed === 2 ? 800 : 1600;
+    const intervalMs = playbackSpeed === 5 ? 250 : playbackSpeed === 2 ? 500 : 1000;
     const interval = setInterval(() => {
       setCurrentTime((prev) => {
         const idx = availableTimestamps.indexOf(prev);
@@ -259,7 +276,7 @@ export function useFloodDashboard() {
         acknowledgeCurrentZone();
       } else if (e.code === 'Space') {
         e.preventDefault();
-        setIsPlaying((prev) => !prev);
+        togglePlay();
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         stepForward();
@@ -277,7 +294,7 @@ export function useFloodDashboard() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectZone, acknowledgeCurrentZone, stepForward, stepBackward]);
+  }, [selectZone, acknowledgeCurrentZone, stepForward, stepBackward, togglePlay]);
 
   return {
     // Data
@@ -298,6 +315,7 @@ export function useFloodDashboard() {
     availableTimestamps,
     isPlaying,
     setIsPlaying,
+    togglePlay,
     playbackSpeed,
     setPlaybackSpeed,
     stepForward,

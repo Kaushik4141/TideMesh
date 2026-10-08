@@ -15,8 +15,70 @@ import {
   TriangleAlert,
   AlertCircle,
 } from 'lucide-react';
-import type { ZoneData, CriticalFacility } from '@/types/dashboard';
+import type { ZoneData, CriticalFacility, SeverityLevel } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
+
+const ZONE_DEFINITIONS: Array<{
+  id: string;
+  name: string;
+  points: string;
+  labelPos: { cx?: number; cy?: number; x: number; y: number };
+}> = [
+  { id: 'B', name: 'Zone B', points: '255,30 420,35 435,175 270,170', labelPos: { cx: 282, cy: 50, x: 292, y: 54 } },
+  { id: 'F', name: 'Zone F', points: '280,185 450,195 440,245 285,240', labelPos: { cx: 332, cy: 216, x: 341, y: 220 } },
+  { id: 'C', name: 'Zone C', points: '230,270 355,270 360,420 220,425', labelPos: { cx: 262, cy: 346, x: 271, y: 350 } },
+  { id: 'H', name: 'Zone H', points: '370,250 480,230 480,350 365,360', labelPos: { cx: 395, cy: 301, x: 404, y: 305 } },
+  { id: 'A', name: 'Zone A', points: '260,20 440,30 460,150 280,165', labelPos: { cx: 340, cy: 86, x: 349, y: 90 } },
+  { id: 'D', name: 'Zone D', points: '460,50 630,40 650,135 480,150', labelPos: { x: 540, y: 95 } },
+  { id: 'E', name: 'Zone E', points: '640,40 820,30 840,140 660,135', labelPos: { x: 730, y: 85 } },
+  { id: 'G', name: 'Zone G', points: '490,225 650,215 670,330 495,310', labelPos: { x: 560, y: 275 } },
+  { id: 'I', name: 'Zone I', points: '680,210 880,220 890,340 680,330', labelPos: { x: 760, y: 275 } },
+  { id: 'J', name: 'Zone J', points: '500,340 700,335 690,450 490,440', labelPos: { x: 580, y: 390 } },
+  { id: 'K', name: 'Zone K', points: '710,345 890,350 880,480 700,460', labelPos: { x: 780, y: 415 } },
+  { id: 'L', name: 'Zone L', points: '480,510 680,500 670,570 470,570', labelPos: { x: 560, y: 545 } },
+];
+
+function getZoneStyle(severity: SeverityLevel = 'LOW', isSelected: boolean = false) {
+  switch (severity) {
+    case 'CRITICAL':
+      return {
+        fill: 'rgba(220, 38, 38, 0.28)',
+        stroke: '#DC2626',
+        strokeWidth: isSelected ? 3 : 2,
+        strokeDasharray: undefined,
+        hasHatch: true,
+        dotColor: '#DC2626',
+      };
+    case 'HIGH':
+      return {
+        fill: 'rgba(249, 115, 22, 0.3)',
+        stroke: '#EA580C',
+        strokeWidth: isSelected ? 2.5 : 1.5,
+        strokeDasharray: undefined,
+        hasHatch: false,
+        dotColor: '#EA580C',
+      };
+    case 'ELEVATED':
+      return {
+        fill: 'rgba(234, 179, 8, 0.25)',
+        stroke: '#CA8A04',
+        strokeWidth: isSelected ? 2.5 : 1.5,
+        strokeDasharray: undefined,
+        hasHatch: false,
+        dotColor: '#CA8A04',
+      };
+    case 'LOW':
+    default:
+      return {
+        fill: 'none',
+        stroke: '#64748B',
+        strokeWidth: isSelected ? 2 : 1.5,
+        strokeDasharray: '4,4',
+        hasHatch: false,
+        dotColor: undefined,
+      };
+  }
+}
 
 interface FloodMapProps {
   zones: ZoneData[];
@@ -182,134 +244,34 @@ export function FloodMap({
           <path d="M 235,320 L 365,340" />
         </g>
 
-        {/* 4. Zone Polygons (Strictly ~30% fills, 1.5px outline, hatch only on CRITICAL) */}
+        {/* 4. Dynamic Zone Polygons (Driven by real simulation state per active timestep) */}
+        {ZONE_DEFINITIONS.map((def) => {
+          const zoneData = zones.find((z) => z.id === def.id);
+          const severity = zoneData?.severity || 'LOW';
+          const isSelected = selectedZoneId === def.id;
+          const style = getZoneStyle(severity, isSelected);
 
-        {/* LOW Risk Zones (Outline only, 1.5px dashed outline, NO dark fill) */}
-        {/* Zone D */}
-        <polygon
-          points="460,50 630,40 650,135 480,150"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('D')}
-        />
-        {/* Zone E */}
-        <polygon
-          points="640,40 820,30 840,140 660,135"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('E')}
-        />
-        {/* Zone G */}
-        <polygon
-          points="490,225 650,215 670,330 495,310"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('G')}
-        />
-        {/* Zone I */}
-        <polygon
-          points="680,210 880,220 890,340 680,330"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('I')}
-        />
-        {/* Zone J */}
-        <polygon
-          points="500,340 700,335 690,450 490,440"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('J')}
-        />
-        {/* Zone K */}
-        <polygon
-          points="710,345 890,350 880,480 700,460"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('K')}
-        />
-        {/* Zone L */}
-        <polygon
-          points="480,510 680,500 670,570 470,570"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('L')}
-        />
-
-        {/* ELEVATED Zones (Yellow tint ~25% opacity, 1.5px yellow border) */}
-        {/* Zone A */}
-        <polygon
-          points="260,20 440,30 460,150 280,165"
-          fill="rgba(234, 179, 8, 0.25)"
-          stroke="#CA8A04"
-          strokeWidth={selectedZoneId === 'A' ? 2.5 : 1.5}
-          className="cursor-pointer hover:fill-yellow-400/35 transition-colors"
-          onClick={() => onSelectZone('A')}
-        />
-        {/* Zone H */}
-        <polygon
-          points="370,250 480,230 480,350 365,360"
-          fill="rgba(234, 179, 8, 0.25)"
-          stroke="#CA8A04"
-          strokeWidth={selectedZoneId === 'H' ? 2.5 : 1.5}
-          className="cursor-pointer hover:fill-yellow-400/35 transition-colors"
-          onClick={() => onSelectZone('H')}
-        />
-
-        {/* HIGH Risk Zones (Orange tint ~30% opacity, 1.5px orange border) */}
-        {/* Zone C */}
-        <polygon
-          points="230,270 355,270 360,420 220,425"
-          fill="rgba(249, 115, 22, 0.3)"
-          stroke="#EA580C"
-          strokeWidth={selectedZoneId === 'C' ? 2.5 : 1.5}
-          className="cursor-pointer hover:fill-orange-500/40 transition-colors"
-          onClick={() => onSelectZone('C')}
-        />
-        {/* Zone F */}
-        <polygon
-          points="280,185 450,195 440,245 285,240"
-          fill="rgba(249, 115, 22, 0.3)"
-          stroke="#EA580C"
-          strokeWidth={selectedZoneId === 'F' ? 2.5 : 1.5}
-          className="cursor-pointer hover:fill-orange-500/40 transition-colors"
-          onClick={() => onSelectZone('F')}
-        />
-
-        {/* CRITICAL Zone B (Hatch pattern + ~30% red tint + distinct 2px red border) */}
-        <polygon
-          points="255,30 420,35 435,175 270,170"
-          fill="url(#criticalHatchRefined)"
-          className="pointer-events-none"
-        />
-        <polygon
-          points="255,30 420,35 435,175 270,170"
-          fill="rgba(220, 38, 38, 0.28)"
-          stroke="#DC2626"
-          strokeWidth={selectedZoneId === 'B' ? 3 : 2}
-          className="cursor-pointer hover:fill-red-600/35 transition-colors"
-          onClick={() => onSelectZone('B')}
-        />
+          return (
+            <React.Fragment key={`poly-${def.id}`}>
+              {style.hasHatch && (
+                <polygon
+                  points={def.points}
+                  fill="url(#criticalHatchRefined)"
+                  className="pointer-events-none"
+                />
+              )}
+              <polygon
+                points={def.points}
+                fill={style.fill}
+                stroke={style.stroke}
+                strokeWidth={style.strokeWidth}
+                strokeDasharray={style.strokeDasharray}
+                className="cursor-pointer transition-colors"
+                onClick={() => onSelectZone(def.id)}
+              />
+            </React.Fragment>
+          );
+        })}
 
         {/* 4.1 Real SFINCS Hydrodynamic Flood Inundation Extent (from Backend NetCDF/GeoJSON) */}
         {showContours && sfincsPolygonPoints && (
@@ -323,124 +285,58 @@ export function FloodMap({
           />
         )}
 
-        {/* 5. Zone Labels (Dark navy #0F172A with white halo + small severity icon) */}
-        {/* Zone B (CRITICAL) */}
-        <g
-          className="cursor-pointer select-none"
-          onClick={() => onSelectZone('B')}
-        >
-          <circle cx="282" cy="50" r="4.5" fill="#DC2626" />
-          <text
-            x="292"
-            y="54"
-            fill="#0F172A"
-            fontFamily="Inter, sans-serif"
-            fontSize="12"
-            fontWeight="700"
-            filter="url(#whiteHalo)"
-          >
-            Zone B
-          </text>
-        </g>
+        {/* 5. Dynamic Zone Labels (Haloed labels + severity dot indicating current status) */}
+        {ZONE_DEFINITIONS.map((def) => {
+          const zoneData = zones.find((z) => z.id === def.id);
+          const severity = zoneData?.severity || 'LOW';
+          const isSelected = selectedZoneId === def.id;
+          const style = getZoneStyle(severity, isSelected);
 
-        {/* Zone F (HIGH) */}
-        <g
-          className="cursor-pointer select-none"
-          onClick={() => onSelectZone('F')}
-        >
-          <circle cx="332" cy="216" r="4" fill="#EA580C" />
-          <text
-            x="341"
-            y="220"
-            fill="#0F172A"
-            fontFamily="Inter, sans-serif"
-            fontSize="12"
-            fontWeight="700"
-            filter="url(#whiteHalo)"
-          >
-            Zone F
-          </text>
-        </g>
+          if (style.dotColor && def.labelPos.cx && def.labelPos.cy) {
+            return (
+              <g
+                key={`label-${def.id}`}
+                className="cursor-pointer select-none"
+                onClick={() => onSelectZone(def.id)}
+              >
+                <circle
+                  cx={def.labelPos.cx}
+                  cy={def.labelPos.cy}
+                  r={severity === 'CRITICAL' ? 4.5 : 4}
+                  fill={style.dotColor}
+                />
+                <text
+                  x={def.labelPos.x}
+                  y={def.labelPos.y}
+                  fill="#0F172A"
+                  fontFamily="Inter, sans-serif"
+                  fontSize="12"
+                  fontWeight="700"
+                  filter="url(#whiteHalo)"
+                >
+                  {def.name}
+                </text>
+              </g>
+            );
+          }
 
-        {/* Zone C (HIGH) */}
-        <g
-          className="cursor-pointer select-none"
-          onClick={() => onSelectZone('C')}
-        >
-          <circle cx="262" cy="346" r="4" fill="#EA580C" />
-          <text
-            x="271"
-            y="350"
-            fill="#0F172A"
-            fontFamily="Inter, sans-serif"
-            fontSize="12"
-            fontWeight="700"
-            filter="url(#whiteHalo)"
-          >
-            Zone C
-          </text>
-        </g>
-
-        {/* Zone H (ELEVATED) */}
-        <g
-          className="cursor-pointer select-none"
-          onClick={() => onSelectZone('H')}
-        >
-          <circle cx="395" cy="301" r="3.5" fill="#CA8A04" />
-          <text
-            x="404"
-            y="305"
-            fill="#0F172A"
-            fontFamily="Inter, sans-serif"
-            fontSize="12"
-            fontWeight="700"
-            filter="url(#whiteHalo)"
-          >
-            Zone H
-          </text>
-        </g>
-
-        {/* Zone A (ELEVATED) */}
-        <g
-          className="cursor-pointer select-none"
-          onClick={() => onSelectZone('A')}
-        >
-          <circle cx="340" cy="86" r="3.5" fill="#CA8A04" />
-          <text
-            x="349"
-            y="90"
-            fill="#0F172A"
-            fontFamily="Inter, sans-serif"
-            fontSize="12"
-            fontWeight="700"
-            filter="url(#whiteHalo)"
-          >
-            Zone A
-          </text>
-        </g>
-
-        {/* LOW Zone Labels (No bracketed severity) */}
-        <text x="540" y="95" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone D
-        </text>
-        <text x="730" y="85" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone E
-        </text>
-        <text x="560" y="275" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone G
-        </text>
-        <text x="760" y="275" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone I
-        </text>
-        <text x="580" y="390" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone J
-        </text>
-        <text x="780" y="415" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone K
-        </text>
-        <text x="560" y="545" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone L
-        </text>
+          return (
+            <text
+              key={`label-${def.id}`}
+              x={def.labelPos.x}
+              y={def.labelPos.y}
+              fill="#475569"
+              fontFamily="Inter, sans-serif"
+              fontSize="11"
+              fontWeight="600"
+              filter="url(#whiteHalo)"
+              className="cursor-pointer select-none"
+              onClick={() => onSelectZone(def.id)}
+            >
+              {def.name}
+            </text>
+          );
+        })}
 
         {/* 6. Facility Markers (Icon-only by default, NO overlapping text labels) */}
         {facilities.map((fac) => {

@@ -31,7 +31,7 @@ export default function OverviewPage() {
     actionsState,
     assignAction,
     isPlaying,
-    setIsPlaying,
+    togglePlay,
     playbackSpeed,
     setPlaybackSpeed,
     shortcutsModalOpen,
@@ -88,7 +88,7 @@ export default function OverviewPage() {
                 availableTimestamps={availableTimestamps}
                 onSelectTime={setCurrentTime}
                 isPlaying={isPlaying}
-                onTogglePlay={() => setIsPlaying((p) => !p)}
+                onTogglePlay={togglePlay}
                 onStepForward={stepForward}
                 onStepBackward={stepBackward}
                 playbackSpeed={playbackSpeed}
