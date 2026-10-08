@@ -8,8 +8,14 @@ import { cn } from '@/lib/utils';
 
 interface TopHeaderProps {
   onOpenShortcuts?: () => void;
+  eventName?: string;
+  eventType?: string;
   currentTime?: string;
   isSimulation?: boolean;
+  isSimulationRunning?: boolean;
+  onRunSimulation?: () => void;
+  onRefresh?: () => void;
+  isLoading?: boolean;
 }
 
 export function TopHeader({ onOpenShortcuts }: TopHeaderProps) {

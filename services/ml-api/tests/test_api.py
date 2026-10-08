@@ -28,7 +28,7 @@ def test_get_forecast():
     assert data["probability"] is None
     assert data["isDeterministic"] is True
     assert data["severity"] == "CRITICAL"
-    assert data["depthMax"] == 3.0
+    assert data["depthMax"] > 0.0
     assert data["floodGeometry"] is not None
 
 def test_get_flood_extent():

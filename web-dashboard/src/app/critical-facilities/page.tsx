@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Shield,
   Waves,
@@ -31,6 +31,7 @@ import { TopHeader } from "@/components/dashboard/TopHeader";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { ShortcutsModal } from "@/components/dashboard/ShortcutsModal";
 import { ScenarioModal } from "@/components/dashboard/ScenarioModal";
+import { apiClient } from "@/lib/api/client";
 import Link from "next/link";
 
 interface FacilityItem {
@@ -245,6 +246,20 @@ export default function CriticalFacilitiesPage() {
 
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
+
+  // Active sync with backend replay simulation
+  useEffect(() => {
+    let mounted = true;
+    console.info('[CriticalFacilitiesPage] Fetching simulation replay data from API...');
+    apiClient
+      .fetchReplayEvent('mangaluru-historical-2018')
+      .catch((err) => {
+        console.warn('[CriticalFacilitiesPage] Replay fetch notice:', err);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const showNotification = (msg: string) => {
     setNotification(msg);

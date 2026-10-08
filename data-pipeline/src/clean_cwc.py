@@ -26,7 +26,7 @@ import sys
 def clean_cwc(input_path: Path, output_path: Path) -> dict:
     print(f"\n{'='*60}")
     print(f"CLEANING UNVERIFIED CWC / METEO DATA: {input_path}")
-    print(f"⚠️ PROVENANCE NOTICE: Source is Open-Meteo GMT response, labeled as UNVERIFIED_SOURCE")
+    print(f"[NOTICE] PROVENANCE NOTICE: Source is Open-Meteo GMT response, labeled as UNVERIFIED_SOURCE")
     print(f"{'='*60}")
 
     if not input_path.exists():

@@ -17,19 +17,25 @@ import type { ZoneData } from '@/types/dashboard';
 import { RiskBadge } from '@/components/ui/risk-badge';
 import { WhyPanel } from '@/components/dashboard/WhyPanel';
 import { cn } from '@/lib/utils';
-import type { AcknowledgmentState } from '@/hooks/useFloodDashboard';
+export interface AcknowledgmentState {
+  acknowledged: boolean;
+  dutyOfficer: string;
+  time: string;
+}
+
 export { ZoneDrawerSkeleton, PriorityTabsSkeleton } from './DashboardSkeletons';
 
 interface ZoneDrawerProps {
   zone: ZoneData;
-  allZones: ZoneData[];
-  onSelectZone: (zoneId: string) => void;
-  onClose: () => void;
+  allZones?: ZoneData[];
+  onSelectZone?: (zoneId: string) => void;
+  onClose?: () => void;
   countdownMinutes: number | null;
   acknowledgment: AcknowledgmentState;
   onAcknowledge: () => void;
   onAssignAction: (actionId: string, team?: string) => void;
   actionsState: Record<string, { status: string; team?: string; timestamp?: string }>;
+  isOpen?: boolean;
   className?: string;
   acknowledgeKeyHint?: string;
   assignTeamKeyHint?: string;
@@ -39,7 +45,7 @@ interface ZoneDrawerProps {
 
 export function ZoneDrawer({
   zone,
-  allZones,
+  allZones = [],
   onSelectZone,
   onClose,
   countdownMinutes,
@@ -47,12 +53,14 @@ export function ZoneDrawer({
   onAcknowledge,
   onAssignAction,
   actionsState,
+  isOpen = true,
   className,
   acknowledgeKeyHint,
   assignTeamKeyHint,
   canAcknowledge = true,
   canAssignTeam = true,
 }: ZoneDrawerProps) {
+  if (!isOpen) return null;
   // Top 3 priority zones for the switcher strip
   const topPriorityZones = allZones.filter((z) => z.rank <= 3);
 
@@ -125,7 +133,7 @@ export function ZoneDrawer({
               return (
                 <button
                   key={pz.id}
-                  onClick={() => onSelectZone(pz.id)}
+                  onClick={() => onSelectZone?.(pz.id)}
                   className={cn(
                     'px-2 py-0.5 rounded text-xs font-medium transition-all whitespace-nowrap focus-visible:ring-2 focus-visible:ring-slate-900',
                     isSelected

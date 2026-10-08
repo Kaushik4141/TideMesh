@@ -29,6 +29,9 @@ export default function OverviewPage() {
     kpi,
     currentTime,
     setCurrentTime,
+    availableTimestamps,
+    stepForward,
+    stepBackward,
     countdownMinutes,
     currentZoneAcknowledgment,
     acknowledgeCurrentZone,
@@ -38,10 +41,15 @@ export default function OverviewPage() {
     setIsPlaying,
     playbackSpeed,
     setPlaybackSpeed,
-    // Replay controls
+    floodExtentGeoJson,
+    eventData,
+    environmentalData,
+    isLoading: apiLoading,
+    isSimulationRunning,
+    triggerSimulationRun,
+    refreshData,
+    // Replay controls & scenario
     currentReplayState,
-    stepForward,
-    stepBackward,
     resetTimeline,
     scenario,
   } = useFloodDashboard();
@@ -192,7 +200,6 @@ export default function OverviewPage() {
     acknowledgeCurrentZone,
     actionsState,
     assignAction,
-    router,
     scenarioModalOpen,
     selectZone,
     selectedZone,
@@ -202,6 +209,7 @@ export default function OverviewPage() {
     setIsPlaying,
     shortcutsModalOpen,
     zones,
+    router,
   ]);
 
   const {
@@ -217,13 +225,26 @@ export default function OverviewPage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans antialiased text-slate-900 select-none">
-      {/* Top Header with Wordmark and Role-based Profile Menu */}
-      <TopHeader onOpenShortcuts={() => setShortcutsModalOpen(true)} />
+      {/* Top Header with live data fetching status and simulation trigger */}
+      <TopHeader
+        onOpenShortcuts={() => setShortcutsModalOpen(true)}
+        eventName={eventData?.name}
+        eventType={eventData?.type || 'SIMULATION'}
+        currentTime={currentTime}
+        isSimulation={true}
+        isSimulationRunning={isSimulationRunning}
+        onRunSimulation={() => triggerSimulationRun()}
+        onRefresh={() => refreshData()}
+        isLoading={isLoading || apiLoading}
+      />
 
       {/* Main Body */}
       <div className="flex flex-1 pt-14 overflow-hidden">
-        {/* Left Sidebar with Scenario dialog trigger */}
-        <Sidebar onOpenScenario={() => setScenarioModalOpen(true)} />
+        {/* Left Sidebar with Scenario dialog trigger and telemetry data */}
+        <Sidebar
+          environmentalData={environmentalData}
+          onOpenScenario={() => setScenarioModalOpen(true)}
+        />
 
         {/* Content Area */}
         <main
@@ -283,6 +304,7 @@ export default function OverviewPage() {
                       facilities={facilities}
                       selectedZoneId={selectedZoneId}
                       onSelectZone={selectZone}
+                      floodExtentGeoJson={floodExtentGeoJson}
                       className="w-full h-full"
                     />
                   )}
@@ -294,6 +316,8 @@ export default function OverviewPage() {
                 ) : (
                   <Timeline
                     currentTime={currentTime}
+                    availableTimestamps={availableTimestamps}
+                    onSelectTime={setCurrentTime}
                     isPlaying={isPlaying}
                     onTogglePlay={() => setIsPlaying((p) => !p)}
                     playbackSpeed={playbackSpeed}

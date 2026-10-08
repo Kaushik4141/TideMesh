@@ -7,6 +7,8 @@ export { TimelineSkeleton } from './DashboardSkeletons';
 
 interface TimelineProps {
   currentTime: string;
+  availableTimestamps?: string[];
+  onSelectTime?: (time: string) => void;
   isPlaying: boolean;
   onTogglePlay: () => void;
   playbackSpeed: 1 | 2 | 5;
@@ -19,8 +21,23 @@ interface TimelineProps {
   className?: string;
 }
 
+const DEFAULT_TIMESTAMPS = [
+  '14:00',
+  '14:15',
+  '14:26',
+  '14:30',
+  '14:45',
+  '15:00',
+  '15:15',
+  '15:30',
+  '15:45',
+  '16:00',
+];
+
 export function Timeline({
   currentTime,
+  availableTimestamps = DEFAULT_TIMESTAMPS,
+  onSelectTime,
   isPlaying,
   onTogglePlay,
   playbackSpeed,
@@ -31,12 +48,12 @@ export function Timeline({
   statusLabel,
   className,
 }: TimelineProps) {
-  // Convert "HH:MM" to progress percentage between 14:00 (0%) and 16:00 (100%)
-  const [cHours, cMins] = currentTime.split(':').map(Number);
-  const totalMins = isNaN(cHours) || isNaN(cMins) ? 14 * 60 + 26 : cHours * 60 + cMins;
-  const startMins = 14 * 60; // 14:00
-  const endMins = 16 * 60; // 16:00
-  const progressPct = Math.max(0, Math.min(100, ((totalMins - startMins) / (endMins - startMins)) * 100));
+  const currentIndex = availableTimestamps.indexOf(currentTime);
+  const activeIdx = currentIndex === -1 ? 0 : currentIndex;
+  const progressPct =
+    availableTimestamps.length > 1
+      ? (activeIdx / (availableTimestamps.length - 1)) * 100
+      : 0;
 
   return (
     <div
@@ -66,7 +83,7 @@ export function Timeline({
         {/* Base Progress Rail */}
         <div className="w-full h-1.5 bg-slate-200 rounded-full relative z-0 flex items-center overflow-hidden">
           <div
-            className="h-full bg-slate-400/80 rounded-full transition-all duration-300"
+            className="h-full bg-slate-500 rounded-full transition-all duration-300"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -99,47 +116,63 @@ export function Timeline({
         </div>
       </div>
 
-      {/* Control Strip & Hourly Ticks */}
-      <div className="flex items-center justify-between pt-1 border-t border-slate-100 gap-2">
+      {/* Playback Controls & Timesteps */}
+      <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
         {/* Playback Controls */}
         <div className="flex items-center gap-1 shrink-0">
           <button
+            type="button"
             onClick={onStepBackward}
-            className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 transition-colors"
-            title="Step backward in simulation"
+            className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 transition-colors cursor-pointer"
+            title="Step backward in simulation (Left Arrow)"
             aria-label="Step backward in simulation"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
           <button
+            type="button"
             onClick={onTogglePlay}
-            className="w-6 h-6 flex items-center justify-center rounded bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-slate-900 shadow-2xs transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-slate-900 shadow-2xs transition-colors cursor-pointer"
             title={isPlaying ? 'Pause simulation (Space)' : 'Play simulation (Space)'}
             aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
           >
-            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 translate-x-0.5" />}
+            {isPlaying ? (
+              <Pause className="w-3.5 h-3.5 fill-current" />
+            ) : (
+              <Play className="w-3.5 h-3.5 fill-current translate-x-0.5" />
+            )}
           </button>
           <button
+            type="button"
             onClick={onStepForward}
-            className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 transition-colors"
-            title="Step forward in simulation"
+            className="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 transition-colors cursor-pointer"
+            title="Step forward in simulation (Right Arrow)"
             aria-label="Step forward in simulation"
           >
             <RotateCw className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Time Steps (Legible & Compact matching replay states) */}
-        <div className="flex items-center justify-between flex-1 max-w-lg px-2 text-slate-500 text-[10px] font-semibold tabular-nums overflow-hidden">
-          <span className={currentTime === '14:00' ? 'text-slate-900 font-bold' : ''}>14:00</span>
-          <span className={currentTime === '14:20' ? 'text-slate-900 font-bold' : ''}>14:20</span>
-          <span className={currentTime === '14:26' ? 'text-teal-700 font-bold' : ''}>14:26</span>
-          <span className={currentTime === '14:30' ? 'text-red-600 font-bold' : 'text-red-500'}>14:30</span>
-          <span className={currentTime === '14:40' ? 'text-slate-900 font-bold' : ''}>14:40</span>
-          <span className={currentTime === '15:00' ? 'text-slate-900 font-bold' : ''}>15:00</span>
-          <span className={currentTime === '15:10' ? 'text-slate-900 font-bold' : ''}>15:10</span>
-          <span className={currentTime === '15:30' ? 'text-slate-900 font-bold' : ''}>15:30</span>
-          <span className={currentTime === '16:00' ? 'text-slate-900 font-bold' : ''}>16:00</span>
+        {/* Clickable Timestep Scrub Buttons */}
+        <div className="flex items-center justify-between flex-1 max-w-xl px-2 overflow-x-auto gap-1">
+          {availableTimestamps.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => onSelectTime?.(t)}
+              className={cn(
+                'px-1.5 py-0.5 rounded text-[11px] font-semibold tabular-nums transition-colors cursor-pointer',
+                t === currentTime
+                  ? 'bg-slate-900 text-white font-bold'
+                  : t === '14:30'
+                  ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                  : 'text-slate-500 hover:bg-slate-100'
+              )}
+            >
+              {t}
+              {t === '14:30' && <span className="ml-0.5 text-[8px] font-bold text-red-600">!</span>}
+            </button>
+          ))}
         </div>
 
         {/* Playback Speed Multipliers & Delta */}
@@ -148,11 +181,12 @@ export function Timeline({
             {([1, 2, 5] as const).map((spd) => (
               <button
                 key={spd}
+                type="button"
                 onClick={() => onChangeSpeed(spd)}
                 className={cn(
-                  'px-1.5 py-0.5 rounded text-[10px] font-bold transition-all',
+                  'px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer',
                   playbackSpeed === spd
-                    ? 'bg-white text-slate-900 shadow-2xs'
+                    ? 'bg-white text-slate-900 shadow-2xs font-extrabold'
                     : 'text-slate-500 hover:text-slate-900'
                 )}
                 aria-label={`${spd}x playback speed`}

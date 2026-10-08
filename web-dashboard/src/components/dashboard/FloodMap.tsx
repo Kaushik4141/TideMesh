@@ -24,6 +24,7 @@ interface FloodMapProps {
   selectedZoneId: string;
   onSelectZone: (zoneId: string) => void;
   facilities: CriticalFacility[];
+  floodExtentGeoJson?: Record<string, unknown> | null;
   className?: string;
 }
 

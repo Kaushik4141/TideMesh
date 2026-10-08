@@ -36,6 +36,7 @@ import { TopHeader } from "@/components/dashboard/TopHeader";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { ShortcutsModal } from "@/components/dashboard/ShortcutsModal";
 import { ScenarioModal } from "@/components/dashboard/ScenarioModal";
+import { apiClient } from "@/lib/api/client";
 
 interface ZoneItem {
   id: string;
@@ -207,6 +208,7 @@ const ZONES_DATA: ZoneItem[] = [
 ];
 
 export default function ZonesPage() {
+  const [zonesList, setZonesList] = useState<ZoneItem[]>(ZONES_DATA);
   const [selectedZoneId, setSelectedZoneId] = useState<string>('B');
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -215,9 +217,50 @@ export default function ZonesPage() {
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
 
-  const selectedZone = ZONES_DATA.find((z) => z.id === selectedZoneId) || ZONES_DATA[0];
+  // Active sync with backend replay simulation
+  React.useEffect(() => {
+    let mounted = true;
+    console.info('[ZonesPage] Fetching simulation replay zones from API...');
+    apiClient
+      .fetchReplayEvent('mangaluru-historical-2018')
+      .then((resp) => {
+        if (mounted && resp?.success && resp.event?.timesteps) {
+          const firstStep = Object.values(resp.event.timesteps)[0];
+          if (firstStep?.zones && firstStep.zones.length > 0) {
+            const mapped: ZoneItem[] = firstStep.zones.map((z, idx) => {
+              const fallback = ZONES_DATA.find((item) => item.id === z.id);
+              return {
+                id: z.id,
+                name: z.name,
+                locality: z.locality,
+                rank: z.rank || idx + 1,
+                severity: z.severity,
+                probability: z.probability,
+                depth: z.depth,
+                onset: z.onset,
+                peak: z.peak,
+                pop: (z.population || 1000).toLocaleString(),
+                facil: z.facilitiesCount || (z.facilities?.length ?? 0),
+                rationale: fallback?.rationale || z.summaryExplanation,
+                actionText: fallback?.actionText,
+              };
+            });
+            setZonesList(mapped);
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('[ZonesPage] API fetch fallback to defaults:', err);
+      });
 
-  const filteredZones = ZONES_DATA
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const selectedZone = zonesList.find((z) => z.id === selectedZoneId) || zonesList[0];
+
+  const filteredZones = zonesList
     .filter((z) => {
       if (severityFilter === 'ALL') return true;
       return z.severity === severityFilter;
