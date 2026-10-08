@@ -9,6 +9,7 @@ import {
   jsonb,
   pgEnum,
   index,
+  uniqueIndex,
   customType,
 } from "drizzle-orm/pg-core";
 
@@ -190,21 +191,43 @@ export const criticalFacilities = pgTable(
 // =============================================================================
 // 6. ENVIRONMENTAL OBSERVATIONS
 // =============================================================================
+/**
+ * Time-series environmental observations (P2 data-pipeline output).
+ * Rainfall, temperature, pressure and wind are delivered by P2's
+ * hourly weather files; tide_level and storm_surge remain reserved
+ * for future tide/surge sources. Position is the WGS 84 (SRID 4326)
+ * observation point.
+ */
 export const environmentalObservations = pgTable(
   "environmental_observations",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
-    rainfall: doublePrecision("rainfall"), // mm
+    rainfall: doublePrecision("rainfall"), // mm (total precipitation)
+    temperatureC: doublePrecision("temperature_c"), // °C (2m air temperature)
+    surfacePressureHpa: doublePrecision("surface_pressure_hpa"), // hPa
+    windSpeedKmh: doublePrecision("wind_speed_kmh"), // km/h (10m wind speed)
     tideLevel: doublePrecision("tide_level"), // meters
     stormSurge: doublePrecision("storm_surge"), // meters
-    source: text("source"), // e.g. 'station-01', 'simulated', 'noaa'
+    elevationM: doublePrecision("elevation_m"), // meters (station elevation)
+    location: postgisGeometry("location", {
+      type: "Point",
+      srid: DEFAULT_SRID,
+    }),
+    source: text("source"), // e.g. 'open-meteo', 'cwc', 'station-01', 'noaa'
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
   (table) => [
     index("env_obs_timestamp_idx").on(table.timestamp),
+    index("env_obs_source_idx").on(table.source),
+    index("env_obs_location_gist_idx").using("gist", table.location),
+    // Idempotent syncs: one row per (timestamp, source)
+    uniqueIndex("env_obs_timestamp_source_uidx").on(
+      table.timestamp,
+      table.source
+    ),
   ]
 );
 

@@ -15,6 +15,13 @@
       "when": 1791464429830,
       "tag": "0001_charming_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791470418156,
+      "tag": "0002_worried_bloodstorm",
+      "breakpoints": true
     }
   ]
 }
