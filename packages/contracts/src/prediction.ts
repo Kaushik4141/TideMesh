@@ -10,7 +10,7 @@ export const RiskDriverSchema = z.object({
 export type RiskDriver = z.infer<typeof RiskDriverSchema>;
 
 export const FloodPredictionSchema = z.object({
-  id: z.string().optional(),
+  id: z.string().nullable().optional(),
   eventId: z.string().nullable().optional(),
   zoneId: z.string().min(1),
   timestamp: z.string(),

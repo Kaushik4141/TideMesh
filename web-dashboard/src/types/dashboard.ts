@@ -38,7 +38,8 @@ export interface ZoneData {
   ward: string;
   rank: number;
   severity: SeverityLevel;
-  probability: number; // e.g. 84.7
+  probability: number | null; // null for deterministic physical simulations
+  isDeterministic?: boolean;
   depth: string; // e.g. "0.31–0.71 m"
   onset: string; // e.g. "14:30"
   peak: string; // e.g. "15:10"

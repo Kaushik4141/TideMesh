@@ -3,8 +3,10 @@ from pathlib import Path
 from app.adapters.sfincs.parser import SFINCSOutputParser
 from app.config import settings
 
+target_dir = settings.sfincs_baseline_dir if settings.sfincs_baseline_dir.exists() else settings.outputs_dir
+
 def test_parse_metadata():
-    parser = SFINCSOutputParser(base_outputs_dir=settings.outputs_dir)
+    parser = SFINCSOutputParser(base_outputs_dir=target_dir)
     metadata = parser.parse_metadata()
 
     assert metadata.model == "SFINCS"
@@ -16,7 +18,7 @@ def test_parse_metadata():
     assert metadata.forcing is not None
 
 def test_parse_flood_extent():
-    parser = SFINCSOutputParser(base_outputs_dir=settings.outputs_dir)
+    parser = SFINCSOutputParser(base_outputs_dir=target_dir)
     geojson = parser.parse_flood_extent_geojson()
 
     assert geojson is not None
@@ -29,7 +31,7 @@ def test_parse_flood_extent():
     assert len(geom.get("coordinates", [])) > 0
 
 def test_catalog_outputs():
-    parser = SFINCSOutputParser(base_outputs_dir=settings.outputs_dir)
+    parser = SFINCSOutputParser(base_outputs_dir=target_dir)
     catalog = parser.catalog_outputs()
 
     assert catalog.simulation_id == "mangaluru-historical-2018"

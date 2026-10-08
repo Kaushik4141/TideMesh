@@ -514,7 +514,7 @@ export default function CriticalFacilitiesPage() {
                   </div>
                   <div className="bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded shadow-md flex items-center gap-3 pointer-events-auto">
                     <div className="flex flex-col text-right">
-                      <span className="text-[10px] text-slate-900 font-bold tracking-tight">12°54'18"N · 74°49'42"E</span>
+                      <span className="text-[10px] text-slate-900 font-bold tracking-tight">{'12°54\'18"N · 74°49\'42"E'}</span>
                       <span className="text-[9px] text-slate-600">DATUM: WGS84 · EPSG:4326</span>
                     </div>
                     <div className="h-5 w-px bg-slate-300"></div>

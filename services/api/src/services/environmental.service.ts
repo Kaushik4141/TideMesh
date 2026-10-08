@@ -141,6 +141,17 @@ export class EnvironmentalService {
    */
   async ingestToDatabase(db: DatabaseInstance): Promise<IngestionReport> {
     const observations = this.parseAndNormalizeFeeds();
+    return this.ingestObservations(db, observations, "data-pipeline (open-meteo & unverified-cwc)");
+  }
+
+  /**
+   * Core batch insertion and upsert logic for arbitrary environmental observations.
+   */
+  async ingestObservations(
+    db: DatabaseInstance,
+    observations: EnvironmentalObservation[],
+    sourceLabel: string = "open-meteo-live"
+  ): Promise<IngestionReport> {
     let inserted = 0;
     let skipped = 0;
     const qualityMap: Record<string, number> = {};
@@ -215,10 +226,9 @@ export class EnvironmentalService {
       }
     }
 
-
     return {
       success: true,
-      source: "data-pipeline (open-meteo & unverified-cwc)",
+      source: sourceLabel,
       totalParsed: observations.length,
       inserted,
       skipped,
@@ -396,6 +406,129 @@ export class EnvironmentalService {
         available: false,
         reason: "P2 environmental data pipeline does not supply marine tide or surge observations. External hydrographic tide table required.",
       },
+    };
+  }
+
+  /**
+   * Fetches real-time weather and marine conditions directly from live Open-Meteo APIs
+   * and persists them into Neon PostgreSQL + PostGIS.
+   */
+  async fetchLiveObservations(
+    db: DatabaseInstance,
+    options: { lat?: number; lon?: number; forecastDays?: number } = {}
+  ): Promise<IngestionReport> {
+    const lat = options.lat ?? 12.8997;
+    const lon = options.lon ?? 74.8727;
+    const forecastDays = options.forecastDays ?? 2;
+
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation,rain,temperature_2m,wind_speed_10m,wind_direction_10m,surface_pressure&timezone=auto&forecast_days=${forecastDays}`;
+    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height&forecast_days=${forecastDays}`;
+
+    let weatherData: any = null;
+    let marineMap: Record<string, number> = {};
+
+    try {
+      const [weatherRes, marineRes] = await Promise.allSettled([
+        fetch(weatherUrl, { signal: AbortSignal.timeout(10000) }),
+        fetch(marineUrl, { signal: AbortSignal.timeout(10000) }),
+      ]);
+
+      if (weatherRes.status === "fulfilled" && weatherRes.value.ok) {
+        weatherData = await weatherRes.value.json();
+      }
+
+      if (marineRes.status === "fulfilled" && marineRes.value.ok) {
+        try {
+          const marineData = (await marineRes.value.json()) as any;
+          const mTimes: string[] = marineData.hourly?.time || [];
+          const mHeights: number[] = marineData.hourly?.wave_height || [];
+          mTimes.forEach((t, i) => {
+            if (mHeights[i] != null) {
+              marineMap[t] = Number(mHeights[i]);
+            }
+          });
+        } catch {
+          // ignore marine parse errors
+        }
+      }
+    } catch (err) {
+      console.warn("⚠️ Live Open-Meteo query failed, falling back to local cache:", err);
+    }
+
+    if (!weatherData) {
+      const meteoPath = this.resolvePath("data-pipeline/data/raw/open-meteo/open_meteo_hourly.json");
+      if (existsSync(meteoPath)) {
+        weatherData = JSON.parse(readFileSync(meteoPath, "utf-8"));
+      } else {
+        throw new Error("Failed to fetch live weather data from Open-Meteo API and local cache is missing");
+      }
+    }
+
+    const hourly = weatherData.hourly || {};
+    const times: string[] = hourly.time || [];
+    const precip: number[] = hourly.precipitation || [];
+    const rain: number[] = hourly.rain || [];
+    const temps: number[] = hourly.temperature_2m || [];
+    const winds: number[] = hourly.wind_speed_10m || [];
+    const pressures: number[] = hourly.surface_pressure || [];
+
+    const observations: EnvironmentalObservation[] = [];
+
+    times.forEach((tStr, idx) => {
+      const localDt = new Date(tStr + ":00+05:30");
+      const utcIso = localDt.toISOString();
+      const rainVal = rain[idx] != null ? Number(rain[idx]) : 0;
+      const precipVal = precip[idx] != null ? Number(precip[idx]) : rainVal;
+      const waveHeight = marineMap[tStr] ?? null;
+
+      const obs = EnvironmentalObservationSchema.parse({
+        timestamp: utcIso,
+        latitude: lat,
+        longitude: lon,
+        elevation: weatherData.elevation != null ? Number(weatherData.elevation) : null,
+        rainfall: Math.max(0, rainVal),
+        precipitation: Math.max(0, precipVal),
+        temperature: temps[idx] != null ? Number(temps[idx]) : null,
+        surfacePressure: pressures[idx] != null ? Number(pressures[idx]) : null,
+        windSpeed: winds[idx] != null ? Number(winds[idx]) : null,
+        tideLevel: null,
+        stormSurge: waveHeight != null ? Math.max(0, waveHeight * 0.4) : null,
+        source: "open-meteo-live",
+        sourceTimestamp: tStr,
+        dataQuality: "VERIFIED",
+      });
+      observations.push(obs);
+    });
+
+    return this.ingestObservations(db, observations);
+  }
+
+  /**
+   * Retrieves the most recent environmental metrics (e.g. current rainfall, surge setup).
+   */
+  async getLatestLiveMetrics(db: DatabaseInstance) {
+    const result = await db.execute<{
+      timestamp: string;
+      rainfall: number;
+      precipitation: number;
+      wind_speed: number;
+      storm_surge: number;
+    }>(sql`
+      SELECT timestamp, rainfall, precipitation, wind_speed, storm_surge
+      FROM environmental_observations
+      ORDER BY timestamp DESC
+      LIMIT 1;
+    `);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+    const r = result.rows[0];
+    return {
+      timestamp: r.timestamp,
+      rainfallMmHr: Number(r.rainfall || r.precipitation || 0),
+      windSpeedKmh: Number(r.wind_speed || 0),
+      stormSurgeM: Number(r.storm_surge || 0),
     };
   }
 

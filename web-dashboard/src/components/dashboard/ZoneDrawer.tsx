@@ -179,10 +179,10 @@ export function ZoneDrawer({
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] text-slate-500 font-medium">
-                Flood probability
+                {zone.probability !== null ? 'Flood probability' : 'Model solver'}
               </span>
-              <span className="text-xl font-bold tabular-nums text-slate-900 mt-0.5">
-                {zone.probability}%
+              <span className="text-base font-bold text-slate-900 mt-0.5">
+                {zone.probability !== null ? `${zone.probability}%` : 'SFINCS Physics'}
               </span>
             </div>
             <div className="h-8 w-px bg-slate-200" />
@@ -208,8 +208,8 @@ export function ZoneDrawer({
           </div>
 
           <div className="text-[10px] text-slate-400 flex items-center justify-between pt-1">
-            <span>Model v1.2</span>
-            <span>Updated 14:26 (2 min ago)</span>
+            <span>SFINCS v2.4.2 (Hydrodynamic)</span>
+            <span>Deterministic Physical Forecast</span>
           </div>
         </div>
 

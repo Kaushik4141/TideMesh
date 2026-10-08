@@ -21,23 +21,40 @@ export default function OverviewPage() {
     setDrawerOpen,
     kpi,
     currentTime,
+    setCurrentTime,
+    availableTimestamps,
+    stepForward,
+    stepBackward,
     countdownMinutes,
     currentZoneAcknowledgment,
     acknowledgeCurrentZone,
     actionsState,
     assignAction,
     isPlaying,
-    setIsPlaying,
+    togglePlay,
     playbackSpeed,
     setPlaybackSpeed,
     shortcutsModalOpen,
     setShortcutsModalOpen,
+    floodExtentGeoJson,
+    eventData,
+    isSimulationRunning,
+    triggerSimulationRun,
+    isLoading,
+    error,
   } = useFloodDashboard();
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans antialiased text-slate-900 select-none">
       {/* Top Header */}
-      <TopHeader onOpenShortcuts={() => setShortcutsModalOpen(true)} />
+      <TopHeader
+        onOpenShortcuts={() => setShortcutsModalOpen(true)}
+        eventName={eventData?.name}
+        eventType={eventData?.type}
+        currentTime={currentTime}
+        isSimulationRunning={isSimulationRunning}
+        onRunSimulation={() => triggerSimulationRun()}
+      />
 
       {/* Main Body */}
       <div className="flex flex-1 pt-14 overflow-hidden">
@@ -60,15 +77,20 @@ export default function OverviewPage() {
                   facilities={facilities}
                   selectedZoneId={selectedZoneId}
                   onSelectZone={selectZone}
+                  floodExtentGeoJson={floodExtentGeoJson}
                   className="w-full h-full"
                 />
               </div>
 
-              {/* Timeline (Always visible in first viewport at 1440x900 and 1280x720) */}
+              {/* Timeline (Always visible in first viewport) */}
               <Timeline
                 currentTime={currentTime}
+                availableTimestamps={availableTimestamps}
+                onSelectTime={setCurrentTime}
                 isPlaying={isPlaying}
-                onTogglePlay={() => setIsPlaying((p) => !p)}
+                onTogglePlay={togglePlay}
+                onStepForward={stepForward}
+                onStepBackward={stepBackward}
                 playbackSpeed={playbackSpeed}
                 onChangeSpeed={setPlaybackSpeed}
               />
