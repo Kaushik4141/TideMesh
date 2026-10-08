@@ -29,7 +29,26 @@ type Bindings = {
 export const app = new Hono<{ Bindings: Bindings }>();
 
 // Global middleware
-app.use("*", cors());
+app.use(
+  "*",
+  cors({
+    origin: (origin) => origin || "*",
+    allowHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    exposeHeaders: ["Content-Length", "Content-Type"],
+    credentials: true,
+  })
+);
+
+// Chromium Private Network Access (PNA) preflight support
+app.use("*", async (c, next) => {
+  if (c.req.header("Access-Control-Request-Private-Network")) {
+    c.res.headers.set("Access-Control-Allow-Private-Network", "true");
+  }
+  await next();
+  c.res.headers.set("Access-Control-Allow-Private-Network", "true");
+});
+
 app.use("*", requestLogger);
 app.onError(errorHandler);
 

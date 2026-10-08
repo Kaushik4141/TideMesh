@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Shield,
   Waves,
@@ -29,6 +29,8 @@ import {
   Maximize,
   RadioTower,
 } from "lucide-react";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { apiClient } from "@/lib/api/client";
 
 export default function CriticalFacilitiesPage() {
   const [filter, setFilter] = useState("all");
@@ -37,6 +39,20 @@ export default function CriticalFacilitiesPage() {
   const [activeFacility, setActiveFacility] = useState("city-hospital");
   const [layers, setLayers] = useState({ routes: true, contours: true, hydro: true });
   const [mapZoom, setMapZoom] = useState(1);
+
+  // Active sync with backend replay simulation
+  useEffect(() => {
+    let mounted = true;
+    console.info('[CriticalFacilitiesPage] Fetching simulation replay data from API...');
+    apiClient
+      .fetchReplayEvent('mangaluru-historical-2018')
+      .catch((err) => {
+        console.warn('[CriticalFacilitiesPage] Replay fetch notice:', err);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const facilities = [
     {
@@ -229,55 +245,8 @@ export default function CriticalFacilitiesPage() {
         </div>
       </header>
 
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-14 bottom-0 w-[232px] bg-white border-r border-slate-300 z-30 flex flex-col justify-between">
-        <div className="flex flex-col pt-2">
-          <nav className="flex flex-col gap-0.5 px-1">
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /><span>Overview</span></div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Grid className="w-4 h-4" /><span>Zones</span></div>
-              <span className="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-bold">12</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded transition-colors bg-blue-100 text-blue-900 border-l-4 border-slate-900 font-semibold text-xs">
-              <div className="flex items-center gap-2"><Hospital className="w-4 h-4" /><span>Critical Facilities</span></div>
-              <span className="px-1.5 py-0.5 bg-slate-300 text-slate-900 rounded text-[10px] font-bold">7</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Siren className="w-4 h-4" /><span>Response & Actions</span></div>
-              <span className="px-1.5 py-0.5 bg-red-100 text-red-900 rounded text-[10px] font-bold">3 Pending</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Route className="w-4 h-4" /><span>Evacuation Routes</span></div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Radio className="w-4 h-4" /><span>Sensor Telemetry</span></div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-3 py-2 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><FileText className="w-4 h-4" /><span>Reports & Briefings</span></div>
-            </a>
-          </nav>
-        </div>
-        <div className="p-2 m-1 mb-2 bg-slate-100 border border-slate-300 rounded-lg">
-          <div className="flex items-center justify-between pb-1 border-b border-slate-300 mb-1">
-            <span className="text-[10px] text-slate-600 uppercase font-bold">Data Engine</span>
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-              <span className="text-[10px] text-slate-900 font-semibold">ONLINE</span>
-            </div>
-          </div>
-          <div className="space-y-1 text-xs text-slate-600">
-            <div className="flex justify-between"><span>Telemetry Feed:</span><span className="text-[10px] text-slate-900 font-bold">99.8%</span></div>
-            <div className="flex justify-between"><span>Hydro Model:</span><span className="text-[10px] text-slate-900 font-bold">v1.2 Active</span></div>
-            <div className="flex justify-between"><span>Model Run:</span><span className="text-[10px] text-slate-900 font-bold">14:24</span></div>
-          </div>
-          <div className="mt-2 pt-1 border-t border-slate-300 flex items-center justify-between">
-            <span className="text-[10px] text-slate-600 font-bold">EOC Hotline:</span>
-            <span className="text-xs text-slate-900 font-bold">1077</span>
-          </div>
-        </div>
-      </aside>
+      {/* Sidebar Navigation */}
+      <Sidebar />
 
       {/* Main Content */}
       <div className="pl-[232px]">

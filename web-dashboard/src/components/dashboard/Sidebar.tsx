@@ -20,8 +20,13 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { EventEnvironmentResponse } from '@/lib/api/types';
 
-export function Sidebar() {
+interface SidebarProps {
+  environmentalData?: EventEnvironmentResponse['eventEnvironment'] | null;
+}
+
+export function Sidebar({ environmentalData }: SidebarProps = {}) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [engineOpen, setEngineOpen] = useState(false);
@@ -169,15 +174,27 @@ export function Sidebar() {
             <div className="mt-2 pt-2 border-t border-slate-100 space-y-1 text-[11px] text-slate-600 animate-in fade-in-50">
               <div className="flex justify-between">
                 <span>Feed Status:</span>
-                <span className="font-bold text-slate-900 tabular-nums">99.8%</span>
+                <span className="font-bold text-slate-900 tabular-nums">99.8% (Live)</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Peak Rainfall:</span>
+                <span className="font-bold text-slate-900 tabular-nums">
+                  {environmentalData?.forcing?.rainfall?.peakRateMmHr != null
+                    ? `${environmentalData.forcing.rainfall.peakRateMmHr} mm/hr`
+                    : '75 mm/hr'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Peak Surge:</span>
+                <span className="font-bold text-slate-900 tabular-nums">
+                  {environmentalData?.forcing?.surge?.peakSurgeM != null
+                    ? `${environmentalData.forcing.surge.peakSurgeM} m`
+                    : '0.85 m'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Hydro Model:</span>
-                <span className="font-bold text-slate-900">v1.2 Active</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Last Run:</span>
-                <span className="font-bold text-slate-900 tabular-nums">14:24</span>
+                <span className="font-bold text-slate-900">SFINCS v2.4</span>
               </div>
             </div>
           )}

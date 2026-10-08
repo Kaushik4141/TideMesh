@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { ZoneData, KpiSummary, CriticalFacility } from '@/types/dashboard';
-import type { ReplayEventResponse, PriorityItem } from '@/lib/api/types';
+import type { ReplayEventResponse, PriorityItem, EventEnvironmentResponse } from '@/lib/api/types';
 import { apiClient } from '@/lib/api/client';
 import { MOCK_ZONES, INITIAL_KPI_SUMMARY, MOCK_FACILITIES } from '@/mocks/floodData';
 
@@ -35,6 +35,7 @@ export function useFloodDashboard() {
 
   // Live / Replay Event State from Backend
   const [eventData, setEventData] = useState<ReplayEventResponse['event'] | null>(null);
+  const [environmentalData, setEnvironmentalData] = useState<EventEnvironmentResponse['eventEnvironment'] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +64,7 @@ export function useFloodDashboard() {
     async function fetchInitialReplay() {
       setIsLoading(true);
       try {
+        console.info('[useFloodDashboard] Fetching SFINCS replay data from API...');
         const resp = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
         if (mounted && resp?.success && resp.event) {
           setEventData(resp.event);
@@ -91,6 +93,28 @@ export function useFloodDashboard() {
     fetchInitialReplay();
     return () => {
       mounted = false;
+    };
+  }, []);
+
+  // Continuous background sync of live environmental telemetry (Open-Meteo)
+  useEffect(() => {
+    let mounted = true;
+    async function loadTelemetry() {
+      try {
+        const envResp = await apiClient.fetchEventEnvironment('mangaluru-historical-2018');
+        if (mounted && envResp?.success && envResp.eventEnvironment) {
+          setEnvironmentalData(envResp.eventEnvironment);
+        }
+      } catch {
+        // Silent fallback
+      }
+    }
+
+    loadTelemetry();
+    const interval = setInterval(loadTelemetry, 30000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -236,18 +260,28 @@ export function useFloodDashboard() {
   const selectZone = useCallback((zoneId: string) => {
     setSelectedZoneId(zoneId);
     setDrawerOpen(true);
+    // Active zone forecast query to backend API
+    apiClient.fetchForecast('mangaluru-historical-2018', zoneId).catch((err) => {
+      console.warn(`[useFloodDashboard] Forecast fetch for zone ${zoneId} notice:`, err);
+    });
   }, []);
 
-  // Trigger on-demand simulation run
+  // Trigger on-demand simulation run (<15s)
   const triggerSimulationRun = useCallback(async (options: { rainfallRateMmHr?: number; surgeLevelM?: number } = {}) => {
     setIsSimulationRunning(true);
     try {
       const res = await apiClient.runSimulation(options);
-      // Refresh replay data
-      const refreshed = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
-      if (refreshed?.success && refreshed.event) {
-        setEventData(refreshed.event);
-        setAvailableTimestamps(refreshed.event.timestamps);
+      // Refresh replay data and environment forcing
+      const [refreshedReplay, refreshedEnv] = await Promise.allSettled([
+        apiClient.fetchReplayEvent('mangaluru-historical-2018'),
+        apiClient.fetchEventEnvironment('mangaluru-historical-2018'),
+      ]);
+      if (refreshedReplay.status === 'fulfilled' && refreshedReplay.value?.success && refreshedReplay.value.event) {
+        setEventData(refreshedReplay.value.event);
+        setAvailableTimestamps(refreshedReplay.value.event.timestamps);
+      }
+      if (refreshedEnv.status === 'fulfilled' && refreshedEnv.value?.success && refreshedEnv.value.eventEnvironment) {
+        setEnvironmentalData(refreshedEnv.value.eventEnvironment);
       }
       return res;
     } catch (err: unknown) {
@@ -255,6 +289,28 @@ export function useFloodDashboard() {
       throw err;
     } finally {
       setIsSimulationRunning(false);
+    }
+  }, []);
+
+  // Manual refresh of telemetry and simulation replay
+  const refreshData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [replayResp, envResp] = await Promise.allSettled([
+        apiClient.fetchReplayEvent('mangaluru-historical-2018'),
+        apiClient.fetchEventEnvironment('mangaluru-historical-2018'),
+      ]);
+      if (replayResp.status === 'fulfilled' && replayResp.value?.success && replayResp.value.event) {
+        setEventData(replayResp.value.event);
+        if (replayResp.value.event.timestamps?.length > 0) {
+          setAvailableTimestamps(replayResp.value.event.timestamps);
+        }
+      }
+      if (envResp.status === 'fulfilled' && envResp.value?.success && envResp.value.eventEnvironment) {
+        setEnvironmentalData(envResp.value.eventEnvironment);
+      }
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -337,7 +393,9 @@ export function useFloodDashboard() {
     isSimulationRunning,
     error,
     eventData,
+    environmentalData,
     triggerSimulationRun,
+    refreshData,
 
     // Actions & Acknowledgments
     currentZoneAcknowledgment: acknowledgments[selectedZoneId] || {

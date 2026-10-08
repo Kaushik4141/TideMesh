@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Shield, Droplets, Building2, Bell, User, Keyboard, Zap, Loader2 } from 'lucide-react';
+import { Shield, Droplets, Building2, Bell, User, Keyboard, Zap, Loader2, RefreshCw } from 'lucide-react';
 
 interface TopHeaderProps {
   onOpenShortcuts?: () => void;
@@ -10,6 +10,8 @@ interface TopHeaderProps {
   currentTime?: string;
   isSimulationRunning?: boolean;
   onRunSimulation?: () => void;
+  onRefresh?: () => void;
+  isLoading?: boolean;
 }
 
 export function TopHeader({
@@ -19,6 +21,8 @@ export function TopHeader({
   currentTime = '14:30',
   isSimulationRunning = false,
   onRunSimulation,
+  onRefresh,
+  isLoading = false,
 }: TopHeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-200 z-40 flex items-center justify-between px-4 lg:px-6 whitespace-nowrap select-none shadow-xs">
@@ -95,6 +99,19 @@ export function TopHeader({
                 <span>Run SFINCS Simulation</span>
               </>
             )}
+          </button>
+        )}
+
+        {/* Manual Telemetry & Simulation Refresh Button */}
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 disabled:opacity-60 text-slate-700 rounded-md text-[11px] lg:text-xs font-semibold border border-slate-200 shadow-2xs transition-colors cursor-pointer"
+            title="Refresh live telemetry and replay from API"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh Data</span>
           </button>
         )}
       </div>

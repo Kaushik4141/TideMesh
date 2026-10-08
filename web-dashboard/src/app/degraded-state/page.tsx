@@ -1,17 +1,32 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Shield, Waves, Bell, User, LayoutDashboard, Grid, Hospital, 
   Siren, Route, Activity, FileText, AlertTriangle, RefreshCw, 
   CheckCircle, Clock, RadioTower, LocateFixed, History, 
   Wrench, Radio, ClipboardCheck, FileEdit, Download, Phone 
 } from "lucide-react";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { apiClient } from "@/lib/api/client";
 
 export default function DegradedStatePage() {
   const [retryStatus, setRetryStatus] = useState<"idle" | "loading" | "error">("idle");
   const [acknowledged, setAcknowledged] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<"idle" | "loading" | "done">("idle");
+
+  useEffect(() => {
+    let mounted = true;
+    console.info('[DegradedStatePage] Verifying backend replay connection from API...');
+    apiClient
+      .fetchReplayEvent('mangaluru-historical-2018')
+      .catch((err) => {
+        console.warn('[DegradedStatePage] Replay fetch notice:', err);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleRetry = () => {
     setRetryStatus("loading");
@@ -78,76 +93,8 @@ export default function DegradedStatePage() {
         </div>
       </header>
 
-      {/* Sidebar */}
-      <aside className="fixed left-0 top-14 bottom-0 w-[232px] bg-white border-r border-slate-200 z-30 flex flex-col justify-between">
-        <div className="flex flex-col pt-3">
-          <nav className="flex flex-col gap-0.5 px-2">
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded bg-blue-50 text-blue-900 border-l-4 border-blue-600 font-semibold transition-colors">
-              <div className="flex items-center gap-3">
-                <LayoutDashboard className="w-[18px] h-[18px]" />
-                <span>Overview</span>
-              </div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <Grid className="w-[18px] h-[18px]" />
-                <span>Zones</span>
-              </div>
-              <span className="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-xs font-medium">12</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <Hospital className="w-[18px] h-[18px]" />
-                <span>Critical Facilities</span>
-              </div>
-              <span className="px-1.5 py-0.5 bg-slate-200 text-slate-700 rounded text-xs font-medium">7</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <Siren className="w-[18px] h-[18px]" />
-                <span>Response &amp; Actions</span>
-              </div>
-              <span className="px-1.5 py-0.5 bg-red-100 text-red-800 rounded text-xs font-medium">3 Pending</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <Route className="w-[18px] h-[18px]" />
-                <span>Evacuation Routes</span>
-              </div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <Activity className="w-[18px] h-[18px]" />
-                <span>Sensor Telemetry</span>
-              </div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-3 rounded text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-colors text-sm font-medium border-l-4 border-transparent">
-              <div className="flex items-center gap-3">
-                <FileText className="w-[18px] h-[18px]" />
-                <span>Reports &amp; Briefings</span>
-              </div>
-            </a>
-          </nav>
-        </div>
-        <div className="p-3 m-2 mb-3 bg-slate-100 border border-slate-200 rounded-lg">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-2">
-            <span className="text-xs font-medium text-slate-500 uppercase">Data Engine</span>
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              <span className="text-xs font-semibold text-slate-900">ONLINE</span>
-            </div>
-          </div>
-          <div className="space-y-1 text-xs text-slate-500">
-            <div className="flex justify-between"><span>Telemetry Feed:</span><span className="text-xs font-medium text-slate-900">99.8%</span></div>
-            <div className="flex justify-between"><span>Hydro Model:</span><span className="text-xs font-medium text-slate-900">v1.2 Active</span></div>
-            <div className="flex justify-between"><span>Model Run:</span><span className="text-xs font-medium text-slate-900">14:24</span></div>
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">EOC Hotline:</span>
-            <span className="text-sm font-bold text-blue-600">1077</span>
-          </div>
-        </div>
-      </aside>
+      {/* Sidebar Navigation */}
+      <Sidebar />
 
       {/* Main Content */}
       <div className="pl-[232px]">

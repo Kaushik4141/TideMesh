@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import { 
   Shield, 
   Droplets, 
@@ -26,7 +28,8 @@ import {
   Zap, 
   GraduationCap,
   CloudRain,
-  Waves
+  Waves,
+  RefreshCw
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -34,8 +37,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { apiClient } from "@/lib/api/client";
 
-const zones = [
+const DEFAULT_ZONES = [
   { id: 'B', name: 'Zone B', locality: 'Panambur Coast', rank: 1, severity: 'CRITICAL', probability: 84.7, depth: '0.31–0.71 m', onset: '14:30', peak: '15:10', pop: '4,820', facil: 3 },
   { id: 'F', name: 'Zone F', locality: 'Tannirbhavi', rank: 2, severity: 'HIGH', probability: 72.0, depth: '0.22–0.55 m', onset: '14:50', peak: '15:30', pop: '3,960', facil: 2 },
   { id: 'C', name: 'Zone C', locality: 'Surathkal Coastal', rank: 3, severity: 'HIGH', probability: 61.0, depth: '0.18–0.46 m', onset: '15:05', peak: '15:45', pop: '2,410', facil: 1 },
@@ -49,6 +54,47 @@ const zones = [
 ];
 
 export default function ZonesPage() {
+  const [zonesList, setZonesList] = useState(DEFAULT_ZONES);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    console.info('[ZonesPage] Fetching simulation replay zones from API...');
+    apiClient
+      .fetchReplayEvent('mangaluru-historical-2018')
+      .then((resp) => {
+        if (mounted && resp?.success && resp.event?.timesteps) {
+          const firstStep = Object.values(resp.event.timesteps)[0];
+          if (firstStep?.zones && firstStep.zones.length > 0) {
+            const mapped = firstStep.zones.map((z, idx) => ({
+              id: z.id,
+              name: z.name,
+              locality: z.locality,
+              rank: z.rank || idx + 1,
+              severity: z.severity,
+              probability: z.probability,
+              depth: z.depth,
+              onset: z.onset,
+              peak: z.peak,
+              pop: (z.population || 1000).toLocaleString(),
+              facil: z.facilitiesCount || (z.facilities?.length ?? 0),
+            }));
+            setZonesList(mapped);
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('[ZonesPage] API fetch fallback to defaults:', err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <div className="bg-slate-50 min-h-screen font-sans text-slate-900 antialiased flex flex-col">
       <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-200 z-40 flex items-center justify-between px-6">
@@ -99,54 +145,8 @@ export default function ZonesPage() {
         </div>
       </header>
 
-      <aside className="fixed left-0 top-14 bottom-0 w-[232px] bg-white border-r border-slate-200 z-30 flex flex-col justify-between">
-        <div className="flex flex-col pt-2">
-          <nav className="flex flex-col gap-0.5 px-1">
-            <a href="#" className="flex items-center justify-between px-4 py-2 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-sm border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><LayoutDashboard className="w-4 h-4" /><span>Overview</span></div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-2 rounded transition-colors bg-slate-200 text-slate-900 border-l-4 border-blue-700 font-semibold">
-              <div className="flex items-center gap-2"><Grid className="w-4 h-4" /><span>Zones</span></div>
-              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">12</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-2 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-sm border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Hospital className="w-4 h-4" /><span>Critical Facilities</span></div>
-              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">7</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-2 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-sm border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Siren className="w-4 h-4" /><span>Response &amp; Actions</span></div>
-              <span className="px-1.5 py-0.5 bg-red-100 text-red-900 rounded text-xs">3 Pending</span>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-2 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-sm border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Route className="w-4 h-4" /><span>Evacuation Routes</span></div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-2 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-sm border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><Radio className="w-4 h-4" /><span>Sensor Telemetry</span></div>
-            </a>
-            <a href="#" className="flex items-center justify-between px-4 py-2 rounded text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-sm border-l-4 border-transparent">
-              <div className="flex items-center gap-2"><FileText className="w-4 h-4" /><span>Reports &amp; Briefings</span></div>
-            </a>
-          </nav>
-        </div>
-        <div className="p-2 m-1 mb-2 bg-slate-100 border border-slate-200 rounded-lg">
-          <div className="flex items-center justify-between pb-1 border-b border-slate-200 mb-1">
-            <span className="text-xs text-slate-500 uppercase font-semibold">Data Engine</span>
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-              <span className="text-xs text-slate-900 font-semibold">ONLINE</span>
-            </div>
-          </div>
-          <div className="space-y-1 text-xs text-slate-500">
-            <div className="flex justify-between"><span>Telemetry Feed:</span><span className="text-slate-900 font-semibold">99.8%</span></div>
-            <div className="flex justify-between"><span>Hydro Model:</span><span className="text-slate-900 font-semibold">v1.2 Active</span></div>
-            <div className="flex justify-between"><span>Model Run:</span><span className="text-slate-900 font-semibold">14:24</span></div>
-          </div>
-          <div className="mt-2 pt-1 border-t border-slate-200 flex items-center justify-between">
-            <span className="text-xs text-slate-500">EOC Hotline:</span>
-            <span className="text-sm text-slate-900 font-bold">1077</span>
-          </div>
-        </div>
-      </aside>
+      {/* Reusable Sidebar Navigation */}
+      <Sidebar />
 
       <div className="pl-[232px] pt-14 w-full flex-1">
         <main className="w-full h-full flex flex-col">
@@ -250,7 +250,7 @@ export default function ZonesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody className="text-sm">
-                    {zones.map((zone) => {
+                    {zonesList.map((zone) => {
                       let alertColor = '';
                       let badgeBg = '';
                       let rowStyle = '';

@@ -59,3 +59,51 @@ export interface RunSimulationResponse {
   simulation: Record<string, unknown>;
   persistedRecord?: Record<string, unknown>;
 }
+
+export interface EnvironmentalObservation {
+  id: string;
+  timestamp: string;
+  latitude: number;
+  longitude: number;
+  elevation: number;
+  rainfall: number;
+  precipitation: number;
+  temperature: number;
+  surfacePressure: number;
+  windSpeed: number;
+  tideLevel?: number | null;
+  stormSurge?: number | null;
+}
+
+export interface EnvironmentalObservationsResponse {
+  success: boolean;
+  count: number;
+  observations: EnvironmentalObservation[];
+}
+
+export interface EventEnvironmentResponse {
+  success: boolean;
+  eventEnvironment: {
+    eventId: string;
+    location: string;
+    period: {
+      start: string;
+      end: string;
+    };
+    forcing: {
+      rainfall: {
+        source: string;
+        peakRateMmHr: number;
+        status: string;
+        hourlyTimeSeries: Array<{ timestamp: string; rainfallMmHr: number }>;
+      };
+      surge: {
+        source: string;
+        peakSurgeM: number;
+        status: string;
+        hourlyTimeSeries: Array<{ timestamp: string; surgeLevelM: number }>;
+      };
+    };
+  };
+}
+

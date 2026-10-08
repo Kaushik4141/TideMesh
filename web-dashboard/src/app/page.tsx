@@ -38,8 +38,11 @@ export default function OverviewPage() {
     setShortcutsModalOpen,
     floodExtentGeoJson,
     eventData,
+    environmentalData,
+    isLoading,
     isSimulationRunning,
     triggerSimulationRun,
+    refreshData,
   } = useFloodDashboard();
 
   return (
@@ -52,12 +55,14 @@ export default function OverviewPage() {
         currentTime={currentTime}
         isSimulationRunning={isSimulationRunning}
         onRunSimulation={() => triggerSimulationRun()}
+        onRefresh={() => refreshData()}
+        isLoading={isLoading}
       />
 
       {/* Main Body */}
       <div className="flex flex-1 pt-14 overflow-hidden">
         {/* Left Sidebar */}
-        <Sidebar />
+        <Sidebar environmentalData={environmentalData} />
 
         {/* Content Area */}
         <main className="flex-1 ml-[220px] lg:ml-[232px] p-2.5 lg:p-3 overflow-hidden flex flex-col gap-2.5">
