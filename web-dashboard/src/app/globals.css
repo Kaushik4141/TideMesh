@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@source "../**/*.{js,ts,jsx,tsx}";
+@source "../../src/**/*.{js,ts,jsx,tsx}";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
