@@ -128,6 +128,8 @@ class SimulationService:
         """
         Returns full file artifact catalog for the specified event.
         """
+        if event_id in ("mangaluru-historical-2018", "mangaluru-baseline-m2") and settings.sfincs_baseline_dir.exists():
+            return self.parser.catalog_outputs(settings.sfincs_baseline_dir)
         try:
             return self.parser.catalog_outputs(settings.outputs_dir)
         except Exception:
@@ -260,10 +262,12 @@ class SimulationService:
             with open(meta_file, "w") as f:
                 json.dump(meta_json, f, indent=2)
 
-        # Sync deliverables to global settings.outputs_dir so standard queries return this run
+        # Sync deliverables to simulations/latest directory
+        latest_dir = settings.repo_root / "simulations" / "latest"
+        latest_dir.mkdir(parents=True, exist_ok=True)
         for f in run_out_dir.glob("*"):
             if f.is_file():
-                shutil.copy2(f, settings.outputs_dir / f.name)
+                shutil.copy2(f, latest_dir / f.name)
 
         return self.adapter.load_and_normalize(run_out_dir, zone_id=zone_id)
 

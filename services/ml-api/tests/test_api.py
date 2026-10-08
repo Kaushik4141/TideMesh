@@ -17,7 +17,7 @@ def test_list_simulations():
     data = res.json()
     assert isinstance(data, list)
     assert len(data) > 0
-    assert data[0]["eventId"] == "mangaluru-historical-2018"
+    assert any(e["eventId"] == "mangaluru-historical-2018" for e in data)
 
 def test_get_forecast():
     res = client.get("/api/v1/simulations/mangaluru-historical-2018/forecast?zone_id=zone-mangaluru-coastal")

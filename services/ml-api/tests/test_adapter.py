@@ -14,9 +14,10 @@ def test_classify_flood_severity():
     assert classify_flood_severity(3.0) == "CRITICAL"
 
 def test_adapter_normalization():
-    parser = SFINCSOutputParser(base_outputs_dir=settings.outputs_dir)
+    target_dir = settings.sfincs_baseline_dir if settings.sfincs_baseline_dir.exists() else settings.outputs_dir
+    parser = SFINCSOutputParser(base_outputs_dir=target_dir)
     adapter = SFINCSAdapter(parser=parser)
-    prediction = adapter.load_and_normalize(settings.outputs_dir, zone_id="zone-mangaluru-coastal")
+    prediction = adapter.load_and_normalize(target_dir, zone_id="zone-mangaluru-coastal")
 
     # Contract verification
     assert prediction.eventId == "mangaluru-historical-2018"
