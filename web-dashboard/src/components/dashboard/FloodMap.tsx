@@ -1,22 +1,23 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useId } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Plus,
   Minus,
   Layers,
   LocateFixed,
-  Hospital,
-  Flame,
-  Home,
-  ShieldCheck,
-  Zap,
-  MapPin,
-  ExternalLink,
+  Waves,
+  Navigation,
+  Droplets,
   Map as MapIcon,
 } from 'lucide-react';
 import type { ZoneData, CriticalFacility } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
+import {
+  MANGALURU_WATERWAYS,
+  FLOW_DIRECTION_VECTORS,
+  RIVER_LANDMARKS,
+} from '@/data/waterways';
 
 interface FloodMapProps {
   zones: ZoneData[];
@@ -165,16 +166,6 @@ const ZONE_COORDINATES: Record<string, { center: [number, number]; coordinates: 
       [74.855, 12.910],
     ],
   },
-  K: {
-    center: [74.855, 12.935],
-    coordinates: [
-      [74.845, 12.955],
-      [74.880, 12.955],
-      [74.880, 12.920],
-      [74.845, 12.920],
-      [74.845, 12.955],
-    ],
-  },
 };
 
 // Real-world Mangaluru GPS coordinates for facilities
@@ -199,6 +190,7 @@ export function FloodMap({
   selectedZoneId,
   onSelectZone,
   facilities,
+  floodExtentGeoJson,
   className,
 }: FloodMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -206,9 +198,17 @@ export function FloodMap({
   const markersRef = useRef<any[]>([]);
 
   const [basemap, setBasemap] = useState<BasemapKey>('osm');
+  const [showWaterways, setShowWaterways] = useState<boolean>(true);
+  const [showFlowVectors, setShowFlowVectors] = useState<boolean>(true);
   const [showInundation, setShowInundation] = useState<boolean>(true);
+  const [showZones, setShowZones] = useState<boolean>(true);
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [hoveredFacility, setHoveredFacility] = useState<CriticalFacility | null>(null);
+  const [hoveredWaterway, setHoveredWaterway] = useState<{
+    name: string;
+    description: string;
+    depthM?: number;
+  } | null>(null);
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
 
@@ -254,8 +254,8 @@ export function FloodMap({
               },
             ],
           },
-          center: [74.815, 12.925], // Mangaluru coastal centroid
-          zoom: 11.8,
+          center: [74.825, 12.895], // Mangaluru estuarine & river centroid
+          zoom: 12.0,
           pitch: 0,
           attributionControl: false,
         });
@@ -264,7 +264,11 @@ export function FloodMap({
           if (!isMounted) return;
           mapRef.current = map;
           setMapLoaded(true);
-          renderRiskLayers(map, maplibregl);
+
+          renderWaterways(map);
+          renderFlowVectors(map);
+          renderInundation(map, floodExtentGeoJson);
+          renderRiskLayers(map);
           renderMarkers(map, maplibregl);
         });
       } catch (err) {
@@ -283,11 +287,173 @@ export function FloodMap({
     };
   }, [basemap]);
 
-  // Update polygon risk layers
-  function renderRiskLayers(map: any, maplibregl: any) {
+  // 1. Render Mangaluru Waterways & River Channels
+  function renderWaterways(map: any) {
     if (!map || !map.isStyleLoaded()) return;
 
-    // Build GeoJSON features for all configured zones
+    if (map.getSource('waterways-source')) {
+      map.getSource('waterways-source').setData(MANGALURU_WATERWAYS);
+      return;
+    }
+
+    map.addSource('waterways-source', {
+      type: 'geojson',
+      data: MANGALURU_WATERWAYS,
+    });
+
+    // River Waterbody Fill
+    map.addLayer({
+      id: 'waterways-fill',
+      type: 'fill',
+      source: 'waterways-source',
+      layout: {
+        visibility: showWaterways ? 'visible' : 'none',
+      },
+      paint: {
+        'fill-color': ['get', 'color'],
+        'fill-opacity': 0.55,
+      },
+    });
+
+    // River Channel Bank Outline
+    map.addLayer({
+      id: 'waterways-outline',
+      type: 'line',
+      source: 'waterways-source',
+      layout: {
+        visibility: showWaterways ? 'visible' : 'none',
+      },
+      paint: {
+        'line-color': '#0369A1',
+        'line-width': 2.2,
+      },
+    });
+
+    // Interactive tooltip on waterways
+    map.on('mouseenter', 'waterways-fill', (e: any) => {
+      map.getCanvas().style.cursor = 'pointer';
+      if (e.features && e.features[0]) {
+        const props = e.features[0].properties;
+        setHoveredWaterway({
+          name: props.name,
+          description: props.description,
+          depthM: props.depthM,
+        });
+      }
+    });
+
+    map.on('mouseleave', 'waterways-fill', () => {
+      map.getCanvas().style.cursor = '';
+      setHoveredWaterway(null);
+    });
+  }
+
+  // 2. Render Hydrodynamic Flow Direction Vectors
+  function renderFlowVectors(map: any) {
+    if (!map || !map.isStyleLoaded()) return;
+
+    if (map.getSource('flow-vectors-source')) {
+      map.getSource('flow-vectors-source').setData(FLOW_DIRECTION_VECTORS);
+      return;
+    }
+
+    map.addSource('flow-vectors-source', {
+      type: 'geojson',
+      data: FLOW_DIRECTION_VECTORS,
+    });
+
+    // Dashed Flow Path Lines
+    map.addLayer({
+      id: 'flow-vectors-line',
+      type: 'line',
+      source: 'flow-vectors-source',
+      layout: {
+        visibility: showFlowVectors ? 'visible' : 'none',
+      },
+      paint: {
+        'line-color': ['get', 'color'],
+        'line-width': 3.2,
+        'line-dasharray': [3, 2],
+      },
+    });
+  }
+
+  // 3. Render SFINCS Inundation Polygon Extent
+  function renderInundation(map: any, geojson: Record<string, unknown> | null | undefined) {
+    if (!map || !map.isStyleLoaded()) return;
+
+    const fallbackInundation = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { depth: '1.2m' },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [74.810, 12.955],
+                [74.835, 12.955],
+                [74.845, 12.915],
+                [74.835, 12.875],
+                [74.825, 12.845],
+                [74.815, 12.845],
+                [74.810, 12.890],
+                [74.805, 12.930],
+                [74.810, 12.955],
+              ],
+            ],
+          },
+        },
+      ],
+    };
+
+    const targetData = geojson || fallbackInundation;
+
+    if (map.getSource('sfincs-inundation-source')) {
+      map.getSource('sfincs-inundation-source').setData(targetData);
+      return;
+    }
+
+    map.addSource('sfincs-inundation-source', {
+      type: 'geojson',
+      data: targetData,
+    });
+
+    // Inundation Surface Fill
+    map.addLayer({
+      id: 'sfincs-inundation-fill',
+      type: 'fill',
+      source: 'sfincs-inundation-source',
+      layout: {
+        visibility: showInundation ? 'visible' : 'none',
+      },
+      paint: {
+        'fill-color': '#0284C7',
+        'fill-opacity': 0.42,
+      },
+    });
+
+    // Inundation Boundary Wave Line
+    map.addLayer({
+      id: 'sfincs-inundation-outline',
+      type: 'line',
+      source: 'sfincs-inundation-source',
+      layout: {
+        visibility: showInundation ? 'visible' : 'none',
+      },
+      paint: {
+        'line-color': '#38BDF8',
+        'line-width': 2.5,
+        'line-dasharray': [4, 2],
+      },
+    });
+  }
+
+  // 4. Render Operational Zone Risk Layers
+  function renderRiskLayers(map: any) {
+    if (!map || !map.isStyleLoaded()) return;
+
     const features = zones.map((z) => {
       const geo = ZONE_COORDINATES[z.id];
       if (!geo) return null;
@@ -299,17 +465,17 @@ export function FloodMap({
 
       if (z.severity === 'CRITICAL') {
         fillColor = '#DC2626';
-        fillOpacity = 0.32;
+        fillOpacity = 0.28;
         strokeColor = '#DC2626';
         strokeWidth = 2.5;
       } else if (z.severity === 'HIGH') {
         fillColor = '#EA580C';
-        fillOpacity = 0.28;
+        fillOpacity = 0.24;
         strokeColor = '#EA580C';
         strokeWidth = 2.0;
       } else if (z.severity === 'ELEVATED') {
         fillColor = '#CA8A04';
-        fillOpacity = 0.22;
+        fillOpacity = 0.18;
         strokeColor = '#CA8A04';
         strokeWidth = 1.5;
       }
@@ -341,7 +507,6 @@ export function FloodMap({
       features,
     };
 
-    // Remove existing zone source if present
     if (map.getSource('flood-zones-source')) {
       map.getSource('flood-zones-source').setData(geojsonData);
       return;
@@ -352,42 +517,42 @@ export function FloodMap({
       data: geojsonData,
     });
 
-    // 1. Zone Fills
     map.addLayer({
       id: 'flood-zones-fill',
       type: 'fill',
       source: 'flood-zones-source',
       layout: {
-        visibility: showInundation ? 'visible' : 'none',
+        visibility: showZones ? 'visible' : 'none',
       },
       paint: {
         'fill-color': ['get', 'fillColor'],
         'fill-opacity': [
           'case',
           ['boolean', ['get', 'isSelected'], false],
-          0.45,
+          0.40,
           ['get', 'fillOpacity'],
         ],
       },
     });
 
-    // 2. Zone Boundaries
     map.addLayer({
       id: 'flood-zones-outline',
       type: 'line',
       source: 'flood-zones-source',
+      layout: {
+        visibility: showZones ? 'visible' : 'none',
+      },
       paint: {
         'line-color': ['get', 'strokeColor'],
         'line-width': [
           'case',
           ['boolean', ['get', 'isSelected'], false],
-          3.5,
+          3.0,
           ['get', 'strokeWidth'],
         ],
       },
     });
 
-    // Interactive zone clicks on polygons
     map.on('click', 'flood-zones-fill', (e: any) => {
       if (e.features && e.features.length > 0) {
         const zoneId = e.features[0].properties.id;
@@ -403,13 +568,56 @@ export function FloodMap({
     });
   }
 
-  // Render HTML Markers for Facilities and Zone Labels
+  // 5. Render HTML Markers (River Landmarks, Facilities, Zone Centroids)
   function renderMarkers(map: any, maplibregl: any) {
-    // Clear old markers
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    // 1. Zone Centroid Labels
+    // River & Hydrological Waypoints
+    RIVER_LANDMARKS.forEach((lm) => {
+      const el = document.createElement('div');
+      el.className = 'cursor-pointer select-none transition-transform hover:scale-105';
+      el.innerHTML = `
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          background: rgba(15, 23, 42, 0.92);
+          backdrop-filter: blur(4px);
+          padding: 2px 7px;
+          border-radius: 4px;
+          border: 1px solid #0284C7;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+          font-family: Inter, sans-serif;
+          color: #E0F2FE;
+        ">
+          <span style="font-size: 11px;">🌊</span>
+          <div style="display: flex; flex-direction: column;">
+            <span style="font-size: 10px; font-weight: 700; line-height: 1.1; color: #38BDF8;">${lm.name}</span>
+            <span style="font-size: 9px; color: #94A3B8; line-height: 1;">${lm.subtitle}</span>
+          </div>
+        </div>
+      `;
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setHoveredWaterway({
+          name: lm.name,
+          description: lm.subtitle,
+        });
+      });
+
+      const marker = new maplibregl.Marker({
+        element: el,
+        anchor: 'center',
+      })
+        .setLngLat(lm.position)
+        .addTo(map);
+
+      markersRef.current.push(marker);
+    });
+
+    // Zone Centroid Labels
     zones.forEach((z) => {
       const geo = ZONE_COORDINATES[z.id];
       if (!geo) return;
@@ -461,7 +669,7 @@ export function FloodMap({
       markersRef.current.push(marker);
     });
 
-    // 2. Critical Facilities Markers
+    // Critical Facilities Markers
     facilities.forEach((fac) => {
       const coords = FACILITY_GEO[fac.id] || (ZONE_COORDINATES[fac.zoneId]?.center ?? [74.815, 12.925]);
       const isCritical = fac.severity === 'CRITICAL';
@@ -524,23 +732,41 @@ export function FloodMap({
     });
   }
 
-  // Sync selected zone & visibility when props change
+  // Update dynamic layers when props change
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
     const map = mapRef.current;
 
+    // Waterways visibility
+    if (map.getLayer('waterways-fill')) {
+      map.setLayoutProperty('waterways-fill', 'visibility', showWaterways ? 'visible' : 'none');
+      map.setLayoutProperty('waterways-outline', 'visibility', showWaterways ? 'visible' : 'none');
+    }
+
+    // Flow vectors visibility
+    if (map.getLayer('flow-vectors-line')) {
+      map.setLayoutProperty('flow-vectors-line', 'visibility', showFlowVectors ? 'visible' : 'none');
+    }
+
+    // Inundation extent visibility & data sync
+    if (map.getSource('sfincs-inundation-source')) {
+      renderInundation(map, floodExtentGeoJson);
+    }
+    if (map.getLayer('sfincs-inundation-fill')) {
+      map.setLayoutProperty('sfincs-inundation-fill', 'visibility', showInundation ? 'visible' : 'none');
+      map.setLayoutProperty('sfincs-inundation-outline', 'visibility', showInundation ? 'visible' : 'none');
+    }
+
+    // Zone outlines visibility & data sync
     if (map.getSource('flood-zones-source')) {
-      import('maplibre-gl').then((mod: any) => {
-        const maplibregl = mod.default || mod;
-        renderRiskLayers(map, maplibregl);
-      });
+      renderRiskLayers(map);
     }
-
     if (map.getLayer('flood-zones-fill')) {
-      map.setLayoutProperty('flood-zones-fill', 'visibility', showInundation ? 'visible' : 'none');
+      map.setLayoutProperty('flood-zones-fill', 'visibility', showZones ? 'visible' : 'none');
+      map.setLayoutProperty('flood-zones-outline', 'visibility', showZones ? 'visible' : 'none');
     }
 
-    // Smoothly fly to selected zone if it changes
+    // Smoothly fly to selected zone
     const geo = ZONE_COORDINATES[selectedZoneId];
     if (geo && map) {
       map.flyTo({
@@ -550,9 +776,9 @@ export function FloodMap({
         speed: 1.2,
       });
     }
-  }, [selectedZoneId, showInundation, mapLoaded]);
+  }, [selectedZoneId, showWaterways, showFlowVectors, showInundation, showZones, floodExtentGeoJson, mapLoaded]);
 
-  // Controls: Zoom in/out, Fly to Zone B
+  // Controls
   const handleZoomIn = () => {
     if (mapRef.current) mapRef.current.zoomIn();
   };
@@ -606,6 +832,31 @@ export function FloodMap({
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Hover Waterway Tooltip */}
+      {hoveredWaterway && (
+        <div
+          className="absolute z-40 pointer-events-none select-none bg-slate-900/95 text-white px-3 py-2 rounded-md shadow-lg text-xs transition-opacity duration-100 border border-sky-600/70 max-w-[280px]"
+          style={{
+            left: '50%',
+            top: '20px',
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div className="font-bold flex items-center gap-1.5 text-sky-300">
+            <Waves className="w-3.5 h-3.5 text-sky-400" />
+            <span>{hoveredWaterway.name}</span>
+          </div>
+          <div className="text-[11px] text-slate-300 mt-0.5 leading-snug">
+            {hoveredWaterway.description}
+          </div>
+          {hoveredWaterway.depthM != null && (
+            <div className="text-[10px] text-sky-300 mt-1 font-mono font-semibold">
+              Bed Level: {hoveredWaterway.depthM} m MSL
+            </div>
+          )}
         </div>
       )}
 
@@ -663,13 +914,46 @@ export function FloodMap({
         </button>
         <div className="h-px bg-slate-200 my-0.5" />
         <button
+          onClick={() => setShowWaterways((prev) => !prev)}
+          className={cn(
+            'w-7 h-7 flex items-center justify-center rounded transition-colors cursor-pointer',
+            showWaterways ? 'bg-sky-100 font-bold text-sky-800' : 'text-slate-700 hover:bg-slate-100'
+          )}
+          title="Toggle River Channels & Water Bodies"
+          aria-label="Toggle Waterways Layer"
+        >
+          <Waves className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setShowFlowVectors((prev) => !prev)}
+          className={cn(
+            'w-7 h-7 flex items-center justify-center rounded transition-colors cursor-pointer',
+            showFlowVectors ? 'bg-cyan-100 font-bold text-cyan-800' : 'text-slate-700 hover:bg-slate-100'
+          )}
+          title="Toggle Hydrodynamic Flow Direction Vectors"
+          aria-label="Toggle Flow Vectors"
+        >
+          <Navigation className="w-3.5 h-3.5" />
+        </button>
+        <button
           onClick={() => setShowInundation((prev) => !prev)}
           className={cn(
-            'w-7 h-7 flex items-center justify-center rounded text-slate-700 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 transition-colors cursor-pointer',
-            showInundation ? 'bg-slate-100 font-bold text-blue-700' : 'hover:bg-slate-50'
+            'w-7 h-7 flex items-center justify-center rounded transition-colors cursor-pointer',
+            showInundation ? 'bg-blue-100 font-bold text-blue-800' : 'text-slate-700 hover:bg-slate-100'
           )}
-          title="Toggle Flood Inundation Layer"
+          title="Toggle SFINCS Flood Inundation Extent"
           aria-label="Toggle Inundation Layer"
+        >
+          <Droplets className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setShowZones((prev) => !prev)}
+          className={cn(
+            'w-7 h-7 flex items-center justify-center rounded transition-colors cursor-pointer',
+            showZones ? 'bg-slate-200 font-bold text-slate-900' : 'text-slate-700 hover:bg-slate-100'
+          )}
+          title="Toggle Operational Zone Outlines"
+          aria-label="Toggle Zones Layer"
         >
           <Layers className="w-4 h-4" />
         </button>
@@ -704,7 +988,33 @@ export function FloodMap({
 
       {/* Map Legend (Bottom-Left) */}
       <div className="relative m-2.5 flex flex-wrap items-end justify-between pointer-events-none gap-2 z-20">
-        <div className="bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded-md border border-slate-200/90 shadow-2xs flex items-center gap-3 pointer-events-auto">
+        <div className="bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded-md border border-slate-200/90 shadow-2xs flex flex-wrap items-center gap-3 pointer-events-auto">
+          {/* River Channel */}
+          <div className="flex items-center gap-1.5">
+            <span className="w-3.5 h-2 bg-sky-500 rounded-2xs border border-sky-700" />
+            <span className="text-[10px] font-bold text-sky-900 uppercase">River Channel</span>
+          </div>
+
+          {/* Flow Direction */}
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] text-cyan-600 font-bold">➔</span>
+            <span className="text-[10px] font-bold text-cyan-900 uppercase">Seaward Flow</span>
+          </div>
+
+          {/* Surge Penetration */}
+          <div className="flex items-center gap-1">
+            <span className="text-[11px] text-rose-600 font-bold">➔</span>
+            <span className="text-[10px] font-bold text-rose-900 uppercase">Surge Inflow</span>
+          </div>
+
+          {/* Inundation */}
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 bg-blue-500/40 border border-blue-400 border-dashed rounded-2xs" />
+            <span className="text-[10px] font-bold text-blue-900 uppercase">Flood Extent</span>
+          </div>
+
+          <div className="h-3 w-px bg-slate-300 hidden sm:block" />
+
           {/* Critical */}
           <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onSelectZone('B')}>
             <span className="w-3 h-3 bg-red-600/30 border-2 border-red-600 rounded-2xs flex items-center justify-center">
@@ -722,11 +1032,6 @@ export function FloodMap({
             <span className="w-3 h-3 bg-yellow-400/25 border border-yellow-600 rounded-2xs" />
             <span className="text-[10px] font-bold text-yellow-800 uppercase">Elevated</span>
           </div>
-          {/* Low */}
-          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onSelectZone('D')}>
-            <span className="w-3 h-3 bg-transparent border border-dashed border-slate-400 rounded-2xs" />
-            <span className="text-[10px] font-bold text-slate-500 uppercase">Low</span>
-          </div>
         </div>
 
         {/* Map Scale & OpenStreetMap Attribution */}
@@ -736,7 +1041,7 @@ export function FloodMap({
             <span className="font-bold text-slate-900">1 km</span>
           </div>
           <span>·</span>
-          <span>12.914°N, 74.856°E</span>
+          <span>12.895°N, 74.825°E</span>
           <span>·</span>
           <span className="text-slate-800 font-semibold flex items-center gap-1">
             <MapIcon className="w-3 h-3 text-emerald-600" />
