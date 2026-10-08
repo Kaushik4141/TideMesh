@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "domain",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "name": "Mangaluru 5km Domain" }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 74.889405441987734, 12.854065119180676 ], [ 74.889385616203327, 12.899279045275268 ], [ 74.843296393121761, 12.899255499395858 ], [ 74.843324479560849, 12.85404165856618 ], [ 74.889405441987734, 12.854065119180676 ] ] ] } }
+]
+}

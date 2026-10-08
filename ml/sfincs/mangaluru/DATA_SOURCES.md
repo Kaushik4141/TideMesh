@@ -1,0 +1,141 @@
+# DATA_SOURCES.md — Mangaluru Data Audit & Metadata Ledger
+
+This ledger tracks raw data sources, coordinate reference systems (CRS), vertical datums, spatial/temporal resolutions, domain specifications, and preprocessing steps applied for SFINCS modeling in Mangaluru.
+
+---
+
+## 1. Initial Model Domain (Milestone M1 Specification)
+
+```text
+Domain Name: Mangaluru Estuarine & Coastal Plain Domain (Netravati River Delta & Bengre Spit)
+Spatial Extent: 5.0 km x 5.0 km (25.0 km² total domain area)
+Model Grid Resolution: 50.0 m x 50.0 m grid cells (100 x 100 cell computational mesh = 10,000 cells)
+Projected CRS: EPSG:32643 (UTM Zone 43N - WGS 84 / UTM zone 43N)
+Geographic CRS: EPSG:4326 (WGS 84)
+Vertical Datum: Mean Sea Level (MSL) in meters
+
+Projected Bounding Box (UTM 43N - Meters):
+  Xmin: 483,000 m E
+  Ymin: 1,421,000 m N
+  Xmax: 488,000 m E
+  Ymax: 1,426,000 m N
+
+Geographic Bounding Box (WGS84 - Degrees):
+  West:  74.8430° E
+  East:  74.8890° E
+  South: 12.8530° N
+  North: 12.8980° N
+
+Domain Boundary Polygon: processed/boundaries/domain.geojson
+Selection Rationale: Covers critical low-lying urban areas (Kottara, Urwa, Bengre, Jeppu) vulnerable to compound flooding from the Netravati River estuary and Arabian Sea spring tides.
+```
+
+---
+
+## 2. Digital Elevation Model (DEM)
+
+```text
+Dataset Name: Copernicus DEM GLO-30 / FABDEM 30m (Forest & Buildings Removed) & GEBCO 2024 Bathymetry
+Source / Provider: European Space Agency (ESA) Copernicus Open Access Hub / Univ. of Bristol FABDEM
+Spatial Resolution: 30 meter native resolution (Resampled to 50 meter model mesh)
+Native CRS: EPSG:4326 (WGS84)
+Target Model CRS: EPSG:32643 (UTM Zone 43N)
+Native Vertical Datum: EGM96 Geoid
+Model Vertical Datum: Mean Sea Level (MSL) meters
+Coverage Bounds: 12.80° N to 13.00° N, 74.75° E to 74.95° E
+License / Access: Open Data / Creative Commons CC-BY 4.0
+Download Location: raw/dem/mangaluru_copernicus_dem_30m.tif
+Processed Location: processed/dem/mangaluru_dem_50m_msl.tif
+
+Processing Steps:
+  1. Reprojection from EPSG:4326 to EPSG:32643 using bilinear interpolation.
+  2. Clipping to 5km x 5km domain bounding box.
+  3. Vertical datum reconciliation: EGM96 to MSL adjustment.
+  4. Integration of coastal bathymetry for river channels (Netravati & Gurupura river beds).
+QA Status: Verified. Elevation range: -5.0m (coastal channel) to +15.0m (coastal terrace).
+```
+
+---
+
+## 3. Coastal Water Level & Tide Forcing
+
+```text
+Source / Station: Panambur Port Tide Gauge / New Mangalore Port Authority (NMPA) & INCOIS Ocean State Forecast
+Station Location: 12.921° N, 74.802° E (Panambur Port Harbor Entrance)
+Temporal Resolution: 15-minute / 1-hour time series
+Units: meters (m)
+Native Vertical Datum: Chart Datum (CD) / Port Zero Datum
+Model Vertical Datum: Mean Sea Level (MSL)
+Datum Offset: MSL = CD - 1.10 m (Chart Datum is 1.10 m below Mean Sea Level at Panambur)
+
+Observed Tide Range (CD):
+  Lowest Astronomical Tide (LAT): +0.10 m CD (-1.00 m MSL)
+  Mean Sea Level (MSL): +1.10 m CD (0.00 m MSL)
+  Highest Astronomical Tide (HAT): +2.25 m CD (+1.15 m MSL)
+  Storm Surge Peak (Extreme): Up to +2.70 m CD (+1.60 m MSL)
+
+Observed vs Predicted: Astronomical predicted tide curve blended with INCOIS storm surge anomaly.
+License / Access: NMPA Official Tide Tables 2024–2026 / INCOIS Open Portal
+Download Location: raw/tide/panambur_tide_2024.csv
+Processed Location: processed/tide/sfincs_tide_bnd.bzs
+
+Processing Steps:
+  1. Time normalization to UTC ISO-8601 timestamps.
+  2. Vertical datum conversion: Subtract 1.10m to convert CD elevations to MSL.
+  3. Interpolation to 5-minute SFINCS hydrodynamic model timestep.
+  4. Mapping to SFINCS ocean boundary nodes along western offshore edge.
+```
+
+---
+
+## 4. Rainfall Forcing (Pluvial Input)
+
+```text
+Source: India Meteorological Department (IMD) Mangaluru Station (ID: 43247) & ERA5-Land Reanalysis
+Station Location: Mangaluru Airport / City Center (12.96° N, 74.89° E)
+Temporal Resolution: 15-minute / Hourly intervals
+Spatial Resolution: Spatially uniform over 5km x 5km domain (Option for IMD radar gridded rainfall)
+Units: mm/hr (intensity) / mm (cumulative precipitation)
+Historical Extreme Coverage: 288 mm / 24-hr extreme monsoon storm (May 29, 2018 Cyclone Mekunu event)
+Peak Downpour Rate: 75.0 mm/hr
+License / Access: IMD Climate Data Services / Copernicus Climate Change Service (C3S)
+Download Location: raw/rainfall/mangaluru_monsoon_rain_2024.csv
+Processed Location: processed/rainfall/sfincs_precip.bzs
+
+Processing Steps:
+  1. Format conversion to SFINCS block time series file (.precip / .bzs).
+  2. Unit conversion to m/s for SFINCS mass-balance internal solver.
+  3. Quality control and missing value zero-filling.
+```
+
+---
+
+## 5. Flood Observations & Ground Truth Benchmarks (Validation)
+
+```text
+Target Historical Events:
+  1. May 29, 2018 Cyclone Mekunu / SW Monsoon Downpour:
+     - 288 mm rainfall in 24 hours + high tide (2.1m CD).
+     - Widespread urban inundation in Kottara Chowki, Alape, Urwa, Pumpwell.
+  2. July 2024 Monsoon Flood Event:
+     - Estuarine flooding along Netravati & Gurupura river confluence.
+
+Observation Datasets:
+  - Sentinel-1 SAR Synthetic Aperture Radar water-extent masks (ESA SciHub).
+  - Karnataka State Disaster Management Authority (KSDMA) inundation point reports.
+  - Georeferenced field photographs and high-water mark (HWM) logs (0.3m to 1.8m depth).
+
+Download Location: raw/observations/mangaluru_2018_flood_extent.geojson
+Validation Metrics: Critical Success Index (CSI / Threat Score), Intersection over Union (IoU), RMSE for depth points.
+```
+
+---
+
+## 6. Domain Coordinate & Vertical References Summary
+
+- **Projected Coordinate Reference System (CRS)**: `EPSG:32643` (UTM Zone 43N, meters)
+- **Geographic CRS**: `EPSG:4326` (WGS 84, degrees)
+- **Vertical Reference System**: Mean Sea Level (MSL) in meters
+- **Datum Reconciliation Formula**:
+  $$\text{Elevation}_{\text{MSL}} = \text{Elevation}_{\text{Chart Datum}} - 1.10\text{ m}$$
+  $$\text{Elevation}_{\text{MSL}} = \text{Elevation}_{\text{EGM96}} \pm 0.00\text{ m (Local MSL Approximation)}$$
