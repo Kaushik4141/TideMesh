@@ -55,7 +55,7 @@ export function ZoneDrawer({
   return (
     <aside
       className={cn(
-        'w-full xl:w-[420px] 2xl:w-[440px] shrink-0 bg-white border border-slate-200/90 rounded-lg shadow-xs flex flex-col max-h-[calc(100vh-140px)] select-none overflow-hidden transition-all',
+        'w-full xl:w-[420px] 2xl:w-[440px] shrink-0 bg-white border border-slate-200/90 rounded-lg shadow-xs flex flex-col h-full min-h-0 select-none overflow-hidden transition-all',
         className
       )}
       aria-label="Zone Detail Drawer"
@@ -150,15 +150,30 @@ export function ZoneDrawer({
             </button>
           )}
 
-          {/* Secondary Action: Assign Team */}
-          <button
-            onClick={() => onAssignAction('act-1', 'Team 1')}
-            className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold transition-colors focus-visible:ring-2 focus-visible:ring-slate-900"
-            title="Assign emergency response team"
-          >
-            <Send className="w-3.5 h-3.5 text-slate-500" />
-            <span>Assign Team</span>
-          </button>
+          {/* Secondary Action: Assign Team (Dynamically dispatches first pending action for this zone) */}
+          {(() => {
+            const firstPendingAction = zone.actions.find((a) => {
+              const st = actionsState[a.id]?.status || a.status;
+              return st === 'unassigned';
+            });
+            return (
+              <button
+                onClick={() => {
+                  if (firstPendingAction) {
+                    onAssignAction(firstPendingAction.id, 'Team 1');
+                  } else if (zone.actions[0]) {
+                    onAssignAction(zone.actions[0].id, 'Team 1');
+                  }
+                }}
+                disabled={!firstPendingAction && zone.actions.length === 0}
+                className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold transition-colors focus-visible:ring-2 focus-visible:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={firstPendingAction ? `Assign Team for ${firstPendingAction.title}` : 'All actions assigned'}
+              >
+                <Send className="w-3.5 h-3.5 text-slate-500" />
+                <span>Assign Team</span>
+              </button>
+            );
+          })()}
 
           {/* Tertiary Action: Open Full Zone View */}
           <Link
@@ -213,8 +228,17 @@ export function ZoneDrawer({
           </div>
         </div>
 
-        {/* 6. WHY IS THIS CRITICAL? SECTION */}
+        {/* 6. WHY IS THIS CRITICAL? SECTION (Severity-adaptive title) */}
         <WhyPanel
+          title={
+            zone.severity === 'CRITICAL'
+              ? 'Why is this critical?'
+              : zone.severity === 'HIGH'
+              ? 'Why is this high risk?'
+              : zone.severity === 'ELEVATED'
+              ? 'Why is this elevated?'
+              : 'Risk Factor Analysis'
+          }
           factors={zone.factors}
           explanation={zone.summaryExplanation}
         />
@@ -310,12 +334,24 @@ export function ZoneDrawer({
 
         {/* 9. SUGGESTED RESPONDER ACTIONS WITH ASSIGN BUTTONS */}
         <div className="space-y-2 pt-1 border-t border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-900 font-bold uppercase tracking-wider">
-              Suggested Responder Actions
-            </span>
-            <span className="text-[10px] text-slate-500 font-medium">1 of 3 Done</span>
-          </div>
+          {(() => {
+            const doneCount = zone.actions.filter((a) => {
+              const liveStatus = actionsState[a.id]?.status || a.status;
+              return liveStatus === 'dispatched' || liveStatus === 'done';
+            }).length;
+            const totalCount = zone.actions.length;
+
+            return (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-900 font-bold uppercase tracking-wider">
+                  Suggested Responder Actions
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  {totalCount > 0 ? `${doneCount} of ${totalCount} Done` : 'None pending'}
+                </span>
+              </div>
+            );
+          })()}
 
           <div className="space-y-1.5 text-xs">
             {zone.actions.map((action) => {

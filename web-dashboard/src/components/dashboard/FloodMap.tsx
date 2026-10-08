@@ -227,9 +227,9 @@ export function FloodMap({
         />
 
         {/* ELEVATED Zones (Yellow tint ~25% opacity, 1.5px yellow border) */}
-        {/* Zone A */}
+        {/* Zone A (Ullal Estuary) */}
         <polygon
-          points="260,20 440,30 460,150 280,165"
+          points="200,470 370,460 380,570 190,570"
           fill="rgba(234, 179, 8, 0.25)"
           stroke="#CA8A04"
           strokeWidth={selectedZoneId === 'A' ? 2.5 : 1.5}
@@ -358,15 +358,15 @@ export function FloodMap({
           </text>
         </g>
 
-        {/* Zone A (ELEVATED) */}
+        {/* Zone A (ELEVATED - Ullal Estuary) */}
         <g
           className="cursor-pointer select-none"
           onClick={() => onSelectZone('A')}
         >
-          <circle cx="340" cy="86" r="3.5" fill="#CA8A04" />
+          <circle cx="265" cy="510" r="3.5" fill="#CA8A04" />
           <text
-            x="349"
-            y="90"
+            x="274"
+            y="514"
             fill="#0F172A"
             fontFamily="Inter, sans-serif"
             fontSize="12"
@@ -404,33 +404,40 @@ export function FloodMap({
         {facilities.map((fac) => {
           const isSelectedZone = fac.zoneId === selectedZoneId;
           const isCritical = fac.severity === 'CRITICAL';
+          const isHovered = hoveredFacility?.id === fac.id;
 
           return (
             <g
               key={fac.id}
               transform={`translate(${fac.x}, ${fac.y})`}
-              className="cursor-pointer transition-transform hover:scale-110"
+              className="cursor-pointer"
               onMouseEnter={() => setHoveredFacility(fac)}
               onMouseLeave={() => setHoveredFacility(null)}
-              onClick={() => onSelectZone(fac.zoneId)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectZone(fac.zoneId);
+              }}
             >
+              {/* Invisible generous hit target to prevent enter/leave jitter */}
+              <circle cx="0" cy="0" r="22" fill="transparent" />
+
               {isCritical && (
                 <circle
                   cx="0"
                   cy="0"
-                  r="14"
+                  r={isHovered ? 17 : 14}
                   fill="#FEE2E2"
-                  className="animate-pulse"
+                  className="animate-pulse pointer-events-none"
                 />
               )}
               <circle
                 cx="0"
                 cy="0"
-                r="11"
+                r={isHovered ? 13 : 11}
                 fill="#FFFFFF"
                 stroke={isCritical ? '#DC2626' : '#0F172A'}
                 strokeWidth={isCritical ? 2.5 : 1.5}
-                className="shadow-sm"
+                className="shadow-sm pointer-events-none transition-all duration-150"
               />
               {/* Category-specific icon rendering */}
               {fac.category === 'hospital' ? (
@@ -439,11 +446,13 @@ export function FloodMap({
                   stroke={isCritical ? '#DC2626' : '#0F172A'}
                   strokeWidth="2.5"
                   strokeLinecap="round"
+                  className="pointer-events-none"
                 />
               ) : fac.category === 'fire' ? (
                 <polygon
                   points="0,-5 4,4 -4,4"
                   fill={isCritical ? '#DC2626' : '#EA580C'}
+                  className="pointer-events-none"
                 />
               ) : (
                 <circle
@@ -451,6 +460,7 @@ export function FloodMap({
                   cy="0"
                   r="4"
                   fill={isCritical ? '#DC2626' : '#475569'}
+                  className="pointer-events-none"
                 />
               )}
             </g>
@@ -458,13 +468,39 @@ export function FloodMap({
         })}
       </svg>
 
-      {/* Hover Facility Tooltip (Renders cleanly without obscuring map roads) */}
+      {/* Floating Selected Zone Indicator (Positioned absolute top-3 left-3 without layout jumping) */}
+      {selectedZone && (
+        <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none z-10">
+          <div className="bg-slate-900/95 backdrop-blur-xs text-white px-3 py-1.5 rounded-md shadow-md flex items-center gap-2.5 pointer-events-auto border border-slate-800">
+            <div
+              className={cn(
+                'w-2 h-2 rounded-full shrink-0',
+                selectedZone.severity === 'CRITICAL'
+                  ? 'bg-red-500 animate-pulse'
+                  : selectedZone.severity === 'HIGH'
+                  ? 'bg-orange-500'
+                  : 'bg-yellow-400'
+              )}
+            />
+            <div className="flex flex-col">
+              <span className="text-xs font-bold leading-tight">
+                {selectedZone.name} · {selectedZone.locality}
+              </span>
+              <span className="text-[11px] text-slate-300 leading-tight">
+                Onset: {selectedZone.onset} · Depth: {selectedZone.depth}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hover Facility Tooltip (Strict pointer-events-none, offset below marker so it never intersects cursor) */}
       {hoveredFacility && (
         <div
-          className="absolute z-30 pointer-events-none bg-slate-900/95 text-white px-2.5 py-1.5 rounded shadow-lg text-xs"
+          className="absolute z-40 pointer-events-none select-none bg-slate-900/95 text-white px-2.5 py-1.5 rounded shadow-lg text-xs transition-opacity duration-100"
           style={{
-            left: `${Math.min(Math.max((hoveredFacility.x / 960) * 100, 10), 85)}%`,
-            top: `${Math.min((hoveredFacility.y / 580) * 100 + 4, 80)}%`,
+            left: `${Math.min(Math.max((hoveredFacility.x / 960) * 100, 15), 75)}%`,
+            top: `${Math.min((hoveredFacility.y / 580) * 100 + 7, 78)}%`,
           }}
         >
           <div className="font-bold flex items-center gap-1.5">
@@ -488,32 +524,6 @@ export function FloodMap({
               ⚠ {hoveredFacility.warningNote}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Floating Selected Zone Indicator (Clean & Minimal) */}
-      {selectedZone && (
-        <div className="relative m-3 flex items-center gap-2 pointer-events-none z-10">
-          <div className="bg-slate-900/95 backdrop-blur-xs text-white px-3 py-1.5 rounded-md shadow-md flex items-center gap-2.5 pointer-events-auto border border-slate-800">
-            <div
-              className={cn(
-                'w-2 h-2 rounded-full shrink-0',
-                selectedZone.severity === 'CRITICAL'
-                  ? 'bg-red-500 animate-pulse'
-                  : selectedZone.severity === 'HIGH'
-                  ? 'bg-orange-500'
-                  : 'bg-yellow-400'
-              )}
-            />
-            <div className="flex flex-col">
-              <span className="text-xs font-bold leading-tight">
-                {selectedZone.name} · {selectedZone.locality}
-              </span>
-              <span className="text-[11px] text-slate-300 leading-tight">
-                Onset: {selectedZone.onset} · Depth: {selectedZone.depth}
-              </span>
-            </div>
-          </div>
         </div>
       )}
 
