@@ -2,9 +2,9 @@
   "model": "SFINCS",
   "model_version": "v2.4.2",
   "location": "Mangaluru Coastal / Netravati Estuary Domain",
-  "simulation_id": "sim-live-test-01",
-  "start_time": "2026-10-08T15:04:08.203465+00:00",
-  "end_time": "2026-10-08T21:04:08.203465+00:00",
+  "simulation_id": "sim-20261008-152759",
+  "start_time": "2026-10-08T15:27:59.431949+00:00",
+  "end_time": "2026-10-08T21:27:59.431949+00:00",
   "time_step_minutes": 5,
   "grid_resolution_m": 50,
   "crs": "EPSG:32643",
@@ -15,8 +15,8 @@
   "onset_threshold_m": 0.05,
   "flood_threshold_m": 0.1,
   "forcing": {
-    "tide_source": "Panambur Dynamic Tide (Peak 1.80m MSL)",
-    "rainfall_source": "Dynamic Forcing (Peak 55.0 mm/hr)"
+    "tide_source": "Panambur Dynamic Tide (Peak 1.50m MSL)",
+    "rainfall_source": "Dynamic Forcing (Peak 65.0 mm/hr)"
   },
-  "event_name": "On-Demand High Monsoon Test"
+  "event_name": "Hourly Cycle 2026-10-08T15:00"
 }

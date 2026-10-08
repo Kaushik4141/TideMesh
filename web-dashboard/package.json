@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@next/swc-win32-x64-msvc": "^16.4.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.53.0",
     "maplibre-gl": "^6.13.0",

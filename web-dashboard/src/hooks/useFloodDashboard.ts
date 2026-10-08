@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { ZoneData, KpiSummary } from '@/types/dashboard';
+import type { ZoneData, KpiSummary, CriticalFacility } from '@/types/dashboard';
 import { MOCK_ZONES, INITIAL_KPI_SUMMARY, MOCK_FACILITIES } from '@/mocks/floodData';
+import { apiClient } from '@/lib/api/client';
+import type { ReplayEventResponse, PriorityItem } from '@/lib/api/types';
 
 export interface AcknowledgmentState {
   acknowledged: boolean;
@@ -13,10 +15,19 @@ export interface AcknowledgmentState {
 export function useFloodDashboard() {
   const [selectedZoneId, setSelectedZoneId] = useState<string>('B');
   const [drawerOpen, setDrawerOpen] = useState<boolean>(true);
-  const [currentTime, setCurrentTime] = useState<string>('14:26');
+  const [currentTime, setCurrentTime] = useState<string>('14:30');
+  const [availableTimestamps, setAvailableTimestamps] = useState<string[]>([
+    '14:00', '14:15', '14:30', '14:45', '15:00', '15:15', '15:30', '15:45', '16:00'
+  ]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<1 | 2 | 5>(1);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Loaded event metadata
+  const [eventData, setEventData] = useState<ReplayEventResponse['event'] | null>(null);
 
   // Per-zone acknowledgment status
   const [acknowledgments, setAcknowledgments] = useState<Record<string, AcknowledgmentState>>({
@@ -36,9 +47,128 @@ export function useFloodDashboard() {
     'act-3': { status: 'dispatched', team: 'Team 4', timestamp: '14:15' },
   });
 
+  // Initial fetch of real SFINCS replay data from Hono API
+  useEffect(() => {
+    let mounted = true;
+    async function fetchInitialReplay() {
+      setIsLoading(true);
+      try {
+        const resp = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
+        if (mounted && resp?.success && resp.event) {
+          setEventData(resp.event);
+          if (resp.event.timestamps && resp.event.timestamps.length > 0) {
+            setAvailableTimestamps(resp.event.timestamps);
+            // Default to 14:30 onset step
+            if (resp.event.timestamps.includes('14:30')) {
+              setCurrentTime('14:30');
+            } else {
+              setCurrentTime(resp.event.timestamps[0]);
+            }
+          }
+          setError(null);
+        }
+      } catch (err: unknown) {
+        if (mounted) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn('[useFloodDashboard] API replay fetch failed, using validated baseline fixtures:', message);
+          setError(message);
+        }
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    }
+
+    fetchInitialReplay();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Derive active timestep data from loaded replay or fall back gracefully
+  const activeTimestep = useMemo(() => {
+    if (eventData?.timesteps && eventData.timesteps[currentTime]) {
+      return eventData.timesteps[currentTime];
+    }
+    return null;
+  }, [eventData, currentTime]);
+
+  // Dynamic Zones list for active timestamp
+  const zones = useMemo<ZoneData[]>(() => {
+    if (activeTimestep?.zones && activeTimestep.zones.length > 0) {
+      return activeTimestep.zones;
+    }
+    return MOCK_ZONES;
+  }, [activeTimestep]);
+
+  // Selected Zone data
   const selectedZone = useMemo<ZoneData>(() => {
-    return MOCK_ZONES.find((z) => z.id === selectedZoneId) || MOCK_ZONES[0];
-  }, [selectedZoneId]);
+    return zones.find((z) => z.id === selectedZoneId) || zones[0];
+  }, [zones, selectedZoneId]);
+
+  // Dynamic KPI summary for active timestamp
+  const kpi = useMemo<KpiSummary>(() => {
+    if (activeTimestep?.kpi) {
+      return activeTimestep.kpi;
+    }
+    return INITIAL_KPI_SUMMARY;
+  }, [activeTimestep]);
+
+  // Dynamic facilities list
+  const facilities = useMemo<CriticalFacility[]>(() => {
+    const facs: CriticalFacility[] = [];
+    zones.forEach((z) => {
+      if (z.facilities) {
+        facs.push(...z.facilities);
+      }
+    });
+    return facs.length > 0 ? facs : MOCK_FACILITIES;
+  }, [zones]);
+
+  // Dynamic Response Priorities
+  const priorities = useMemo<PriorityItem[]>(() => {
+    if (activeTimestep?.priorities) {
+      return activeTimestep.priorities;
+    }
+    return [];
+  }, [activeTimestep]);
+
+  // Dynamic GeoJSON flood extent polygon
+  const floodExtentGeoJson = useMemo(() => {
+    return activeTimestep?.floodExtent || null;
+  }, [activeTimestep]);
+
+  // Playback timer loop
+  useEffect(() => {
+    if (!isPlaying || availableTimestamps.length === 0) return;
+
+    const intervalMs = playbackSpeed === 5 ? 400 : playbackSpeed === 2 ? 800 : 1600;
+    const interval = setInterval(() => {
+      setCurrentTime((prev) => {
+        const idx = availableTimestamps.indexOf(prev);
+        if (idx === -1 || idx >= availableTimestamps.length - 1) {
+          return availableTimestamps[0]; // loop back to start
+        }
+        return availableTimestamps[idx + 1];
+      });
+    }, intervalMs);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, playbackSpeed, availableTimestamps]);
+
+  // Step controls
+  const stepForward = useCallback(() => {
+    const idx = availableTimestamps.indexOf(currentTime);
+    if (idx !== -1 && idx < availableTimestamps.length - 1) {
+      setCurrentTime(availableTimestamps[idx + 1]);
+    }
+  }, [currentTime, availableTimestamps]);
+
+  const stepBackward = useCallback(() => {
+    const idx = availableTimestamps.indexOf(currentTime);
+    if (idx > 0) {
+      setCurrentTime(availableTimestamps[idx - 1]);
+    }
+  }, [currentTime, availableTimestamps]);
 
   // Compute countdown dynamically
   const countdownMinutes = useMemo<number | null>(() => {
@@ -81,10 +211,29 @@ export function useFloodDashboard() {
     setDrawerOpen(true);
   }, []);
 
+  // Trigger on-demand simulation run
+  const triggerSimulationRun = useCallback(async (options: { rainfallRateMmHr?: number; surgeLevelM?: number } = {}) => {
+    setIsSimulationRunning(true);
+    try {
+      const res = await apiClient.runSimulation(options);
+      // Refresh replay data
+      const refreshed = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
+      if (refreshed?.success && refreshed.event) {
+        setEventData(refreshed.event);
+        setAvailableTimestamps(refreshed.event.timestamps);
+      }
+      return res;
+    } catch (err: unknown) {
+      console.error('[useFloodDashboard] Simulation run failed:', err);
+      throw err;
+    } finally {
+      setIsSimulationRunning(false);
+    }
+  }, []);
+
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input, textarea or select
       const activeEl = document.activeElement;
       if (
         activeEl &&
@@ -111,6 +260,12 @@ export function useFloodDashboard() {
       } else if (e.code === 'Space') {
         e.preventDefault();
         setIsPlaying((prev) => !prev);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        stepForward();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        stepBackward();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         setDrawerOpen(false);
@@ -122,19 +277,41 @@ export function useFloodDashboard() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectZone, acknowledgeCurrentZone]);
+  }, [selectZone, acknowledgeCurrentZone, stepForward, stepBackward]);
 
   return {
-    zones: MOCK_ZONES,
+    // Data
+    zones,
     selectedZone,
     selectedZoneId,
     selectZone,
     drawerOpen,
     setDrawerOpen,
-    kpi: INITIAL_KPI_SUMMARY,
+    kpi,
+    facilities,
+    priorities,
+    floodExtentGeoJson,
+
+    // Time & Playback
     currentTime,
     setCurrentTime,
+    availableTimestamps,
+    isPlaying,
+    setIsPlaying,
+    playbackSpeed,
+    setPlaybackSpeed,
+    stepForward,
+    stepBackward,
     countdownMinutes,
+
+    // State & Status
+    isLoading,
+    isSimulationRunning,
+    error,
+    eventData,
+    triggerSimulationRun,
+
+    // Actions & Acknowledgments
     currentZoneAcknowledgment: acknowledgments[selectedZoneId] || {
       acknowledged: false,
       dutyOfficer: 'R. Shetty',
@@ -143,11 +320,8 @@ export function useFloodDashboard() {
     acknowledgeCurrentZone,
     actionsState,
     assignAction,
-    facilities: MOCK_FACILITIES,
-    isPlaying,
-    setIsPlaying,
-    playbackSpeed,
-    setPlaybackSpeed,
+
+    // Modal
     shortcutsModalOpen,
     setShortcutsModalOpen,
   };

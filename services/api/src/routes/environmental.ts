@@ -85,6 +85,71 @@ environmentalRouter.post("/ingest", async (c) => {
 });
 
 /**
+ * POST /api/v1/environmental-observations/fetch-live
+ * Queries live Open-Meteo & Open-Meteo Marine APIs and ingests verified observations into Neon PostGIS.
+ */
+environmentalRouter.post("/fetch-live", async (c) => {
+  try {
+    const db = getDb(c.env);
+    const body = await c.req.json().catch(() => ({}));
+    const lat = body.latitude ? Number(body.latitude) : 12.8997;
+    const lon = body.longitude ? Number(body.longitude) : 74.8727;
+    const forecastDays = body.forecastDays ? Number(body.forecastDays) : 2;
+
+    const report = await environmentalService.fetchLiveObservations(db, {
+      lat,
+      lon,
+      forecastDays,
+    });
+
+    return c.json(
+      {
+        success: true,
+        message: "Live environmental observations fetched and persisted successfully",
+        report,
+      },
+      201
+    );
+  } catch (error) {
+    const err = error as Error;
+    return c.json(
+      {
+        success: false,
+        error: "Failed to fetch live environmental observations",
+        message: err.message,
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /api/v1/environmental-observations/latest-live
+ * Returns the most recent environmental metrics recorded in the database.
+ */
+environmentalRouter.get("/latest-live", async (c) => {
+  try {
+    const db = getDb(c.env);
+    const latest = await environmentalService.getLatestLiveMetrics(db);
+
+    return c.json({
+      success: true,
+      latest,
+    });
+  } catch (error) {
+    const err = error as Error;
+    return c.json(
+      {
+        success: false,
+        error: "Failed to get latest live metrics",
+        message: err.message,
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/v1/environmental-observations/sfincs-forcing
  * Returns SFINCS-compatible rainfall forcing time series.
  */

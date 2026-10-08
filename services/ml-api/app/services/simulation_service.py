@@ -63,6 +63,20 @@ class SimulationService:
             except Exception:
                 pass
 
+        # Ensure canonical historical replay event is always cataloged
+        if not any(e["eventId"] == "mangaluru-historical-2018" for e in events):
+            events.insert(0, {
+                "eventId": "mangaluru-historical-2018",
+                "name": "Mangaluru Historical Flood 2018",
+                "location": "Mangaluru Coastal / Netravati Estuary Domain",
+                "startTime": "2018-05-29T00:00:00Z",
+                "endTime": "2018-05-29T06:00:00Z",
+                "maxDepthM": 1.0,
+                "floodedAreaKm2": 1.075,
+                "model": "SFINCS v2.4.2",
+                "status": "ready",
+            })
+
         return events
 
     def get_forecast(
@@ -73,15 +87,21 @@ class SimulationService:
         """
         Retrieves the normalized FloodPrediction for the specified event ID.
         """
-        # Look in outputs_dir first
+        # If requesting historical baseline event, load from baseline outputs
+        if event_id in ("mangaluru-historical-2018", "mangaluru-baseline-m2") and settings.sfincs_baseline_dir.exists():
+            prediction = self.adapter.load_and_normalize(settings.sfincs_baseline_dir, zone_id=zone_id)
+            prediction.eventId = event_id
+            return prediction
+
+        # Look in outputs_dir
         try:
             prediction = self.adapter.load_and_normalize(settings.outputs_dir, zone_id=zone_id)
-            if prediction.eventId == event_id or event_id in ("default", "latest", "mangaluru-historical-2018"):
+            if prediction.eventId == event_id or event_id in ("default", "latest"):
                 return prediction
         except Exception:
             pass
 
-        # Look in baseline outputs
+        # Look in baseline outputs as fallback
         if settings.sfincs_baseline_dir.exists():
             prediction = self.adapter.load_and_normalize(settings.sfincs_baseline_dir, zone_id=zone_id)
             return prediction

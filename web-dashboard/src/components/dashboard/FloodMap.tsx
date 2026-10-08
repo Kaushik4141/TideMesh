@@ -23,6 +23,7 @@ interface FloodMapProps {
   selectedZoneId: string;
   onSelectZone: (zoneId: string) => void;
   facilities: CriticalFacility[];
+  floodExtentGeoJson?: Record<string, unknown> | null;
   className?: string;
 }
 
@@ -31,12 +32,41 @@ export function FloodMap({
   selectedZoneId,
   onSelectZone,
   facilities,
+  floodExtentGeoJson,
   className,
 }: FloodMapProps) {
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [showContours, setShowContours] = useState<boolean>(true);
   const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null);
   const [hoveredFacility, setHoveredFacility] = useState<CriticalFacility | null>(null);
+
+  const sfincsPolygonPoints = React.useMemo(() => {
+    if (!floodExtentGeoJson || typeof floodExtentGeoJson !== 'object') return null;
+    try {
+      const fc = floodExtentGeoJson as {
+        features?: Array<{
+          geometry: {
+            type: string;
+            coordinates: number[][][];
+          };
+        }>;
+      };
+      if (!fc.features || fc.features.length === 0) return null;
+      const geom = fc.features[0].geometry;
+      if (geom.type === 'Polygon' && geom.coordinates?.[0]) {
+        return geom.coordinates[0]
+          .map(([lon, lat]: number[]) => {
+            const x = 240 + ((lon - 74.84) / 0.08) * 400;
+            const y = 50 + ((12.92 - lat) / 0.08) * 360;
+            return `${Math.round(x)},${Math.round(y)}`;
+          })
+          .join(' ');
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }, [floodExtentGeoJson]);
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId);
 
@@ -280,6 +310,18 @@ export function FloodMap({
           className="cursor-pointer hover:fill-red-600/35 transition-colors"
           onClick={() => onSelectZone('B')}
         />
+
+        {/* 4.1 Real SFINCS Hydrodynamic Flood Inundation Extent (from Backend NetCDF/GeoJSON) */}
+        {showContours && sfincsPolygonPoints && (
+          <polygon
+            points={sfincsPolygonPoints}
+            fill="rgba(14, 165, 233, 0.45)"
+            stroke="#0284C7"
+            strokeWidth="2.5"
+            strokeDasharray="4,2"
+            className="pointer-events-none filter drop-shadow-sm transition-all duration-300"
+          />
+        )}
 
         {/* 5. Zone Labels (Dark navy #0F172A with white halo + small severity icon) */}
         {/* Zone B (CRITICAL) */}
