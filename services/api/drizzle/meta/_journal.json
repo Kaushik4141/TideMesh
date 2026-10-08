@@ -15,6 +15,13 @@
       "when": 1791464429830,
       "tag": "0001_charming_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791467391443,
+      "tag": "0002_marvelous_old_lace",
+      "breakpoints": true
     }
   ]
 }

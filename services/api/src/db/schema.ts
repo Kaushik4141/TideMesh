@@ -9,8 +9,10 @@ import {
   jsonb,
   pgEnum,
   index,
+  uniqueIndex,
   customType,
 } from "drizzle-orm/pg-core";
+
 
 import { relations } from "drizzle-orm";
 
@@ -195,18 +197,37 @@ export const environmentalObservations = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
+    location: postgisGeometry("location", { type: "Point", srid: DEFAULT_SRID }),
+    elevation: doublePrecision("elevation"), // meters
     rainfall: doublePrecision("rainfall"), // mm
-    tideLevel: doublePrecision("tide_level"), // meters
-    stormSurge: doublePrecision("storm_surge"), // meters
-    source: text("source"), // e.g. 'station-01', 'simulated', 'noaa'
+    precipitation: doublePrecision("precipitation"), // mm
+    temperature: doublePrecision("temperature"), // °C
+    surfacePressure: doublePrecision("surface_pressure"), // hPa
+    windSpeed: doublePrecision("wind_speed"), // km/h
+    tideLevel: doublePrecision("tide_level"), // meters (nullable, do NOT fake)
+    stormSurge: doublePrecision("storm_surge"), // meters (nullable, do NOT fake)
+    source: text("source").notNull(), // e.g. 'open-meteo', 'unverified-cwc'
+    sourceTimestamp: text("source_timestamp"), // original timestamp from raw feed
+    dataQuality: text("data_quality").default("RAW").notNull(), // 'VERIFIED', 'UNVERIFIED_SOURCE', 'RAW'
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
   (table) => [
     index("env_obs_timestamp_idx").on(table.timestamp),
+    index("env_obs_source_idx").on(table.source),
+    index("env_obs_location_gist_idx").using("gist", table.location),
+    uniqueIndex("env_obs_source_time_loc_idx").on(
+      table.source,
+      table.timestamp,
+      table.latitude,
+      table.longitude
+    ),
   ]
 );
+
 
 // =============================================================================
 // 7. FLOOD PREDICTIONS

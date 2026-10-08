@@ -11,7 +11,9 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:seed": "tsx scripts/seed.ts",
     "check:postgis": "tsx scripts/check-postgis.ts",
+    "ingest:env": "tsx scripts/ingest-environmental.ts",
     "test": "tsx tests/run-all.ts"
+
   },
   "dependencies": {
     "@hono/node-server": "^2.1.4",

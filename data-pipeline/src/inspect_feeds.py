@@ -135,15 +135,17 @@ def inspect_json(path: Path) -> dict:
 
 
 def main():
+    base_dir = Path(__file__).resolve().parent.parent
     files = [
-        Path("data/raw/cwc/cwc_observations.json"),
-        Path("data/raw/open-meteo/open_meteo_hourly.json"),
+        base_dir / "data" / "raw" / "cwc" / "cwc_observations.json",
+        base_dir / "data" / "raw" / "open-meteo" / "open_meteo_hourly.json",
     ]
 
     results = []
     for file in files:
         result = inspect_json(file)
         results.append(result)
+
 
     print("\n" + "=" * 80)
     print("SUMMARY")

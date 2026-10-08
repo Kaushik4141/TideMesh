@@ -11,7 +11,7 @@ export async function runSimulationTests() {
   console.log("  Testing GET /api/v1/simulations...");
   const listRes = await app.request("/api/v1/simulations");
   assert.strictEqual(listRes.status, 200, "Simulations endpoint should return 200 OK");
-  const listData = await listRes.json();
+  const listData = (await listRes.json()) as any;
   assert.ok(listData.success, "Response should have success: true");
   assert.ok(listData.simulations.length > 0, "Should list at least one simulation");
   assert.strictEqual(
@@ -27,7 +27,8 @@ export async function runSimulationTests() {
     "/api/v1/simulations/mangaluru-historical-2018/forecast?zoneId=zone-mangaluru-coastal"
   );
   assert.strictEqual(forecastRes.status, 200, "Forecast endpoint should return 200 OK");
-  const forecastBody = await forecastRes.json();
+  const forecastBody = (await forecastRes.json()) as any;
+
   assert.ok(forecastBody.success, "Response should have success: true");
 
   const forecast = forecastBody.forecast;
@@ -62,7 +63,7 @@ export async function runSimulationTests() {
     "/api/v1/simulations/mangaluru-historical-2018/extent"
   );
   assert.strictEqual(extentRes.status, 200, "Extent endpoint should return 200 OK");
-  const extentBody = await extentRes.json();
+  const extentBody = (await extentRes.json()) as any;
   assert.strictEqual(extentBody.type, "FeatureCollection", "Extent must be GeoJSON FeatureCollection");
   assert.ok(extentBody.features.length > 0, "Should contain at least one feature");
   console.log(`  ✅ Flood extent GeoJSON verified with ${extentBody.features.length} feature(s)`);
@@ -75,7 +76,8 @@ export async function runSimulationTests() {
       { method: "POST" }
     );
     assert.strictEqual(syncRes.status, 201, "Sync endpoint should return 201 Created");
-    const syncBody = await syncRes.json();
+    const syncBody = (await syncRes.json()) as any;
+
     assert.ok(syncBody.success, "Sync response should have success: true");
     assert.ok(syncBody.data.prediction.id, "Saved prediction must have an ID");
 

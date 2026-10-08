@@ -4,8 +4,9 @@ data/raw/cwc/*.parquet
 data/raw/open-meteo/*.parquet
 
 # Python
-__pycache__/
+**/__pycache__/
 *.py[cod]
+
 *$py.class
 .pytest_cache/
 .coverage
