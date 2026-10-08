@@ -32,3 +32,18 @@ class SFINCSOutputsCatalog(BaseModel):
     peak_depth_tif_path: Optional[str] = None
     onset_time_tif_path: Optional[str] = None
     peak_time_tif_path: Optional[str] = None
+
+class SimulationRunRequest(BaseModel):
+    eventId: Optional[str] = None
+    zoneId: str = "zone-mangaluru-coastal"
+    rainfallRateMmHr: Optional[float] = None
+    rainfallSeries: Optional[List[float]] = None
+    surgeLevelM: Optional[float] = 1.5
+    durationHours: int = 6
+    scenarioName: Optional[str] = None
+
+class SimulationRunResponse(BaseModel):
+    status: str
+    simulation_id: str
+    execution_time_seconds: float
+    forecast: Dict[str, Any]

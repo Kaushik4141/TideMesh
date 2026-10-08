@@ -14,10 +14,9 @@ export async function runSimulationTests() {
   const listData = (await listRes.json()) as any;
   assert.ok(listData.success, "Response should have success: true");
   assert.ok(listData.simulations.length > 0, "Should list at least one simulation");
-  assert.strictEqual(
-    listData.simulations[0].eventId,
-    "mangaluru-historical-2018",
-    "Should contain Mangaluru historical simulation"
+  assert.ok(
+    listData.simulations.some((s: any) => s.eventId === "mangaluru-historical-2018"),
+    "Should contain Mangaluru historical simulation in event catalog"
   );
   console.log(`  ✅ List simulations verified: found ${listData.simulations.length} event(s)`);
 

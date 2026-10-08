@@ -291,7 +291,7 @@ export const MOCK_ZONES: ZoneData[] = [
         priority: 'Normal',
       },
     ],
-    svgPoints: '260,20 440,30 460,150 280,165',
+    svgPoints: '200,470 370,460 380,570 190,570',
   },
   {
     id: 'D',

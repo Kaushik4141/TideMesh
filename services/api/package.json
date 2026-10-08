@@ -12,8 +12,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "check:postgis": "tsx scripts/check-postgis.ts",
     "ingest:env": "tsx scripts/ingest-environmental.ts",
+    "cron:hourly": "tsx src/jobs/hourly-runner.ts",
     "test": "tsx tests/run-all.ts"
-
   },
   "dependencies": {
     "@hono/node-server": "^2.1.4",

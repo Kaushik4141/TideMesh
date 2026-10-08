@@ -38,6 +38,7 @@ bower_components
 build/Release
 
 # Dependency directories
+node_modules
 node_modules/
 jspm_packages/
 
@@ -193,6 +194,7 @@ Thumbs.db
 # Python & Virtual Environments
 venv/
 env/
+.venv
 .venv/
 ENV/
 __pycache__/
@@ -240,3 +242,7 @@ desktop.ini
 .idea/
 *.swp
 *.swo
+
+# SFINCS Dynamic Simulation Runs & Runtime Outputs
+simulations/runs/
+simulations/latest/

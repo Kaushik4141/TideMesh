@@ -112,3 +112,76 @@ simulationRouter.post("/:eventId/sync", async (c) => {
     );
   }
 });
+
+/**
+ * POST /api/v1/simulations/run
+ * Manual trigger / On-demand runner endpoint for SFINCS hydrodynamic simulations.
+ * Triggered by P4's Dashboard "Run Simulation" button or scheduled cron worker.
+ */
+simulationRouter.post("/run", async (c) => {
+  try {
+    const db = getDb(c.env);
+    const body = await c.req.json().catch(() => ({}));
+
+    const result = await simulationService.runSimulation(db, {
+      eventId: body.eventId,
+      zoneId: body.zoneId || "zone-mangaluru-coastal",
+      rainfallRateMmHr:
+        body.rainfallRateMmHr != null
+          ? Number(body.rainfallRateMmHr)
+          : undefined,
+      rainfallSeries: body.rainfallSeries,
+      surgeLevelM:
+        body.surgeLevelM != null ? Number(body.surgeLevelM) : undefined,
+      durationHours:
+        body.durationHours != null ? Number(body.durationHours) : 6,
+      scenarioName: body.scenarioName,
+      useLiveWeather: body.useLiveWeather !== false,
+    });
+
+    return c.json(
+      {
+        success: true,
+        message:
+          "SFINCS hydrodynamic simulation executed and saved to PostGIS successfully",
+        executionTimeMs: result.executionTimeMs,
+        simulation: result.simulation,
+        persistedRecord: result.dbRecord?.prediction,
+      },
+      201
+    );
+  } catch (error) {
+    const err = error as Error;
+    return c.json(
+      {
+        success: false,
+        error: `Simulation run failed: ${err.message}`,
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /api/v1/simulations/:eventId/replay
+ * Canonical Replay Aggregator for Frontend Responder Dashboard.
+ * Returns time series of flood extent, depth, zone impacts, facilities, and response priorities.
+ */
+simulationRouter.get("/:eventId/replay", async (c) => {
+  const eventId = c.req.param("eventId");
+
+  try {
+    const replay = simulationService.getReplayData(eventId);
+    return c.json(replay);
+  } catch (error) {
+    const err = error as Error;
+    return c.json(
+      {
+        success: false,
+        error: `Failed to load replay data for event ${eventId}: ${err.message}`,
+      },
+      500
+    );
+  }
+});
+

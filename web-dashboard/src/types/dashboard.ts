@@ -19,7 +19,7 @@ export interface ResponderAction {
 export interface CriticalFacility {
   id: string;
   name: string;
-  category: 'hospital' | 'fire' | 'shelter' | 'security' | 'utility';
+  category: 'hospital' | 'fire' | 'shelter' | 'security' | 'utility' | 'power' | 'police';
   zoneId: string;
   severity: SeverityLevel;
   depth: string;
