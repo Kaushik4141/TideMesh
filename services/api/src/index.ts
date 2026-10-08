@@ -29,26 +29,7 @@ type Bindings = {
 export const app = new Hono<{ Bindings: Bindings }>();
 
 // Global middleware
-app.use(
-  "*",
-  cors({
-    origin: (origin) => origin || "*",
-    allowHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With"],
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
-    exposeHeaders: ["Content-Length", "Content-Type"],
-    credentials: true,
-  })
-);
-
-// Chromium Private Network Access (PNA) preflight support
-app.use("*", async (c, next) => {
-  if (c.req.header("Access-Control-Request-Private-Network")) {
-    c.res.headers.set("Access-Control-Allow-Private-Network", "true");
-  }
-  await next();
-  c.res.headers.set("Access-Control-Allow-Private-Network", "true");
-});
-
+app.use("*", cors());
 app.use("*", requestLogger);
 app.onError(errorHandler);
 
@@ -79,6 +60,20 @@ app.route("/api/v1/health", healthRouter);
 app.route("/api/v1/simulations", simulationRouter);
 app.route("/api/v1/environmental-observations", environmentalRouter);
 app.route("/api/v1/events", eventEnvironmentRouter);
+
+// Top-level operational alias: GET /api/v1/forecast/live
+app.get("/api/v1/forecast/live", async (c) => {
+  const { getDb } = await import("./db/index.js");
+  const { simulationService } = await import("./services/simulation.service.js");
+  try {
+    const db = getDb(c.env);
+    const forecast = await simulationService.getLiveForecast(db);
+    return c.json(forecast);
+  } catch (error) {
+    const err = error as Error;
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
 
 
 

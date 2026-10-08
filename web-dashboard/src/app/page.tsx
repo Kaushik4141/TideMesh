@@ -44,10 +44,18 @@ export default function OverviewPage() {
     isSimulationRunning,
     triggerSimulationRun,
     refreshData,
-    // Replay controls & scenario
+    // Operational 3-Mode Architecture
+    activeMode,
+    switchMode,
+    scenarioParams,
+    triggerScenarioRun,
+    clockTimes,
+    isHypothetical,
+    disclaimer,
+    currentConditions,
+    // Replay controls
     currentReplayState,
     resetTimeline,
-    scenario,
   } = useFloodDashboard();
 
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
@@ -66,13 +74,15 @@ export default function OverviewPage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans antialiased text-slate-900 select-none">
-      {/* Top Header with live data fetching status and simulation trigger */}
+      {/* Top Header with 3-Mode Segmented Switcher & Live Telemetry Controls */}
       <TopHeader
         onOpenShortcuts={() => setShortcutsModalOpen(true)}
+        activeMode={activeMode}
+        onSwitchMode={switchMode}
+        onOpenScenario={() => setScenarioModalOpen(true)}
         eventName={eventData?.name}
-        eventType={eventData?.type || 'SIMULATION'}
         currentTime={currentTime}
-        isSimulation={true}
+        clockTimes={clockTimes}
         isSimulationRunning={isSimulationRunning}
         onRunSimulation={() => triggerSimulationRun()}
         onRefresh={() => refreshData()}
@@ -84,11 +94,74 @@ export default function OverviewPage() {
         {/* Left Sidebar with Scenario dialog trigger and telemetry data */}
         <Sidebar
           environmentalData={environmentalData}
+          activeMode={activeMode}
+          currentConditions={currentConditions}
+          scenarioParams={scenarioParams}
           onOpenScenario={() => setScenarioModalOpen(true)}
         />
 
         {/* Content Area */}
-        <main className="flex-1 ml-[220px] lg:ml-[232px] p-2.5 lg:p-3 overflow-hidden flex flex-col gap-2.5">
+        <main className="flex-1 ml-[220px] lg:ml-[232px] p-2.5 lg:p-3 overflow-hidden flex flex-col gap-2">
+          {/* Operational Mode Callout Banner */}
+          {activeMode === 'SCENARIO' ? (
+            <div className="bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-lg flex items-center justify-between text-xs text-amber-900 shadow-2xs shrink-0 animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500 text-white text-[10px] tracking-wider">
+                  Scenario
+                </span>
+                <span className="font-semibold">
+                  <strong>Hypothetical Stress Test:</strong> Simulating Cloudburst (+{scenarioParams?.rainfallRateMmHr ?? 110} mm/hr) & High Surge (+{scenarioParams?.surgeLevelM ?? 2.8}m). NOT a live forecast.
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setScenarioModalOpen(true)}
+                  className="px-2 py-0.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] cursor-pointer"
+                >
+                  Adjust Parameters
+                </button>
+                <button
+                  onClick={() => switchMode('LIVE_FORECAST')}
+                  className="px-2 py-0.5 rounded border border-amber-600 text-amber-900 hover:bg-amber-100 font-bold text-[11px] cursor-pointer"
+                >
+                  Back to Live Mode
+                </button>
+              </div>
+            </div>
+          ) : activeMode === 'HISTORICAL_REPLAY' ? (
+            <div className="bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 rounded-lg flex items-center justify-between text-xs text-blue-900 shadow-2xs shrink-0 animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px] tracking-wider">
+                  Replay
+                </span>
+                <span className="font-semibold">
+                  <strong>Validation Hindcast:</strong> Calibrated reproduction of the May 29, 2018 Cyclone Mekunu event (14:00–16:00 IST).
+                </span>
+              </div>
+              <button
+                onClick={() => switchMode('LIVE_FORECAST')}
+                className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer"
+              >
+                Switch to Live Forecast
+              </button>
+            </div>
+          ) : (
+            <div className="bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-lg flex items-center justify-between text-[11px] text-emerald-900 shadow-2xs shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
+                </span>
+                <span className="font-semibold">
+                  <strong>Operational Live Forecast:</strong> 0–6 hour forward hydrodynamic prediction generated from real-time meteorological & marine conditions.
+                </span>
+              </div>
+              <span className="text-[10px] text-emerald-700 font-mono font-semibold">
+                SFINCS-v2.4 Solver · Continuous Auto-Cycle
+              </span>
+            </div>
+          )}
+
           {/* KPI Strip */}
           <KpiStrip kpi={kpi} />
 
@@ -113,6 +186,8 @@ export default function OverviewPage() {
               <Timeline
                 currentTime={currentTime}
                 availableTimestamps={availableTimestamps}
+                clockTimes={clockTimes}
+                activeMode={activeMode}
                 onSelectTime={setCurrentTime}
                 isPlaying={isPlaying}
                 onTogglePlay={togglePlay}
@@ -147,11 +222,12 @@ export default function OverviewPage() {
         onClose={() => setShortcutsModalOpen(false)}
       />
 
-      {/* What-If Heavier Rainfall Scenario Dialog */}
+      {/* What-If Contingency Scenario Dialog */}
       <ScenarioModal
         open={scenarioModalOpen}
         onClose={() => setScenarioModalOpen(false)}
-        scenario={scenario}
+        initialParams={scenarioParams}
+        onRunScenario={triggerScenarioRun}
       />
     </div>
   );

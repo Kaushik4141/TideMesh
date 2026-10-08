@@ -35,6 +35,104 @@ simulationRouter.get("/", async (c) => {
 });
 
 /**
+ * GET /api/v1/simulations/live/forecast
+ * Primary Operational Mode: 0–6 hour forward hydrodynamic forecast
+ * driven by live and forecast meteorological + marine conditions.
+ */
+simulationRouter.get("/live/forecast", async (c) => {
+  try {
+    const db = getDb(c.env);
+    const forecast = await simulationService.getLiveForecast(db);
+    return c.json(forecast);
+  } catch (error) {
+    const err = error as Error;
+    return c.json(
+      {
+        success: false,
+        error: `Failed to generate operational live forecast: ${err.message}`,
+      },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/v1/simulations/scenario
+ * What-If Contingency Mode: Generates hypothetical stress-test sequence
+ * based on user-supplied rainfall intensity and storm surge sliders.
+ */
+simulationRouter.post("/scenario", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const scenario = simulationService.getScenarioData({
+      rainfallRateMmHr: body.rainfallRateMmHr != null ? Number(body.rainfallRateMmHr) : undefined,
+      surgeLevelM: body.surgeLevelM != null ? Number(body.surgeLevelM) : undefined,
+      scenarioName: body.scenarioName,
+      breachSeaWall: body.breachSeaWall !== false,
+    });
+    return c.json(scenario);
+  } catch (error) {
+    const err = error as Error;
+    return c.json(
+      {
+        success: false,
+        error: `Failed to generate contingency scenario: ${err.message}`,
+      },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/v1/simulations/run
+ * Manual trigger / On-demand runner endpoint for SFINCS hydrodynamic simulations.
+ * Triggered by P4's Dashboard "Run Simulation" button or scheduled cron worker.
+ */
+simulationRouter.post("/run", async (c) => {
+  try {
+    const db = getDb(c.env);
+    const body = await c.req.json().catch(() => ({}));
+
+    const result = await simulationService.runSimulation(db, {
+      eventId: body.eventId,
+      zoneId: body.zoneId || "zone-mangaluru-coastal",
+      rainfallRateMmHr:
+        body.rainfallRateMmHr != null
+          ? Number(body.rainfallRateMmHr)
+          : undefined,
+      rainfallSeries: body.rainfallSeries,
+      surgeLevelM:
+        body.surgeLevelM != null ? Number(body.surgeLevelM) : undefined,
+      durationHours:
+        body.durationHours != null ? Number(body.durationHours) : 6,
+      scenarioName: body.scenarioName,
+      useLiveWeather: body.useLiveWeather !== false,
+    });
+
+    return c.json(
+      {
+        success: true,
+        message:
+          "SFINCS hydrodynamic simulation executed and saved to PostGIS successfully",
+        executionTimeMs: result.executionTimeMs,
+        simulation: result.simulation,
+        persistedRecord: result.dbRecord?.prediction,
+      },
+      201
+    );
+  } catch (error) {
+    const err = error as Error;
+    return c.json(
+      {
+        success: false,
+        error: `Simulation run failed: ${err.message}`,
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/v1/simulations/:eventId/forecast
  * Returns normalized FloodPrediction adhering strictly to TideMesh contract.
  */
@@ -107,55 +205,6 @@ simulationRouter.post("/:eventId/sync", async (c) => {
       {
         success: false,
         error: `Failed to sync simulation to database: ${err.message}`,
-      },
-      500
-    );
-  }
-});
-
-/**
- * POST /api/v1/simulations/run
- * Manual trigger / On-demand runner endpoint for SFINCS hydrodynamic simulations.
- * Triggered by P4's Dashboard "Run Simulation" button or scheduled cron worker.
- */
-simulationRouter.post("/run", async (c) => {
-  try {
-    const db = getDb(c.env);
-    const body = await c.req.json().catch(() => ({}));
-
-    const result = await simulationService.runSimulation(db, {
-      eventId: body.eventId,
-      zoneId: body.zoneId || "zone-mangaluru-coastal",
-      rainfallRateMmHr:
-        body.rainfallRateMmHr != null
-          ? Number(body.rainfallRateMmHr)
-          : undefined,
-      rainfallSeries: body.rainfallSeries,
-      surgeLevelM:
-        body.surgeLevelM != null ? Number(body.surgeLevelM) : undefined,
-      durationHours:
-        body.durationHours != null ? Number(body.durationHours) : 6,
-      scenarioName: body.scenarioName,
-      useLiveWeather: body.useLiveWeather !== false,
-    });
-
-    return c.json(
-      {
-        success: true,
-        message:
-          "SFINCS hydrodynamic simulation executed and saved to PostGIS successfully",
-        executionTimeMs: result.executionTimeMs,
-        simulation: result.simulation,
-        persistedRecord: result.dbRecord?.prediction,
-      },
-      201
-    );
-  } catch (error) {
-    const err = error as Error;
-    return c.json(
-      {
-        success: false,
-        error: `Simulation run failed: ${err.message}`,
       },
       500
     );

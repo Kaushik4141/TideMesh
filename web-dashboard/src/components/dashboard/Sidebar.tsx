@@ -21,14 +21,28 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-import type { EventEnvironmentResponse } from '@/lib/api/types';
+import type {
+  EventEnvironmentResponse,
+  DashboardMode,
+  CurrentConditions,
+  ScenarioParameters,
+} from '@/lib/api/types';
 
 interface SidebarProps {
   environmentalData?: EventEnvironmentResponse['eventEnvironment'] | null;
+  activeMode?: DashboardMode;
+  currentConditions?: CurrentConditions;
+  scenarioParams?: ScenarioParameters;
   onOpenScenario?: () => void;
 }
 
-export function Sidebar({ environmentalData, onOpenScenario }: SidebarProps = {}) {
+export function Sidebar({
+  environmentalData,
+  activeMode = 'LIVE_FORECAST',
+  currentConditions,
+  scenarioParams,
+  onOpenScenario,
+}: SidebarProps = {}) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [engineOpen, setEngineOpen] = useState(false);
@@ -194,30 +208,86 @@ export function Sidebar({ environmentalData, onOpenScenario }: SidebarProps = {}
 
           {engineOpen && (
             <div className="mt-2 pt-2 border-t border-slate-100 space-y-1 text-[11px] text-slate-600 animate-in fade-in-50">
-              <div className="flex justify-between">
-                <span>Feed Status:</span>
-                <span className="font-bold text-slate-900 tabular-nums">99.8% (Live)</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Peak Rainfall:</span>
-                <span className="font-bold text-slate-900 tabular-nums">
-                  {environmentalData?.forcing?.rainfall?.peakRateMmHr != null
-                    ? `${environmentalData.forcing.rainfall.peakRateMmHr} mm/hr`
-                    : '75 mm/hr'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Peak Surge:</span>
-                <span className="font-bold text-slate-900 tabular-nums">
-                  {environmentalData?.forcing?.surge?.peakSurgeM != null
-                    ? `${environmentalData.forcing.surge.peakSurgeM} m`
-                    : '0.85 m'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Hydro Model:</span>
-                <span className="font-bold text-slate-900">SFINCS v2.4</span>
-              </div>
+              {activeMode === 'LIVE_FORECAST' ? (
+                <>
+                  <div className="flex justify-between">
+                    <span>Source:</span>
+                    <span className="font-bold text-slate-900 truncate max-w-[110px]" title="Open-Meteo High-Resolution Forecast">
+                      Open-Meteo Live
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Live Rain:</span>
+                    <span className="font-bold text-slate-900 tabular-nums">
+                      {currentConditions?.rainfallMmHr != null
+                        ? `${currentConditions.rainfallMmHr} mm/hr`
+                        : '4.2 mm/hr'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Surge / Tide:</span>
+                    <span className="font-bold text-slate-900 tabular-nums">
+                      +{currentConditions?.tideSurgeM != null
+                        ? `${currentConditions.tideSurgeM} m`
+                        : '0.82 m'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Wind Speed:</span>
+                    <span className="font-bold text-slate-900 tabular-nums">
+                      {currentConditions?.windSpeedKmh != null
+                        ? `${currentConditions.windSpeedKmh} km/h`
+                        : '18.5 km/h'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Hydro Model:</span>
+                    <span className="font-bold text-emerald-700">SFINCS 0–6h</span>
+                  </div>
+                </>
+              ) : activeMode === 'HISTORICAL_REPLAY' ? (
+                <>
+                  <div className="flex justify-between">
+                    <span>Benchmark:</span>
+                    <span className="font-bold text-blue-900">May 2018 Mekunu</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Peak Rainfall:</span>
+                    <span className="font-bold text-slate-900 tabular-nums">75.0 mm/hr</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Peak Surge:</span>
+                    <span className="font-bold text-slate-900 tabular-nums">0.85 m MSL</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Hydro Model:</span>
+                    <span className="font-bold text-blue-700">SFINCS Hindcast</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between">
+                    <span>Stress Mode:</span>
+                    <span className="font-bold text-amber-900">Hypothetical</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Cloudburst:</span>
+                    <span className="font-bold text-amber-800 tabular-nums">
+                      {scenarioParams?.rainfallRateMmHr ?? 110} mm/hr
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Peak Surge:</span>
+                    <span className="font-bold text-teal-800 tabular-nums">
+                      +{scenarioParams?.surgeLevelM?.toFixed(2) ?? '2.80'} m
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Hydro Model:</span>
+                    <span className="font-bold text-amber-700">SFINCS Contingency</span>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
