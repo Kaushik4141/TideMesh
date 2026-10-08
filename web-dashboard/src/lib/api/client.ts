@@ -38,7 +38,7 @@ class ApiClient {
    * driven by real-time meteorological and marine conditions.
    */
   async fetchLiveForecast(): Promise<ReplayEventResponse> {
-    const url = `${this.baseUrl}/api/v1/forecast/live`;
+    const url = `${this.baseUrl}/api/v1/simulations/live/forecast`;
     try {
       const res = await fetch(url, {
         headers: { Accept: 'application/json' },
