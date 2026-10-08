@@ -86,9 +86,10 @@ export async function runDbTests() {
       .where(sql`${schema.floodPredictions.zoneId} = 'zone-b'`);
 
     assert.ok(predictions.length > 0, "Should find flood predictions for zone-b");
+    const prob = predictions[0]!.probability;
     assert.ok(
-      predictions[0]!.probability >= 0 && predictions[0]!.probability <= 1,
-      "Probability must be normalized between 0 and 1"
+      prob === null || (prob >= 0 && prob <= 1),
+      "Probability must be null or normalized between 0 and 1"
     );
     console.log(
       `  ✅ Flood predictions query verified: probability=${predictions[0]?.probability}, severity=${predictions[0]?.severity}`

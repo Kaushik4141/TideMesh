@@ -4,12 +4,14 @@ import {
   uuid,
   integer,
   doublePrecision,
+  boolean,
   timestamp,
   jsonb,
   pgEnum,
   index,
   customType,
 } from "drizzle-orm/pg-core";
+
 import { relations } from "drizzle-orm";
 
 /**
@@ -218,13 +220,20 @@ export const floodPredictions = pgTable(
       .notNull()
       .references(() => zones.id, { onDelete: "cascade" }),
     timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
-    probability: doublePrecision("probability").notNull(), // normalized: 0.0 to 1.0
+    probability: doublePrecision("probability"), // normalized: 0.0 to 1.0 (nullable for physics simulations)
+    isDeterministic: boolean("is_deterministic").default(false).notNull(),
     severity: severityLevelEnum("severity").notNull(),
     onsetTime: timestamp("onset_time", { withTimezone: true }),
     peakTime: timestamp("peak_time", { withTimezone: true }),
     depthMin: doublePrecision("depth_min"), // meters
     depthMax: doublePrecision("depth_max"), // meters
+    floodGeometry: postgisGeometry("flood_geometry", {
+      type: "Geometry",
+      srid: DEFAULT_SRID,
+    }),
     modelVersion: text("model_version").default("flood-xgb-v1").notNull(),
+    source: text("source").default("ml"),
+    metrics: jsonb("metrics"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
