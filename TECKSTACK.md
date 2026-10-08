@@ -1,16 +1,16 @@
-# CoastShield AI — TECHSTACK.md
+# TideMesh — TECHSTACK.md
 
-> **Purpose:** Canonical technical-stack reference for CoastShield AI.
+> **Purpose:** Canonical technical-stack reference for TideMesh.
 > Read this file together with `PRODUCT.md` before making architecture, dependency, API, database, or frontend decisions.
 
 ---
 
 ## 1. Architecture Summary
 
-CoastShield AI uses a **hybrid web + mobile + AI/geospatial architecture**.
+TideMesh uses a **hybrid web + mobile + AI/geospatial architecture**.
 
 ```text
-                         COASTSHIELD AI
+                            TIDEMESH
                               |
               +---------------+---------------+
               |                               |
@@ -482,7 +482,7 @@ PostGIS is mandatory for the spatial side of the product.
 
 ### Why PostGIS
 
-CoastShield needs spatial queries such as:
+TideMesh needs spatial queries such as:
 
 - Which buildings intersect the predicted flood polygon?
 - Which roads are affected?
@@ -1165,7 +1165,7 @@ A developer should be able to start the main local services with one command.
 Recommended:
 
 ```text
-coastshield/
+tidemesh/
 │
 ├── PRODUCT.md
 ├── TECHSTACK.md
@@ -1577,7 +1577,7 @@ Managed PostgreSQL + PostGIS
 
 # 43. Architecture Principle to Remember
 
-The final CoastShield architecture should be:
+The final TideMesh architecture should be:
 
 ```text
          EXPO                         NEXT.JS
