@@ -156,49 +156,6 @@ export function useFloodDashboard() {
     return () => clearInterval(timer);
   }, [isPlaying, playbackSpeed]);
 
-  // Global Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input, textarea or select
-      const activeEl = document.activeElement;
-      if (
-        activeEl &&
-        (activeEl.tagName === 'INPUT' ||
-          activeEl.tagName === 'TEXTAREA' ||
-          activeEl.tagName === 'SELECT' ||
-          activeEl.getAttribute('contenteditable') === 'true')
-      ) {
-        return;
-      }
-
-      if (e.key === '1') {
-        e.preventDefault();
-        selectZone('B'); // Rank 1
-      } else if (e.key === '2') {
-        e.preventDefault();
-        selectZone('F'); // Rank 2
-      } else if (e.key === '3') {
-        e.preventDefault();
-        selectZone('C'); // Rank 3
-      } else if (e.key === 'a' || e.key === 'A') {
-        e.preventDefault();
-        acknowledgeCurrentZone();
-      } else if (e.code === 'Space') {
-        e.preventDefault();
-        setIsPlaying((prev) => !prev);
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        setDrawerOpen(false);
-      } else if (e.key === '?') {
-        e.preventDefault();
-        setShortcutsModalOpen((prev) => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectZone, acknowledgeCurrentZone]);
-
   return {
     demoEvent: DEMO_EVENT,
     zones: DEMO_ZONES,

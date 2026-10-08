@@ -5,16 +5,11 @@ import Link from 'next/link';
 import {
   X,
   CheckCircle,
-  Building2,
-  Users,
-  Compass,
-  Maximize2,
   Timer,
   AlertTriangle,
   Hospital,
   Flame,
   Home,
-  ShieldCheck,
   Send,
   ExternalLink,
 } from 'lucide-react';
@@ -23,6 +18,7 @@ import { RiskBadge } from '@/components/ui/risk-badge';
 import { WhyPanel } from '@/components/dashboard/WhyPanel';
 import { cn } from '@/lib/utils';
 import type { AcknowledgmentState } from '@/hooks/useFloodDashboard';
+export { ZoneDrawerSkeleton, PriorityTabsSkeleton } from './DashboardSkeletons';
 
 interface ZoneDrawerProps {
   zone: ZoneData;
@@ -35,6 +31,10 @@ interface ZoneDrawerProps {
   onAssignAction: (actionId: string, team?: string) => void;
   actionsState: Record<string, { status: string; team?: string; timestamp?: string }>;
   className?: string;
+  acknowledgeKeyHint?: string;
+  assignTeamKeyHint?: string;
+  canAcknowledge?: boolean;
+  canAssignTeam?: boolean;
 }
 
 export function ZoneDrawer({
@@ -48,6 +48,10 @@ export function ZoneDrawer({
   onAssignAction,
   actionsState,
   className,
+  acknowledgeKeyHint,
+  assignTeamKeyHint,
+  canAcknowledge = true,
+  canAssignTeam = true,
 }: ZoneDrawerProps) {
   // Top 3 priority zones for the switcher strip
   const topPriorityZones = allZones.filter((z) => z.rank <= 3);
@@ -89,11 +93,21 @@ export function ZoneDrawer({
         <div className="flex items-center gap-2 pt-0.5">
           <Timer className="w-4 h-4 text-red-600 animate-pulse shrink-0" aria-hidden="true" />
           <span className="text-xs font-bold text-red-600">
-            {countdownMinutes !== null
-              ? countdownMinutes === 0
-                ? 'Onset imminent (NOW)'
-                : `Onset in ${countdownMinutes} min`
-              : 'Onset time pending'}
+            {countdownMinutes !== null ? (
+              countdownMinutes === 0 ? (
+                'Onset imminent (NOW)'
+              ) : (
+                <>
+                  Onset in{' '}
+                  <span className="font-display font-bold text-sm tabular-nums">
+                    {countdownMinutes}
+                  </span>{' '}
+                  min
+                </>
+              )
+            ) : (
+              'Onset time pending'
+            )}
           </span>
           <span className="text-[11px] text-slate-400 font-medium">
             · Predicted peak at {zone.peak} ({zone.peakDepth})
@@ -143,14 +157,16 @@ export function ZoneDrawer({
             <button
               onClick={onAcknowledge}
               className="flex-1 flex items-center justify-center gap-1.5 h-8 px-3 rounded-md bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition-colors focus-visible:ring-2 focus-visible:ring-slate-900"
-              title="Acknowledge alert status for this zone (Press A)"
+              title={canAcknowledge && acknowledgeKeyHint ? `Acknowledge alert status (Press ${acknowledgeKeyHint})` : 'Acknowledge alert status'}
             >
               <CheckCircle className="w-3.5 h-3.5 text-sky-400" />
-              <span>Acknowledge (A)</span>
+              <span>
+                Acknowledge{canAcknowledge && acknowledgeKeyHint ? ` (${acknowledgeKeyHint})` : ''}
+              </span>
             </button>
           )}
 
-          {/* Secondary Action: Assign Team (Dynamically dispatches first pending action for this zone as Team Delta) */}
+          {/* Secondary Action: Assign Team */}
           {(() => {
             const firstPendingAction = zone.actions.find((a) => {
               const st = actionsState[a.id]?.status || a.status;
@@ -174,7 +190,11 @@ export function ZoneDrawer({
                 title={firstPendingAction ? `Assign Team Delta for ${firstPendingAction.title}` : 'All actions assigned'}
               >
                 <Send className="w-3.5 h-3.5 text-slate-500" />
-                <span>{assignedTeam ? `${assignedTeam} Assigned` : 'Assign Team'}</span>
+                <span>
+                  {assignedTeam
+                    ? `${assignedTeam} Assigned`
+                    : `Assign Team${canAssignTeam && assignTeamKeyHint ? ` (${assignTeamKeyHint})` : ''}`}
+                </span>
               </button>
             );
           })()}
@@ -200,7 +220,7 @@ export function ZoneDrawer({
               <span className="text-[11px] text-slate-500 font-medium">
                 Flood probability
               </span>
-              <span className="text-xl font-bold tabular-nums text-slate-900 mt-0.5">
+              <span className="font-display font-bold text-2xl tabular-nums text-slate-900 mt-0.5">
                 {zone.probability}%
               </span>
             </div>
@@ -209,7 +229,7 @@ export function ZoneDrawer({
               <span className="text-[11px] text-slate-500 font-medium">
                 Expected depth
               </span>
-              <span className="text-xl font-bold tabular-nums text-slate-900 mt-0.5">
+              <span className="font-display font-bold text-2xl tabular-nums text-slate-900 mt-0.5">
                 {zone.depth}
               </span>
             </div>

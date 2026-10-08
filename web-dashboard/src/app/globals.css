@@ -7,9 +7,25 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+  --font-display-fallback: 'Barlow Condensed', 'Arial Narrow', 'Inter', system-ui, sans-serif;
+  --font-body-fallback: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+@theme {
+  --font-display: var(--font-display, var(--font-display-fallback));
+  --font-body: var(--font-body, var(--font-body-fallback));
+}
+
+.font-display {
+  font-family: var(--font-display, var(--font-display-fallback));
+}
+
+.font-body {
+  font-family: var(--font-body, var(--font-body-fallback));
 }
 
 body {
+  font-family: var(--font-body, var(--font-body-fallback));
   background-color: var(--background);
   color: var(--foreground);
 }

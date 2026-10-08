@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { ZoneData, CriticalFacility } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
+export { MapSkeleton } from './DashboardSkeletons';
 
 interface FloodMapProps {
   zones: ZoneData[];
@@ -26,41 +27,9 @@ interface FloodMapProps {
   className?: string;
 }
 
-// OpenStreetMap tile sources
-const MAP_API_KEY = process.env.NEXT_PUBLIC_MAP_API_KEY || '';
-
-const getBasemapTiles = () => {
-  const authQuery = MAP_API_KEY ? `?api_key=${MAP_API_KEY}` : '';
-  return {
-    osm: {
-      name: 'OSM Standard',
-      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    },
-    hot: {
-      name: 'OSM Relief',
-      url: 'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-    },
-    voyager: {
-      name: 'OSM Voyager',
-      url: `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png${authQuery}`,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; CARTO',
-      maxZoom: 19,
-    },
-    positron: {
-      name: 'OSM Light',
-      url: `https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png${authQuery}`,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; CARTO',
-      maxZoom: 19,
-    },
-  };
-};
-
-const BASEMAP_TILES = getBasemapTiles();
-type BasemapKey = keyof typeof BASEMAP_TILES;
+// OpenStreetMap Standard tile source (keyless)
+const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors';
 
 // Real-world GeoJSON coordinates for Mangaluru coastal zones
 const ZONE_COORDINATES: Record<string, { center: [number, number]; coordinates: [number, number][] }> = {
@@ -204,14 +173,13 @@ export function FloodMap({
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
 
-  const [basemap, setBasemap] = useState<BasemapKey>('osm');
   const [showInundation, setShowInundation] = useState<boolean>(true);
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [hoveredFacility, setHoveredFacility] = useState<CriticalFacility | null>(null);
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
 
-  // Initialize MapLibre GL with OpenStreetMap tiles
+  // Initialize MapLibre GL with OpenStreetMap Standard tiles
   useEffect(() => {
     let isMounted = true;
 
@@ -229,8 +197,6 @@ export function FloodMap({
           mapRef.current = null;
         }
 
-        const tileConfig = BASEMAP_TILES[basemap];
-
         const map = new maplibregl.Map({
           container: mapContainerRef.current,
           style: {
@@ -238,9 +204,9 @@ export function FloodMap({
             sources: {
               'osm-tiles': {
                 type: 'raster',
-                tiles: [tileConfig.url],
+                tiles: [OSM_TILE_URL],
                 tileSize: 256,
-                attribution: tileConfig.attribution,
+                attribution: OSM_ATTRIBUTION,
               },
             },
             layers: [
@@ -249,7 +215,11 @@ export function FloodMap({
                 type: 'raster',
                 source: 'osm-tiles',
                 minzoom: 0,
-                maxzoom: tileConfig.maxZoom,
+                maxzoom: 19,
+                paint: {
+                  'raster-saturation': -0.5,
+                  'raster-brightness-max': 0.95,
+                },
               },
             ],
           },
@@ -280,7 +250,7 @@ export function FloodMap({
         mapRef.current = null;
       }
     };
-  }, [basemap]);
+  }, []);
 
   // Update polygon risk layers
   function renderRiskLayers(map: any, maplibregl: any) {
@@ -429,7 +399,7 @@ export function FloodMap({
           border-radius: 4px;
           box-shadow: 0 1px 3px rgba(0,0,0,0.25);
           border: 1px solid ${isCritical ? '#DC2626' : isHigh ? '#EA580C' : isElevated ? '#CA8A04' : '#94A3B8'};
-          font-family: Inter, sans-serif;
+          font-family: var(--font-body, Inter, sans-serif);
           font-size: 11px;
           font-weight: 700;
           color: #0F172A;
@@ -611,10 +581,10 @@ export function FloodMap({
       {/* Hover Facility Tooltip */}
       {hoveredFacility && (
         <div
-          className="absolute z-40 pointer-events-none select-none bg-slate-900/95 text-white px-2.5 py-1.5 rounded shadow-lg text-xs transition-opacity duration-100 border border-slate-700"
+          className="absolute z-40 pointer-events-none select-none bg-slate-900/95 text-white px-2.5 py-1.5 rounded shadow-lg text-xs transition-opacity duration-100 border border-slate-700 max-w-xs"
           style={{
             left: '50%',
-            top: '20px',
+            top: '56px',
             transform: 'translateX(-50%)',
           }}
         >
@@ -682,25 +652,6 @@ export function FloodMap({
         </button>
       </div>
 
-      {/* Basemap Switcher Chips (Center-Top) */}
-      <div className="absolute top-3 right-16 flex items-center gap-1 bg-white/95 backdrop-blur-xs px-1.5 py-1 rounded-md border border-slate-200 shadow-2xs z-20">
-        <span className="text-[10px] font-bold text-slate-500 uppercase px-1">Basemap:</span>
-        {(['osm', 'hot', 'voyager', 'positron'] as const).map((key) => (
-          <button
-            key={key}
-            onClick={() => setBasemap(key)}
-            className={cn(
-              'px-2 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer',
-              basemap === key
-                ? 'bg-slate-900 text-white'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            )}
-          >
-            {BASEMAP_TILES[key].name}
-          </button>
-        ))}
-      </div>
-
       {/* Map Legend (Bottom-Left) */}
       <div className="relative m-2.5 flex flex-wrap items-end justify-between pointer-events-none gap-2 z-20">
         <div className="bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded-md border border-slate-200/90 shadow-2xs flex items-center gap-3 pointer-events-auto">
@@ -739,7 +690,7 @@ export function FloodMap({
           <span>·</span>
           <span className="text-slate-800 font-semibold flex items-center gap-1">
             <MapIcon className="w-3 h-3 text-emerald-600" />
-            <span>OpenStreetMap Live</span>
+            <span>© OpenStreetMap contributors</span>
           </span>
         </div>
       </div>

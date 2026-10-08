@@ -3,6 +3,7 @@
 import React from 'react';
 import { RotateCcw, RotateCw, Play, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
+export { TimelineSkeleton } from './DashboardSkeletons';
 
 interface TimelineProps {
   currentTime: string;
@@ -26,7 +27,6 @@ export function Timeline({
   onChangeSpeed,
   onStepForward,
   onStepBackward,
-  onReset,
   currentFloodDepth = '0.31–0.71 m',
   statusLabel,
   className,
@@ -46,18 +46,18 @@ export function Timeline({
       )}
     >
       {/* Visual Timeline Hydrograph Track */}
-      <div className="relative w-full h-8 flex items-center px-1">
+      <div className="relative w-full h-10 flex items-center px-1 overflow-visible">
         {/* Hydrograph Background Curve */}
-        <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 32">
+        <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 40">
           <path
-            d="M 0,26 Q 120,25 240,22 T 400,16 T 520,5 T 600,9 T 720,18 T 800,24"
+            d="M 0,32 Q 120,30 240,26 T 400,20 T 520,6 T 600,10 T 720,22 T 800,28"
             fill="none"
             stroke="#CBD5E1"
             strokeDasharray="3,2"
             strokeWidth="1.5"
           />
           <path
-            d="M 200,22 Q 400,16 480,10 T 560,5 L 560,32 L 200,32 Z"
+            d="M 200,26 Q 400,20 480,12 T 560,6 L 560,40 L 200,40 Z"
             fill="#FEE2E2"
             opacity="0.5"
           />
@@ -71,31 +71,31 @@ export function Timeline({
           />
         </div>
 
-        {/* Dynamic NOW Marker tracking playback */}
+        {/* Dynamic NOW Marker tracking playback (Top-positioned) */}
         <div
-          className="absolute -top-1.5 flex flex-col items-center z-20 -translate-x-1/2 transition-all duration-300"
+          className="absolute -top-2 flex flex-col items-center z-30 -translate-x-1/2 transition-all duration-300 pointer-events-none"
           style={{ left: `${progressPct}%` }}
         >
-          <span className="bg-teal-700 text-white px-1.5 py-0.2 rounded text-[10px] font-bold shadow-xs whitespace-nowrap">
-            NOW {currentTime}
+          <span className="bg-teal-700 text-white px-1.5 py-0.5 rounded text-[10px] font-bold shadow-xs whitespace-nowrap">
+            NOW <span className="font-display font-bold tabular-nums text-xs tracking-wide">{currentTime}</span>
           </span>
           <div className="w-0.5 h-4 bg-teal-700 mt-0.5" />
         </div>
 
-        {/* Marker 2: ONSET 14:30 (Fixed Reference at 25%) */}
-        <div className="absolute left-[25%] -top-1.5 flex flex-col items-center z-10 -translate-x-1/2">
+        {/* Marker 2: ONSET 14:30 (Fixed Reference at 25%, bottom-offset to prevent overlap with NOW) */}
+        <div className="absolute left-[25%] -bottom-1 flex flex-col items-center z-20 -translate-x-1/2 pointer-events-none">
+          <div className="w-0.5 h-3 bg-red-600 mb-0.5" />
           <span className="bg-red-600 text-white px-1.5 py-0.2 rounded text-[9px] font-bold shadow-xs whitespace-nowrap">
-            ONSET 14:30
+            ONSET <span className="font-display font-bold tabular-nums text-[11px] tracking-wide">14:30</span>
           </span>
-          <div className="w-0.5 h-3 bg-red-600 mt-0.5" />
         </div>
 
         {/* Marker 3: PEAK 15:10 (Fixed Reference at 58.3%) */}
-        <div className="absolute left-[58%] -top-1.5 flex flex-col items-center z-10 -translate-x-1/2">
-          <span className="bg-slate-900 text-white px-1.5 py-0.2 rounded text-[9px] font-bold shadow-xs whitespace-nowrap">
-            PEAK 15:10 (0.71 m)
+        <div className="absolute left-[58%] -top-2 flex flex-col items-center z-10 -translate-x-1/2 pointer-events-none">
+          <span className="bg-slate-900 text-white px-1.5 py-0.5 rounded text-[9px] font-bold shadow-xs whitespace-nowrap">
+            PEAK <span className="font-display font-bold tabular-nums text-[11px] tracking-wide">15:10</span> (0.71 m)
           </span>
-          <div className="w-0.5 h-3 bg-slate-900 mt-0.5" />
+          <div className="w-0.5 h-4 bg-slate-900 mt-0.5" />
         </div>
       </div>
 

@@ -268,7 +268,7 @@ export default function DegradedStatePage() {
                       
                       <div className="flex items-end justify-between w-full pointer-events-auto">
                         <div className="bg-white/95 backdrop-blur-sm p-2 rounded shadow-sm text-[11px] font-medium text-slate-500 space-y-0.5">
-                          <div>COORD: <span className="font-semibold text-slate-900">12°51'24.8"N 74°50'12.4"E</span></div>
+                          <div>COORD: <span className="font-semibold text-slate-900">12°51&apos;24.8&quot;N 74°50&apos;12.4&quot;E</span></div>
                           <div>DATUM: WGS 84 · ELEV: 1.4m MSL</div>
                           <div>DISPLAY CACHE: FRAME #1352-HYD</div>
                         </div>

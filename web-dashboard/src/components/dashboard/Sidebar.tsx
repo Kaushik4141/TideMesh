@@ -39,10 +39,10 @@ export function Sidebar({ onOpenScenario }: SidebarProps) {
   ];
 
   const moreNav = [
-    { name: 'Response & Actions', href: '#actions', icon: Siren, badge: '3 Pending', badgeColor: 'bg-red-500/10 text-red-700 border-red-500/20' },
-    { name: 'Evacuation Routes', href: '#routes', icon: Route },
+    { name: 'Response & Actions', href: '/actions', icon: Siren, badge: '3 Pending', badgeColor: 'bg-red-500/10 text-red-700 border-red-500/20' },
+    { name: 'Evacuation Routes', href: '/routes', icon: Route },
     { name: 'Sensor Telemetry', href: '/degraded-state', icon: Radio },
-    { name: 'Reports & Briefings', href: '#reports', icon: FileText },
+    { name: 'Reports & Briefings', href: '/reports', icon: FileText },
   ];
 
   return (
