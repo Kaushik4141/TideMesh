@@ -6,11 +6,14 @@ export interface WaterwayFeature {
   properties: {
     id: string;
     name: string;
-    type: 'river' | 'estuary' | 'ocean' | 'channel' | 'flow_vector';
+    type: 'river' | 'estuary' | 'ocean' | 'channel' | 'flow_vector' | 'route_corridor';
     flowDirection?: 'seaward' | 'surge_inland' | 'bidirectional';
     depthM?: number;
     description: string;
     color?: string;
+    casingColor?: string;
+    glowColor?: string;
+    widthPx?: number;
   };
   geometry: {
     type: 'Polygon' | 'LineString' | 'Point';
@@ -24,257 +27,114 @@ export interface WaterwaysCollection {
 }
 
 /**
- * High-accuracy river channel polygons and estuarine water bodies for Mangaluru
+ * Detailed, continuous winding paths tracing the actual river courses (Destination-route style)
  */
-export const MANGALURU_WATERWAYS: WaterwaysCollection = {
-  type: 'FeatureCollection',
-  features: [
-    // 1. Gurupura (Phalguni) River Channel Polygon
-    {
-      type: 'Feature',
-      id: 'river-gurupura',
-      properties: {
-        id: 'river-gurupura',
-        name: 'Gurupura (Phalguni) River',
-        type: 'river',
-        depthM: -2.8,
-        description: 'Tidal river flowing south behind Tannirbhavi and Bengre sandspits to confluence.',
-        color: '#0284C7',
-      },
-      geometry: {
-        type: 'Polygon',
-        coordinates: [
-          [
-            [74.848, 12.965],
-            [74.842, 12.945],
-            [74.832, 12.924], // Kulur Bridge
-            [74.821, 12.905], // Tannirbhavi ferry corridor
-            [74.818, 12.885],
-            [74.822, 12.865], // Behind Bengre
-            [74.828, 12.848], // Confluence approach
-            [74.834, 12.845],
-            [74.830, 12.862],
-            [74.825, 12.885],
-            [74.828, 12.908],
-            [74.838, 12.926],
-            [74.848, 12.948],
-            [74.854, 12.965],
-            [74.848, 12.965],
-          ],
-        ],
-      },
-    },
+export const GURUPURA_WINDING_PATH: [number, number][] = [
+  [74.858, 12.982], // Upstream headwaters Kavoor/Maravoor
+  [74.852, 12.964], // Baikampady Industrial flank
+  [74.846, 12.948], // Upper Kulur bend
+  [74.838, 12.934], // Kulur meander
+  [74.832, 12.924], // Kulur Bridge (NH-66 River Crossing)
+  [74.826, 12.914], // Lower Kulur curve
+  [74.821, 12.904], // Tannirbhavi ferry corridor
+  [74.819, 12.894], // Tannirbhavi inner river reach
+  [74.818, 12.884], // Boloor / Urwa riverside
+  [74.820, 12.874], // Bokkapattna bend
+  [74.822, 12.864], // Behind Bengre barrier spit
+  [74.825, 12.854], // Bengre spit narrow reach
+  [74.828, 12.847], // Confluence approach
+  [74.832, 12.843], // Estuary confluence meeting point
+];
 
-    // 2. Netravati River Estuary Channel Polygon
-    {
-      type: 'Feature',
-      id: 'river-netravati',
-      properties: {
-        id: 'river-netravati',
-        name: 'Netravati River Estuary',
-        type: 'estuary',
-        depthM: -3.2,
-        description: 'Major perennial river discharging Western Ghats runoff into Arabian Sea.',
-        color: '#0369A1',
-      },
-      geometry: {
-        type: 'Polygon',
-        coordinates: [
-          [
-            [74.888, 12.865],
-            [74.872, 12.860],
-            [74.858, 12.856], // Bolar North Bank
-            [74.845, 12.852],
-            [74.835, 12.846], // Estuary mouth
-            [74.828, 12.842],
-            [74.832, 12.836], // Ullal South Bank
-            [74.842, 12.838],
-            [74.855, 12.842],
-            [74.870, 12.848],
-            [74.888, 12.852],
-            [74.888, 12.865],
-          ],
-        ],
-      },
-    },
+export const NETRAVATI_WINDING_PATH: [number, number][] = [
+  [74.898, 12.864], // Inland Netravati reach from Western Ghats
+  [74.884, 12.861], // Arkula / Jeppinamogaru river basin
+  [74.872, 12.858], // Netravati Railway / National Highway Bridge
+  [74.860, 12.854], // Morgan's Gate / Jeppu flank
+  [74.848, 12.850], // Bolar North Bank ferry point
+  [74.838, 12.845], // Upper Estuary mouth
+  [74.832, 12.843], // Confluence with Gurupura River
+  [74.825, 12.841], // Estuary breach outlet
+  [74.816, 12.840], // Outflow channel past Ullal breakwaters
+  [74.802, 12.839], // Discharge plume into Arabian Sea
+];
 
-    // 3. Mangaluru Estuary Confluence & Old Port Basin
-    {
-      type: 'Feature',
-      id: 'waterway-confluence',
-      properties: {
-        id: 'waterway-confluence',
-        name: 'Netravati–Gurupura Confluence (Old Port Basin)',
-        type: 'channel',
-        depthM: -4.5,
-        description: 'Deep tidal mixing confluence where both rivers meet before breaching into the sea.',
-        color: '#0284C7',
-      },
-      geometry: {
-        type: 'Polygon',
-        coordinates: [
-          [
-            [74.826, 12.855],
-            [74.835, 12.852],
-            [74.836, 12.842],
-            [74.828, 12.838],
-            [74.818, 12.840], // Outflow mouth
-            [74.816, 12.846],
-            [74.822, 12.852],
-            [74.826, 12.855],
-          ],
-        ],
-      },
-    },
-
-    // 4. Arabian Sea Nearshore Coastal Waterway
-    {
-      type: 'Feature',
-      id: 'ocean-arabian-sea',
-      properties: {
-        id: 'ocean-arabian-sea',
-        name: 'Arabian Sea (Nearshore Marine Boundary)',
-        type: 'ocean',
-        depthM: -6.0,
-        description: 'Open ocean tidal forcing boundary generating storm surges and astronomical tides.',
-        color: '#075985',
-      },
-      geometry: {
-        type: 'Polygon',
-        coordinates: [
-          [
-            [74.780, 13.025],
-            [74.782, 12.805],
-            [74.815, 12.805],
-            [74.818, 12.840],
-            [74.812, 12.880], // Tannirbhavi Coast
-            [74.800, 12.928],
-            [74.792, 12.965],
-            [74.778, 13.025],
-            [74.780, 13.025],
-          ],
-        ],
-      },
-    },
-  ],
-};
+export const SURGE_PENETRATION_PATH: [number, number][] = [
+  [74.804, 12.839], // Arabian Sea marine surge front
+  [74.818, 12.841], // Breaching the estuary mouth
+  [74.828, 12.845], // Flooding Old Port confluence basin
+  [74.824, 12.872], // Backwater surge pushing up Gurupura channel
+  [74.830, 12.918], // Surge swell reaching Kulur Bridge
+];
 
 /**
- * Hydrodynamic flow direction paths (downstream discharge & surge backwater vectors)
+ * High-visibility route-style LineStrings for turn-by-turn navigation appearance
  */
-export const FLOW_DIRECTION_VECTORS: WaterwaysCollection = {
+export const WATERWAY_ROUTE_PATHS: WaterwaysCollection = {
   type: 'FeatureCollection',
   features: [
-    // Gurupura downstream discharge line
     {
       type: 'Feature',
-      id: 'flow-gurupura-downstream',
+      id: 'route-gurupura-core',
       properties: {
-        id: 'flow-gurupura-downstream',
-        name: 'Gurupura Downstream Flow',
-        type: 'flow_vector',
+        id: 'route-gurupura-core',
+        name: 'Gurupura (Phalguni) River Waterway',
+        type: 'river',
         flowDirection: 'seaward',
-        description: 'Gravitational river flow south toward the estuary confluence.',
-        color: '#38BDF8',
+        depthM: -2.8,
+        description: 'Primary tidal river channel winding 8.5 km to the estuary confluence.',
+        color: '#00F0FF', // Neon Electric Cyan (GPS route core)
+        casingColor: '#0369A1',
+        glowColor: '#38BDF8',
+        widthPx: 8,
       },
       geometry: {
         type: 'LineString',
-        coordinates: [
-          [74.850, 12.960],
-          [74.840, 12.935],
-          [74.834, 12.924], // Kulur
-          [74.824, 12.900],
-          [74.821, 12.875],
-          [74.828, 12.850],
-          [74.822, 12.842], // Estuary mouth
-        ],
+        coordinates: GURUPURA_WINDING_PATH,
       },
     },
-
-    // Netravati downstream discharge line
     {
       type: 'Feature',
-      id: 'flow-netravati-downstream',
+      id: 'route-netravati-core',
       properties: {
-        id: 'flow-netravati-downstream',
-        name: 'Netravati Seaward Discharge',
-        type: 'flow_vector',
+        id: 'route-netravati-core',
+        name: 'Netravati River Estuary Waterway',
+        type: 'estuary',
         flowDirection: 'seaward',
-        description: 'Main runoff stream discharging west toward the Arabian Sea.',
-        color: '#38BDF8',
+        depthM: -3.2,
+        description: 'Major arterial flood channel discharging Western Ghats runoff into Arabian Sea.',
+        color: '#06B6D4', // Vibrant Cyan Highway
+        casingColor: '#1E3A8A',
+        glowColor: '#0284C7',
+        widthPx: 10,
       },
       geometry: {
         type: 'LineString',
-        coordinates: [
-          [74.885, 12.858],
-          [74.870, 12.855],
-          [74.855, 12.850],
-          [74.842, 12.846],
-          [74.830, 12.842],
-          [74.820, 12.841],
-        ],
+        coordinates: NETRAVATI_WINDING_PATH,
       },
     },
-
-    // Tidal surge inland penetration vector (backwater effect)
     {
       type: 'Feature',
-      id: 'flow-surge-backwater',
+      id: 'route-surge-penetration',
       properties: {
-        id: 'flow-surge-backwater',
-        name: 'Marine Surge Inflow / Backwater Swell',
+        id: 'route-surge-penetration',
+        name: 'Storm Surge Inflow & Backwater Vector',
         type: 'flow_vector',
         flowDirection: 'surge_inland',
-        description: 'High tide surge pushing marine waters inward through the rivermouth.',
-        color: '#F43F5E',
+        depthM: 1.85,
+        description: 'Marine tidal surge forcing ocean water inward through the estuary mouth.',
+        color: '#F43F5E', // Rose Alert Vector
+        casingColor: '#881337',
+        glowColor: '#FDA4AF',
+        widthPx: 6,
       },
       geometry: {
         type: 'LineString',
-        coordinates: [
-          [74.815, 12.841],
-          [74.825, 12.844],
-          [74.830, 12.855],
-          [74.828, 12.880], // Swelling up Gurupura channel
-          [74.832, 12.915], // Threatening Kulur Bridge
-        ],
+        coordinates: SURGE_PENETRATION_PATH,
       },
     },
   ],
 };
-
-/**
- * Key hydrological points and monitoring landmarks along the river channels
- */
-export const RIVER_LANDMARKS = [
-  {
-    id: 'lm-gurupura-upper',
-    name: 'Gurupura River Channel',
-    subtitle: 'Bed Level: -2.8m MSL · Flow: Seaward',
-    position: [74.836, 12.932] as [number, number],
-    type: 'river',
-  },
-  {
-    id: 'lm-kulur-bridge',
-    name: 'Kulur River Bridge (NH-66)',
-    subtitle: 'Clearance: +3.8m · Inundation Risk Sector',
-    position: [74.834, 12.924] as [number, number],
-    type: 'bridge',
-  },
-  {
-    id: 'lm-netravati-estuary',
-    name: 'Netravati River Estuary',
-    subtitle: 'Width: 1.2km · Western Ghats Discharge',
-    position: [74.862, 12.852] as [number, number],
-    type: 'river',
-  },
-  {
-    id: 'lm-confluence-mouth',
-    name: 'Estuary Confluence & Harbour Mouth',
-    subtitle: 'Compound Tidal Surge Mixing Zone',
-    position: [74.824, 12.843] as [number, number],
-    type: 'estuary',
-  },
-];
 
 /**
  * Historical / calibrated SFINCS floodwave progression factors across 9 timesteps
@@ -336,72 +196,65 @@ function bufferCenterline(
   return [...left, ...right.reverse(), left[0]];
 }
 
-const GURUPURA_CENTERLINE: [number, number][] = [
-  [74.848, 12.965],
-  [74.842, 12.945],
-  [74.832, 12.924], // Kulur Bridge
-  [74.821, 12.905], // Tannirbhavi
-  [74.818, 12.885],
-  [74.822, 12.865], // Bengre spit
-  [74.828, 12.848],
-  [74.834, 12.845], // Confluence
-];
-
-const NETRAVATI_CENTERLINE: [number, number][] = [
-  [74.888, 12.860],
-  [74.872, 12.856],
-  [74.858, 12.852], // Bolar
-  [74.845, 12.848],
-  [74.835, 12.844], // Confluence approach
-  [74.828, 12.842],
-  [74.818, 12.841], // Outflow
-];
-
 /**
- * Dynamically computes swelling river polygons as simulation progresses.
+ * Dynamically computes swelling river flood corridors as simulation progresses.
  * The patch width increases during flood onset/peak, showing river overtopping.
  */
 export function getDynamicSwollenWaterways(factor: number): WaterwaysCollection {
   const clampedFactor = Math.max(0.1, Math.min(1.5, factor));
 
   // Dynamic half-width in degrees (~111km per deg lat, ~108km per deg lon)
-  // Base width ~ 180m, max expansion at factor 1.0 reaches +450m on each bank
-  const gurupuraHalfWidth = 0.0016 + 0.0042 * clampedFactor;
-  const netravatiHalfWidth = 0.0028 + 0.0055 * clampedFactor;
-  const confluenceRadius = 0.006 + 0.007 * clampedFactor;
+  // Base riverbed width ~ 180m; at peak (factor 1.0) swells out by +520m overtopping the banks
+  const gurupuraHalfWidth = 0.0018 + 0.0050 * clampedFactor;
+  const netravatiHalfWidth = 0.0032 + 0.0068 * clampedFactor;
+  const confluenceRadius = 0.0065 + 0.0085 * clampedFactor;
 
-  const gurupuraPolygon = bufferCenterline(GURUPURA_CENTERLINE, gurupuraHalfWidth);
-  const netravatiPolygon = bufferCenterline(NETRAVATI_CENTERLINE, netravatiHalfWidth);
+  const gurupuraPolygon = bufferCenterline(GURUPURA_WINDING_PATH, gurupuraHalfWidth);
+  const netravatiPolygon = bufferCenterline(NETRAVATI_WINDING_PATH, netravatiHalfWidth);
 
   // Confluence basin expansion
-  const centerConf = [74.828, 12.846];
+  const centerConf = [74.828, 12.845];
   const confCoords: [number, number][] = [];
-  const steps = 14;
+  const steps = 16;
   for (let s = 0; s <= steps; s++) {
     const angle = (s / steps) * Math.PI * 2;
     confCoords.push([
-      Number((centerConf[0] + Math.cos(angle) * confluenceRadius * 1.2).toFixed(5)),
+      Number((centerConf[0] + Math.cos(angle) * confluenceRadius * 1.25).toFixed(5)),
       Number((centerConf[1] + Math.sin(angle) * confluenceRadius).toFixed(5)),
     ]);
   }
 
   // Dynamic visual depth & swelling width
   const peakDepth = Number((0.45 + 2.55 * clampedFactor).toFixed(2));
-  const swellMeters = Math.round(clampedFactor * 480);
+  const swellMeters = Math.round(clampedFactor * 520);
+
+  // Arabian Sea coastal polygon
+  const oceanCoords = [
+    [74.780, 13.025],
+    [74.782, 12.805],
+    [74.815, 12.805],
+    [74.818, 12.840],
+    [74.812, 12.880],
+    [74.800, 12.928],
+    [74.792, 12.965],
+    [74.778, 13.025],
+    [74.780, 13.025],
+  ];
 
   return {
     type: 'FeatureCollection',
     features: [
       {
         type: 'Feature',
-        id: 'river-gurupura',
+        id: 'swollen-patch-gurupura',
         properties: {
-          id: 'river-gurupura',
-          name: 'Gurupura (Phalguni) River Channel',
-          type: 'river',
+          id: 'swollen-patch-gurupura',
+          name: 'Gurupura River Inundation Corridor',
+          type: 'route_corridor',
           depthM: peakDepth,
-          description: `Swollen river corridor · Width: +${swellMeters}m bank overtopping · Water level: ${peakDepth}m`,
+          description: `Active flood corridor · Width: +${swellMeters}m overtopping riverbanks · Water depth: ${peakDepth}m`,
           color: clampedFactor > 0.8 ? '#1D4ED8' : clampedFactor > 0.5 ? '#0284C7' : '#0EA5E9',
+          glowColor: '#38BDF8',
         },
         geometry: {
           type: 'Polygon',
@@ -410,14 +263,15 @@ export function getDynamicSwollenWaterways(factor: number): WaterwaysCollection 
       },
       {
         type: 'Feature',
-        id: 'river-netravati',
+        id: 'swollen-patch-netravati',
         properties: {
-          id: 'river-netravati',
-          name: 'Netravati River Estuary',
-          type: 'estuary',
+          id: 'swollen-patch-netravati',
+          name: 'Netravati Estuarine Flood Swath',
+          type: 'route_corridor',
           depthM: peakDepth,
-          description: `Discharging estuarine floodwave · Width: +${swellMeters}m expansion · Water level: ${peakDepth}m`,
+          description: `Discharging estuarine floodwave · Width: +${swellMeters}m expansion · Water depth: ${peakDepth}m`,
           color: clampedFactor > 0.8 ? '#1E40AF' : clampedFactor > 0.5 ? '#0369A1' : '#0284C7',
+          glowColor: '#60A5FA',
         },
         geometry: {
           type: 'Polygon',
@@ -426,22 +280,40 @@ export function getDynamicSwollenWaterways(factor: number): WaterwaysCollection 
       },
       {
         type: 'Feature',
-        id: 'waterway-confluence',
+        id: 'swollen-patch-confluence',
         properties: {
-          id: 'waterway-confluence',
-          name: 'Estuary Confluence & Harbour Swell',
-          type: 'channel',
-          depthM: peakDepth + 0.5,
+          id: 'swollen-patch-confluence',
+          name: 'Old Port Estuary Confluence Basin',
+          type: 'route_corridor',
+          depthM: peakDepth + 0.45,
           description: `Tidal mixing backwater swell · Compound Surge: +${(0.85 * clampedFactor).toFixed(2)}m`,
-          color: '#1D4ED8',
+          color: '#1E3A8A',
+          glowColor: '#38BDF8',
         },
         geometry: {
           type: 'Polygon',
           coordinates: [confCoords],
         },
       },
-      // Arabian Sea baseline
-      MANGALURU_WATERWAYS.features[3],
+      {
+        type: 'Feature',
+        id: 'ocean-arabian-sea',
+        properties: {
+          id: 'ocean-arabian-sea',
+          name: 'Arabian Sea Nearshore Coastal Waters',
+          type: 'ocean',
+          depthM: -6.0,
+          description: 'Open ocean tidal forcing boundary generating storm surges and astronomical tides.',
+          color: '#075985',
+        },
+        geometry: {
+          type: 'Polygon',
+          coordinates: [oceanCoords],
+        },
+      },
     ],
   };
 }
+
+export const MANGALURU_WATERWAYS = getDynamicSwollenWaterways(0.65);
+export const FLOW_DIRECTION_VECTORS = WATERWAY_ROUTE_PATHS;
