@@ -20,7 +20,7 @@ export function TopHeader({ onOpenShortcuts }: TopHeaderProps) {
             <Shield className="w-5 h-5 text-sky-400" aria-hidden="true" />
           </div>
           <span className="text-base lg:text-lg font-bold text-slate-900 tracking-tight whitespace-nowrap">
-            CoastShield AI
+            TideMesh
           </span>
         </div>
 

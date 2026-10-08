@@ -55,7 +55,7 @@ export default function ZonesPage() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Shield className="text-blue-700 w-5 h-5" />
-            <span className="text-lg font-semibold tracking-tight text-slate-900">CoastShield AI</span>
+            <span className="text-lg font-semibold tracking-tight text-slate-900">TideMesh</span>
           </div>
           <div className="h-4 w-px bg-slate-300"></div>
           <div className="flex items-center gap-1">

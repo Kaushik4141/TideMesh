@@ -36,7 +36,7 @@ export default function DegradedStatePage() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
             <Shield className="text-blue-900 w-[22px] h-[22px]" />
-            <span className="text-lg font-semibold text-blue-600 tracking-tight">CoastShield AI</span>
+            <span className="text-lg font-semibold text-blue-600 tracking-tight">TideMesh</span>
           </div>
           <div className="h-4 w-px bg-slate-300"></div>
           <div className="flex items-center gap-2">

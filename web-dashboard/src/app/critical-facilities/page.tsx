@@ -183,7 +183,7 @@ export default function CriticalFacilitiesPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Shield className="text-slate-900 w-5 h-5" />
-            <span className="text-base font-semibold text-slate-900 tracking-tight">CoastShield AI</span>
+            <span className="text-base font-semibold text-slate-900 tracking-tight">TideMesh</span>
           </div>
           <div className="h-4 w-px bg-slate-300"></div>
           <div className="flex items-center gap-1">
