@@ -17,6 +17,8 @@ import {
   MANGALURU_WATERWAYS,
   FLOW_DIRECTION_VECTORS,
   RIVER_LANDMARKS,
+  getDynamicSwollenWaterways,
+  TIMESTEP_EXPANSION_FACTORS,
 } from '@/data/waterways';
 
 interface FloodMapProps {
@@ -25,6 +27,7 @@ interface FloodMapProps {
   onSelectZone: (zoneId: string) => void;
   facilities: CriticalFacility[];
   floodExtentGeoJson?: Record<string, unknown> | null;
+  currentTime?: string;
   className?: string;
 }
 
@@ -191,6 +194,7 @@ export function FloodMap({
   onSelectZone,
   facilities,
   floodExtentGeoJson,
+  currentTime = '14:30',
   className,
 }: FloodMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -209,6 +213,9 @@ export function FloodMap({
     description: string;
     depthM?: number;
   } | null>(null);
+
+  const currentFactor = TIMESTEP_EXPANSION_FACTORS[currentTime] ?? 0.65;
+  const currentSwellMeters = Math.round(currentFactor * 480);
 
   const selectedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
 
@@ -265,7 +272,7 @@ export function FloodMap({
           mapRef.current = map;
           setMapLoaded(true);
 
-          renderWaterways(map);
+          renderWaterways(map, currentFactor);
           renderFlowVectors(map);
           renderInundation(map, floodExtentGeoJson);
           renderRiskLayers(map);
@@ -287,18 +294,20 @@ export function FloodMap({
     };
   }, [basemap]);
 
-  // 1. Render Mangaluru Waterways & River Channels
-  function renderWaterways(map: any) {
+  // 1. Render Mangaluru Waterways & River Channels with dynamic width swelling
+  function renderWaterways(map: any, factor: number = currentFactor) {
     if (!map || !map.isStyleLoaded()) return;
 
+    const dynamicData = getDynamicSwollenWaterways(factor);
+
     if (map.getSource('waterways-source')) {
-      map.getSource('waterways-source').setData(MANGALURU_WATERWAYS);
+      map.getSource('waterways-source').setData(dynamicData);
       return;
     }
 
     map.addSource('waterways-source', {
       type: 'geojson',
-      data: MANGALURU_WATERWAYS,
+      data: dynamicData,
     });
 
     // River Waterbody Fill
@@ -737,6 +746,11 @@ export function FloodMap({
     if (!mapRef.current || !mapLoaded) return;
     const map = mapRef.current;
 
+    // Dynamically update swollen river channels based on simulation progression (currentTime)
+    if (map.getSource('waterways-source')) {
+      map.getSource('waterways-source').setData(getDynamicSwollenWaterways(currentFactor));
+    }
+
     // Waterways visibility
     if (map.getLayer('waterways-fill')) {
       map.setLayoutProperty('waterways-fill', 'visibility', showWaterways ? 'visible' : 'none');
@@ -776,7 +790,7 @@ export function FloodMap({
         speed: 1.2,
       });
     }
-  }, [selectedZoneId, showWaterways, showFlowVectors, showInundation, showZones, floodExtentGeoJson, mapLoaded]);
+  }, [selectedZoneId, showWaterways, showFlowVectors, showInundation, showZones, floodExtentGeoJson, currentTime, currentFactor, mapLoaded]);
 
   // Controls
   const handleZoomIn = () => {
@@ -834,6 +848,16 @@ export function FloodMap({
           </div>
         </div>
       )}
+
+      {/* Dynamic Waterbody Swell Indicator */}
+      <div className="absolute top-16 left-3 flex items-center gap-2 pointer-events-none z-20">
+        <div className="bg-sky-950/95 backdrop-blur-xs text-sky-200 border border-sky-600/70 px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1.5 shadow-md pointer-events-auto">
+          <Waves className="w-3.5 h-3.5 text-sky-400 animate-pulse shrink-0" />
+          <span>
+            River Swell: <strong className="text-white font-bold">+{currentSwellMeters}m</strong> overtopping · {currentTime} IST
+          </span>
+        </div>
+      </div>
 
       {/* Hover Waterway Tooltip */}
       {hoveredWaterway && (

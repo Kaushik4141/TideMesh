@@ -104,6 +104,7 @@ export default function OverviewPage() {
                   selectedZoneId={selectedZoneId}
                   onSelectZone={selectZone}
                   floodExtentGeoJson={floodExtentGeoJson}
+                  currentTime={currentTime}
                   className="w-full h-full"
                 />
               </div>
