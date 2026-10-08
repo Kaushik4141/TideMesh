@@ -232,6 +232,12 @@ export function FloodMap({
       try {
         const maplibregl: any = await import('maplibre-gl');
 
+        if (typeof maplibregl.setWorkerUrl === 'function') {
+          maplibregl.setWorkerUrl('/maplibre-gl-worker.mjs');
+        } else if (typeof maplibregl.default?.setWorkerUrl === 'function') {
+          maplibregl.default.setWorkerUrl('/maplibre-gl-worker.mjs');
+        }
+
         if (!isMounted || !mapContainerRef.current) return;
 
         // Clean up previous instance if any

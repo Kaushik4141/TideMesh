@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "copy:worker": "cp node_modules/maplibre-gl/dist/maplibre-gl-worker* public/ 2>/dev/null || true",
+    "predev": "npm run copy:worker",
+    "prebuild": "npm run copy:worker",
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",

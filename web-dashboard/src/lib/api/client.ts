@@ -106,18 +106,27 @@ class ApiClient {
   async fetchEventEnvironment(
     eventId: string = 'mangaluru-historical-2018'
   ): Promise<EventEnvironmentResponse> {
-    const url = `${this.baseUrl}/api/v1/environmental/events/${encodeURIComponent(eventId)}/summary`;
+    const canonicalUrl = `${this.baseUrl}/api/v1/events/${encodeURIComponent(eventId)}/environment`;
+    const fallbackUrl = `${this.baseUrl}/api/v1/environmental/events/${encodeURIComponent(eventId)}/summary`;
     try {
-      const res = await fetch(url, {
+      const res = await fetch(canonicalUrl, {
         headers: { Accept: 'application/json' },
         cache: 'no-store',
       });
-      if (!res.ok) {
+      if (res.ok) {
+        return (await res.json()) as EventEnvironmentResponse;
+      }
+      // Fallback
+      const fallbackRes = await fetch(fallbackUrl, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!fallbackRes.ok) {
         throw new Error(`API returned HTTP ${res.status}: ${res.statusText}`);
       }
-      return (await res.json()) as EventEnvironmentResponse;
+      return (await fallbackRes.json()) as EventEnvironmentResponse;
     } catch (err) {
-      console.warn(`[ApiClient] Failed to fetch event environment from ${url}:`, err);
+      console.warn(`[ApiClient] Failed to fetch event environment from ${canonicalUrl}:`, err);
       throw err;
     }
   }
