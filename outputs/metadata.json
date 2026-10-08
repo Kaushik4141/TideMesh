@@ -10,13 +10,13 @@
   "grid_resolution_m": 50,
   "crs": "EPSG:32643",
   "vertical_datum": "MSL",
-  "max_depth_m": 3.0,
-  "mean_flooded_depth_m": 1.6967145204544067,
+  "max_depth_m": 3.8600001335144043,
+  "mean_flooded_depth_m": 2.16232967376709,
   "flooded_area_km2": 8.8,
   "onset_threshold_m": 0.05,
   "flood_threshold_m": 0.1,
   "forcing": {
-    "rainfall_source": "IMD Mangaluru Extreme Downpour (Peak 75 mm/hr)",
-    "tide_source": "Panambur Port Spring Tide + Surge (Peak 2.25m MSL)"
+    "rainfall_source": "Open-Meteo Environmental Observation Feed (data-pipeline)",
+    "tide_source": "Panambur Port Spring Tide Astronomical Calculation (MSL Datum Offset -1.10m)"
   }
 }
