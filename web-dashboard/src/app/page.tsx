@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFloodDashboard } from '@/hooks/useFloodDashboard';
 import { TopHeader } from '@/components/dashboard/TopHeader';
 import { Sidebar } from '@/components/dashboard/Sidebar';
@@ -22,21 +22,30 @@ export default function OverviewPage() {
     setDrawerOpen,
     kpi,
     currentTime,
+    setCurrentTime,
+    availableTimestamps,
+    stepForward,
+    stepBackward,
     countdownMinutes,
     currentZoneAcknowledgment,
     acknowledgeCurrentZone,
     actionsState,
     assignAction,
     isPlaying,
-    setIsPlaying,
+    togglePlay,
     playbackSpeed,
     setPlaybackSpeed,
     shortcutsModalOpen,
     setShortcutsModalOpen,
-    // Replay controls
+    floodExtentGeoJson,
+    eventData,
+    environmentalData,
+    isLoading,
+    isSimulationRunning,
+    triggerSimulationRun,
+    refreshData,
+    // Replay controls & scenario
     currentReplayState,
-    stepForward,
-    stepBackward,
     resetTimeline,
     scenario,
   } = useFloodDashboard();
@@ -44,7 +53,7 @@ export default function OverviewPage() {
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
 
   // Sync with URL query parameter e.g. /?zone=B
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const zoneParam = params.get('zone');
@@ -57,17 +66,26 @@ export default function OverviewPage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans antialiased text-slate-900 select-none">
-      {/* Top Header with SIMULATION badge & live simulation clock */}
+      {/* Top Header with live data fetching status and simulation trigger */}
       <TopHeader
         onOpenShortcuts={() => setShortcutsModalOpen(true)}
+        eventName={eventData?.name}
+        eventType={eventData?.type || 'SIMULATION'}
         currentTime={currentTime}
         isSimulation={true}
+        isSimulationRunning={isSimulationRunning}
+        onRunSimulation={() => triggerSimulationRun()}
+        onRefresh={() => refreshData()}
+        isLoading={isLoading}
       />
 
       {/* Main Body */}
       <div className="flex flex-1 pt-14 overflow-hidden">
-        {/* Left Sidebar with Scenario dialog trigger */}
-        <Sidebar onOpenScenario={() => setScenarioModalOpen(true)} />
+        {/* Left Sidebar with Scenario dialog trigger and telemetry data */}
+        <Sidebar
+          environmentalData={environmentalData}
+          onOpenScenario={() => setScenarioModalOpen(true)}
+        />
 
         {/* Content Area */}
         <main className="flex-1 ml-[220px] lg:ml-[232px] p-2.5 lg:p-3 overflow-hidden flex flex-col gap-2.5">
@@ -85,6 +103,7 @@ export default function OverviewPage() {
                   facilities={facilities}
                   selectedZoneId={selectedZoneId}
                   onSelectZone={selectZone}
+                  floodExtentGeoJson={floodExtentGeoJson}
                   className="w-full h-full"
                 />
               </div>
@@ -92,8 +111,10 @@ export default function OverviewPage() {
               {/* Timeline (Always visible in first viewport, fully connected to replay states) */}
               <Timeline
                 currentTime={currentTime}
+                availableTimestamps={availableTimestamps}
+                onSelectTime={setCurrentTime}
                 isPlaying={isPlaying}
-                onTogglePlay={() => setIsPlaying((p) => !p)}
+                onTogglePlay={togglePlay}
                 playbackSpeed={playbackSpeed}
                 onChangeSpeed={setPlaybackSpeed}
                 onStepForward={stepForward}
@@ -104,26 +125,22 @@ export default function OverviewPage() {
               />
             </div>
 
-            {/* Zone Investigation Drawer (Scrollable body, sticky actions) */}
-            {drawerOpen && (
-              <ZoneDrawer
-                zone={selectedZone}
-                allZones={zones}
-                onSelectZone={selectZone}
-                onClose={() => setDrawerOpen(false)}
-                countdownMinutes={countdownMinutes}
-                acknowledgment={currentZoneAcknowledgment}
-                onAcknowledge={acknowledgeCurrentZone}
-                onAssignAction={assignAction}
-                actionsState={actionsState}
-                className="h-full"
-              />
-            )}
+            {/* Zone Detail Drawer */}
+            <ZoneDrawer
+              zone={selectedZone}
+              isOpen={drawerOpen}
+              onClose={() => setDrawerOpen(false)}
+              countdownMinutes={countdownMinutes}
+              acknowledgment={currentZoneAcknowledgment}
+              onAcknowledge={acknowledgeCurrentZone}
+              actionsState={actionsState}
+              onAssignAction={assignAction}
+            />
           </div>
         </main>
       </div>
 
-      {/* Keyboard Shortcuts Dialog */}
+      {/* Keyboard Shortcuts Modal */}
       <ShortcutsModal
         open={shortcutsModalOpen}
         onClose={() => setShortcutsModalOpen(false)}
