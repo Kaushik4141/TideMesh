@@ -5,14 +5,28 @@ import type {
   EventEnvironmentResponse,
 } from './types';
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3000';
+const resolveApiBaseUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    // In browser: use relative URL so Next rewrites proxy cleanly
+    const customUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (customUrl && !customUrl.includes('localhost') && !customUrl.includes('127.0.0.1')) {
+      return customUrl.replace(/\/$/, '');
+    }
+    return '';
+  }
+  // SSR / Node runtime
+  return (
+    process.env.INTERNAL_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://127.0.0.1:3000'
+  ).replace(/\/$/, '');
+};
 
 class ApiClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = API_BASE_URL.replace(/\/$/, '');
+    this.baseUrl = resolveApiBaseUrl();
   }
 
   public getBaseUrl(): string {
