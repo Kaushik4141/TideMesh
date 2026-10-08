@@ -17,7 +17,7 @@ export function WhyPanel({ factors, explanation, title = 'Why is this critical?'
         <span className="text-xs text-slate-900 font-bold uppercase tracking-wider">
           {title}
         </span>
-        <span className="text-[11px] text-slate-500 font-medium">Model v1.2</span>
+        <span className="text-[11px] text-slate-500 font-medium">Illustrative attribution — unvalidated</span>
       </div>
 
       {/* Contribution Bars */}

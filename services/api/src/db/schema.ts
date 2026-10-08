@@ -349,6 +349,18 @@ export const alerts = pgTable(
 // DRIZZLE RELATIONS
 // =============================================================================
 
+/** Compact comparison provenance/results. Simulation service owns raster artifacts. */
+export const simulationComparisons = pgTable("simulation_comparisons", {
+  id: text("id").primaryKey(),
+  baselineRunId: text("baseline_run_id").notNull(),
+  scenarioRunId: text("scenario_run_id").notNull(),
+  scenarioPredictionId: uuid("scenario_prediction_id").references(() => floodPredictions.id, { onDelete: "set null" }),
+  inputs: jsonb("inputs").notNull(),
+  artifactReferences: jsonb("artifact_references").notNull(),
+  resultSummary: jsonb("result_summary").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, table => [index("comparisons_baseline_run_idx").on(table.baselineRunId)]);
+
 export const zonesRelations = relations(zones, ({ many }) => ({
   predictions: many(floodPredictions),
   priorities: many(responsePriorities),

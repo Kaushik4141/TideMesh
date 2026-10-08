@@ -34,6 +34,7 @@ interface SidebarProps {
   currentConditions?: CurrentConditions;
   scenarioParams?: ScenarioParameters;
   onOpenScenario?: () => void;
+  comparisonActive?: boolean;
 }
 
 export function Sidebar({
@@ -42,6 +43,7 @@ export function Sidebar({
   currentConditions,
   scenarioParams,
   onOpenScenario,
+  comparisonActive = false,
 }: SidebarProps = {}) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -181,7 +183,7 @@ export function Sidebar({
       {/* Footer Area: Data Engine & Hotline */}
       <div className="p-2 border-t border-slate-200 bg-slate-50/70 space-y-2">
         {/* Compact DATA ENGINE (Collapsed by default with ONLINE status dot) */}
-        <div className="rounded-md border border-slate-200 bg-white p-2 text-xs shadow-2xs">
+        {!comparisonActive && <div className="rounded-md border border-slate-200 bg-white p-2 text-xs shadow-2xs">
           <button
             onClick={() => setEngineOpen((prev) => !prev)}
             className="w-full flex items-center justify-between text-left focus:outline-none"
@@ -193,11 +195,11 @@ export function Sidebar({
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
               </span>
               <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                Telemetry
+                Illustrative telemetry
               </span>
             </div>
             <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-              <span>ONLINE</span>
+              <span>UNVALIDATED</span>
               {engineOpen ? (
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               ) : (
@@ -290,7 +292,7 @@ export function Sidebar({
               )}
             </div>
           )}
-        </div>
+        </div>}
 
         {/* EOC Hotline button styled as tel:1077 link */}
         <a

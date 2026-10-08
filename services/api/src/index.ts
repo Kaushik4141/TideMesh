@@ -60,6 +60,22 @@ app.route("/api/v1/health", healthRouter);
 app.route("/api/v1/simulations", simulationRouter);
 app.route("/api/v1/environmental-observations", environmentalRouter);
 app.route("/api/v1/events", eventEnvironmentRouter);
+app.route("/api/v1/environmental/events", eventEnvironmentRouter);
+
+// Summary alias: GET /api/v1/environmental/events/:eventId/summary
+app.get("/api/v1/environmental/events/:eventId/summary", async (c) => {
+  const eventId = c.req.param("eventId");
+  const { getDb } = await import("./db/index.js");
+  const { environmentalService } = await import("./services/environmental.service.js");
+  try {
+    const db = getDb(c.env);
+    const eventEnv = await environmentalService.getEventEnvironment(db, eventId);
+    return c.json({ success: true, eventEnvironment: eventEnv });
+  } catch (error) {
+    const err = error as Error;
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
 
 // Top-level operational alias: GET /api/v1/forecast/live
 app.get("/api/v1/forecast/live", async (c) => {

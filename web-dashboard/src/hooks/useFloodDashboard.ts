@@ -91,18 +91,22 @@ export function useFloodDashboard() {
 
   // Core Data Loader parameterized by active mode
   const loadModeData = useCallback(
-    async (mode: DashboardMode, customScenarioParams?: ScenarioParameters) => {
+    async (mode: DashboardMode) => {
       setIsLoading(true);
       setError(null);
       setIsPlaying(false);
+      if (mode === 'SCENARIO') {
+        // Scenario comparison is loaded by useScenarioComparison from exact runs.
+        setEventData(null);
+        setIsLoading(false);
+        return;
+      }
       try {
         let resp;
         if (mode === 'LIVE_FORECAST') {
           resp = await apiClient.fetchLiveForecast();
         } else if (mode === 'HISTORICAL_REPLAY') {
           resp = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
-        } else {
-          resp = await apiClient.fetchScenario(customScenarioParams || scenarioParams);
         }
 
         if (resp?.success && resp.event) {
@@ -139,7 +143,7 @@ export function useFloodDashboard() {
         setIsLoading(false);
       }
     },
-    [scenarioParams]
+    []
   );
 
   // Initial Data Fetching for active mode
@@ -166,7 +170,7 @@ export function useFloodDashboard() {
     async (params: ScenarioParameters) => {
       setScenarioParams(params);
       setActiveMode('SCENARIO');
-      await loadModeData('SCENARIO', params);
+      await loadModeData('SCENARIO');
     },
     [loadModeData]
   );
@@ -419,6 +423,7 @@ export function useFloodDashboard() {
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (activeMode === 'SCENARIO') return;
       const activeEl = document.activeElement;
       if (
         activeEl &&
@@ -462,7 +467,7 @@ export function useFloodDashboard() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectZone, acknowledgeCurrentZone, stepForward, stepBackward, togglePlay]);
+  }, [activeMode, selectZone, acknowledgeCurrentZone, stepForward, stepBackward, togglePlay]);
 
   return {
     // Data

@@ -303,6 +303,7 @@ export default function ZonesPage() {
         {/* Main Content Area */}
         <div className="flex-1 ml-[220px] lg:ml-[232px] flex flex-col h-[calc(100vh-3.5rem)] overflow-y-auto bg-slate-50">
           <main className="w-full flex flex-col min-h-full">
+            <div className="bg-amber-50 border-b border-amber-300 px-6 py-3 text-sm text-amber-950"><strong>ILLUSTRATIVE / UNVALIDATED DATASET.</strong> This directory and its hardcoded fallback zones, example risk percentages and sensor status are not linked to a selected simulation run. <Link href="/?compare=1" className="font-bold underline">Compare real runs in Overview</Link>.</div>
             {/* Sector Header Banner */}
             <div className="px-6 py-4 bg-white border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-2xs">
               <div className="flex flex-col gap-0.5">
@@ -326,7 +327,7 @@ export default function ZonesPage() {
                 <Link href={`/?zone=${selectedZone.id}`}>
                   <Button className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-xs">
                     <MapIcon className="w-4 h-4 text-sky-400" />
-                    <span>View Selected ({selectedZone.name}) on Live Map</span>
+                    <span>View Selected ({selectedZone.name}) on Demo Map</span>
                   </Button>
                 </Link>
                 <Button 
@@ -379,7 +380,7 @@ export default function ZonesPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="rank">Priority Rank (Highest)</SelectItem>
-                      <SelectItem value="probability">Flood Prob. (Desc)</SelectItem>
+                      <SelectItem value="probability">Illustrative risk % (Desc)</SelectItem>
                       <SelectItem value="onset">Onset Time (Earliest)</SelectItem>
                       <SelectItem value="population">Population Exposed</SelectItem>
                     </SelectContent>
@@ -411,7 +412,7 @@ export default function ZonesPage() {
                         <TableHead className="text-center w-12 py-2">Rank</TableHead>
                         <TableHead className="min-w-[140px] py-2">Zone & Locality</TableHead>
                         <TableHead className="min-w-[100px] py-2">Tier Alert</TableHead>
-                        <TableHead className="min-w-[120px] py-2">Flood Prob.</TableHead>
+                        <TableHead className="min-w-[120px] py-2">Illustrative risk %</TableHead>
                         <TableHead className="min-w-[95px] py-2">Depth Range</TableHead>
                         <TableHead className="min-w-[75px] py-2">Onset</TableHead>
                         <TableHead className="min-w-[75px] py-2">Peak</TableHead>
@@ -676,7 +677,7 @@ export default function ZonesPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <Radio className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="text-[11px] uppercase font-bold text-slate-900">Sector Telemetry Node Health</span>
+                      <span className="text-[11px] uppercase font-bold text-slate-900">Illustrative Sensor Status (Unvalidated)</span>
                     </div>
                     <span className="text-[11px] text-slate-500 font-semibold">8/8 Gauges Active</span>
                   </div>

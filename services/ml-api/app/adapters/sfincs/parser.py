@@ -21,6 +21,7 @@ class SFINCSOutputParser:
             p = Path(target_dir)
             if p.exists() and p.is_dir():
                 return p
+            raise FileNotFoundError("Requested SFINCS output directory not found")
         
         # Check primary output directory
         if self.base_outputs_dir.exists():
@@ -51,6 +52,8 @@ class SFINCSOutputParser:
 
         with open(metadata_file, "r", encoding="utf-8") as f:
             data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("Invalid SFINCS metadata")
 
         forcing_data = data.get("forcing")
         forcing = None
@@ -141,7 +144,7 @@ class SFINCSOutputParser:
 
         def _check_file(name: str) -> Optional[str]:
             p = output_dir / name
-            return str(p) if p.exists() else None
+            return f"{metadata.simulation_id}/{name}" if p.is_file() and not p.is_symlink() else None
 
         return SFINCSOutputsCatalog(
             simulation_id=metadata.simulation_id,

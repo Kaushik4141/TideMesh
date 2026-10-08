@@ -4,7 +4,9 @@ import { sql } from "drizzle-orm";
 import type { DatabaseInstance } from "../db/index.js";
 import {
   FloodPredictionSchema,
+  RunSnapshotSchema,
   type FloodPrediction,
+  type RunSnapshot,
   type SeverityLevel,
 } from "@tidemesh/contracts";
 import { environmentalService } from "./environmental.service.js";
@@ -21,16 +23,59 @@ export interface SimulationEventSummary {
   status: string;
 }
 
+export class SimulationError extends Error {
+  constructor(public readonly status: 404 | 422 | 502 | 504, message: string) {
+    super(message);
+    this.name = "SimulationError";
+  }
+}
+
+export function requireImmutableRunId(runId: string): void {
+  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(runId) ||
+      ["latest", "live", "default", "mangaluru-live-forecast"].includes(runId.toLowerCase())) {
+    throw new SimulationError(422, "Select an immutable simulation run ID; latest/live/default aliases cannot be compared.");
+  }
+}
+
 export class SimulationService {
   private mlApiUrl: string;
   private rootDir: string;
 
   constructor(mlApiUrl?: string) {
-    this.mlApiUrl =
+    this.mlApiUrl = (
       mlApiUrl ||
-      process.env.ML_API_URL ||
-      "http://127.0.0.1:8000";
+      (typeof process !== "undefined" ? process.env.ML_API_URL : undefined) ||
+      "http://127.0.0.1:8000"
+    ).replace(/\/+$/, "");
     this.rootDir = resolve(process.cwd(), "../..");
+  }
+
+  /** Exact artifact lookup. Comparison must never use local or alias fallbacks. */
+  async getRunSnapshot(runId: string): Promise<RunSnapshot> {
+    requireImmutableRunId(runId);
+    let res: Response;
+    try {
+      res = await fetch(`${this.mlApiUrl}/api/v1/simulations/${encodeURIComponent(runId)}/run`, {
+        signal: AbortSignal.timeout(210000),
+      });
+    } catch (error) {
+      const timedOut = error instanceof Error && ["TimeoutError", "AbortError"].includes(error.name);
+      throw new SimulationError(timedOut ? 504 : 502, timedOut ? "Simulation snapshot request timed out." : "Simulation snapshot service is unavailable.");
+    }
+    if (!res.ok) {
+      throw new SimulationError(res.status === 404 ? 404 : 502,
+        res.status === 404 ? `Run '${runId}' was not found. Select an existing immutable run.` : `Simulation snapshot service failed (${res.status}).`);
+    }
+    let snapshot: RunSnapshot;
+    try {
+      snapshot = RunSnapshotSchema.parse(await res.json());
+    } catch {
+      throw new SimulationError(502, "Simulation service returned an invalid run snapshot.");
+    }
+    if (snapshot.runId !== runId) {
+      throw new SimulationError(502, "Simulation snapshot identity does not match the requested run; comparison stopped.");
+    }
+    return snapshot;
   }
 
   /**
@@ -77,7 +122,9 @@ export class SimulationService {
       );
       if (res.ok) {
         const raw = await res.json();
-        return FloodPredictionSchema.parse(raw);
+        const forecast = FloodPredictionSchema.parse(raw);
+        if (forecast.eventId !== eventId) throw new SimulationError(502, "Forecast identity does not match the requested event.");
+        return forecast;
       }
     } catch {
       // ML service not reachable, fall back to local adapter
@@ -104,6 +151,8 @@ export class SimulationService {
       // Fallback
     }
 
+    // A fallback is allowed only if its metadata identifies this exact event.
+    this.loadLocalForecast(eventId, "zone-mangaluru-coastal");
     return this.loadLocalFloodExtent();
   }
 
@@ -117,6 +166,13 @@ export class SimulationService {
     zoneId: string = "zone-mangaluru-coastal"
   ) {
     const forecast = await this.getForecast(eventId, zoneId);
+
+    return this.persistForecast(db, forecast, eventId);
+  }
+
+  /** Persist the actual runner response, without fetching another event's forecast. */
+  async persistForecast(db: DatabaseInstance, forecast: FloodPrediction, eventId: string) {
+    const zoneId = forecast.zoneId;
 
     // 1. Ensure target Mangaluru zone exists in zones table
     await db.execute(sql`
@@ -183,6 +239,10 @@ export class SimulationService {
       RETURNING id, event_id, zone_id, severity, is_deterministic, depth_max, created_at;
     `);
 
+    if (!res.rows[0]?.id) {
+      throw new Error("Database did not confirm prediction persistence.");
+    }
+
     return {
       synced: true,
       prediction: res.rows[0],
@@ -195,7 +255,7 @@ export class SimulationService {
    * automatically persists results into Neon PostGIS, and returns the normalized forecast.
    */
   async runSimulation(
-    db: DatabaseInstance,
+    db: DatabaseInstance | undefined,
     options: {
       eventId?: string;
       zoneId?: string;
@@ -215,7 +275,7 @@ export class SimulationService {
     const zoneId = options.zoneId || "zone-mangaluru-coastal";
 
     let rainfallRate = options.rainfallRateMmHr;
-    if (rainfallRate == null && options.useLiveWeather) {
+    if (db && rainfallRate == null && options.useLiveWeather) {
       const latest = await environmentalService.getLatestLiveMetrics(db);
       if (latest && latest.rainfallMmHr > 0) {
         rainfallRate = latest.rainfallMmHr;
@@ -232,27 +292,43 @@ export class SimulationService {
       scenarioName: options.scenarioName,
     };
 
-    const res = await fetch(`${this.mlApiUrl}/api/v1/simulations/run`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(60000),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`SFINCS simulation service failed (${res.status}): ${errText}`);
+    let res: Response;
+    try {
+      res = await fetch(`${this.mlApiUrl}/api/v1/simulations/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(210000),
+      });
+    } catch (error) {
+      const timedOut = error instanceof Error && ["TimeoutError", "AbortError"].includes(error.name);
+      throw new SimulationError(timedOut ? 504 : 502, timedOut ? "Simulation execution timed out; inspect run state before retrying." : "Simulation runner is unavailable.");
     }
 
-    const rawPrediction = await res.json();
-    const forecast = FloodPredictionSchema.parse(rawPrediction);
+    if (!res.ok) {
+      throw new SimulationError(502, `SFINCS simulation service failed (${res.status}).`);
+    }
+
+    let forecast: FloodPrediction;
+    try {
+      forecast = FloodPredictionSchema.parse(await res.json());
+    } catch {
+      throw new SimulationError(502, "Simulation runner returned an invalid forecast.");
+    }
+    if (options.eventId && forecast.eventId !== options.eventId) {
+      throw new SimulationError(502, "Simulation runner returned a different event ID; comparison stopped.");
+    }
 
     // Automatically persist to Neon PostgreSQL + PostGIS
-    const dbRecord = await this.syncToDatabase(
-      db,
-      forecast.eventId || options.eventId || "live-run",
-      zoneId
-    );
+    let dbRecord = null;
+    if (db) {
+      try {
+        dbRecord = await this.persistForecast(db, forecast, forecast.eventId || options.eventId || "live-run");
+      } catch {
+        // A completed immutable artifact is still selectable; never claim DB persistence succeeded.
+        dbRecord = null;
+      }
+    }
 
     const executionTimeMs = Date.now() - startTime;
 
@@ -325,6 +401,9 @@ export class SimulationService {
     }
 
     const data = JSON.parse(readFileSync(metaPath, "utf-8"));
+    if (data.simulation_id !== eventId) {
+      throw new SimulationError(404, "Exact simulation artifacts are unavailable; no other event output was substituted.");
+    }
     const extent = this.loadLocalFloodExtent();
 
     // Extract first geometry

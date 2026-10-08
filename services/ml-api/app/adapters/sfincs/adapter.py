@@ -1,8 +1,7 @@
-from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, Union
 from pathlib import Path
 from app.schemas.sfincs import SFINCSMetadata
-from app.schemas.prediction import NormalizedFloodPrediction, SeverityLevel, RiskDriver
+from app.schemas.prediction import NormalizedFloodPrediction, SeverityLevel
 from app.adapters.sfincs.parser import SFINCSOutputParser
 
 def classify_flood_severity(max_depth_m: float) -> SeverityLevel:
@@ -45,42 +44,11 @@ class SFINCSAdapter:
         """
         Normalizes SFINCS metadata and GeoJSON extent into CoastShield FloodPrediction format.
         """
-        # Parse simulation start time
-        try:
-            start_dt = datetime.fromisoformat(metadata.start_time.replace("Z", "+00:00"))
-        except Exception:
-            start_dt = datetime.now(timezone.utc)
-
-        # Standard Mangaluru SFINCS baseline event timings:
-        # Onset occurs ~20 min after extreme rainfall begins (20 min offset)
-        # Peak water depth occurs at 3 hours / 180 min
-        onset_dt = start_dt + timedelta(minutes=20)
-        peak_dt = start_dt + timedelta(minutes=180)
-
-        onset_iso = onset_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-        peak_iso = peak_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-
         # Classify physical severity
         severity = classify_flood_severity(metadata.max_depth_m)
 
         # Extract primary GeoJSON geometry
         primary_geom = self.parser.extract_primary_geometry(flood_extent_geojson)
-
-        # Build compound risk drivers from forcing data
-        drivers = []
-        if metadata.forcing:
-            if metadata.forcing.rainfall_source:
-                drivers.append(RiskDriver(
-                    factor="Monsoon Downpour",
-                    contribution=0.6,
-                    description=metadata.forcing.rainfall_source,
-                ))
-            if metadata.forcing.tide_source:
-                drivers.append(RiskDriver(
-                    factor="Tidal Surge",
-                    contribution=0.4,
-                    description=metadata.forcing.tide_source,
-                ))
 
         # Physical metrics
         metrics = {
@@ -91,6 +59,7 @@ class SFINCSAdapter:
             "verticalDatum": metadata.vertical_datum,
             "onsetThresholdM": metadata.onset_threshold_m,
             "floodThresholdM": metadata.flood_threshold_m,
+            "timingSource": "unavailable: P1 onset/peak rasters are heuristic estimates, not solver time series",
         }
 
         forcing_dict = {}
@@ -107,8 +76,8 @@ class SFINCSAdapter:
             probability=None,  # Physics hydrodynamic model: deterministic depth, not statistical probability!
             isDeterministic=True,
             severity=severity,
-            onset=onset_iso,
-            peak=peak_iso,
+            onset=None,
+            peak=None,
             depthMin=metadata.flood_threshold_m,
             depthMax=metadata.max_depth_m,
             confidence=None,  # Physics model does not output fake ML confidence
@@ -117,7 +86,7 @@ class SFINCSAdapter:
             floodGeometry=primary_geom,
             metrics=metrics,
             forcing=forcing_dict,
-            drivers=drivers,
+            drivers=[],  # No quantitative driver attribution has been implemented.
         )
 
     def load_and_normalize(

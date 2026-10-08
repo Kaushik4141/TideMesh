@@ -30,6 +30,7 @@ interface TopHeaderProps {
   onRunSimulation?: () => void;
   onRefresh?: () => void;
   isLoading?: boolean;
+  peakSummary?: boolean;
 }
 
 export function TopHeader({
@@ -44,6 +45,7 @@ export function TopHeader({
   onRunSimulation,
   onRefresh,
   isLoading = false,
+  peakSummary = false,
 }: TopHeaderProps) {
   const displayClock = clockTimes[currentTime];
   const timeChipLabel =
@@ -98,7 +100,7 @@ export function TopHeader({
                   ? 'bg-white text-emerald-900 shadow-xs border border-emerald-300 font-extrabold'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               )}
-              title="Primary Mode: 0–6 hour forward hydrodynamic forecast driven by live conditions"
+              title="Illustrative, unvalidated live-mode dataset"
             >
               <span className="relative flex h-2 w-2 shrink-0">
                 <span
@@ -114,7 +116,7 @@ export function TopHeader({
                   )}
                 />
               </span>
-              <span>LIVE FORECAST</span>
+              <span>LIVE DEMO</span>
               <span
                 className={cn(
                   'text-[9px] px-1 rounded font-bold uppercase',
@@ -137,7 +139,7 @@ export function TopHeader({
                   ? 'bg-white text-blue-900 shadow-xs border border-blue-300 font-extrabold'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               )}
-              title="Calibration Mode: Hindcast benchmark reproducing May 29, 2018 Cyclone Mekunu event"
+              title="Illustrative historical replay; calibration has not been validated"
             >
               <span
                 className={cn(
@@ -179,7 +181,7 @@ export function TopHeader({
                   activeMode === 'SCENARIO' ? 'bg-amber-500' : 'bg-slate-400'
                 )}
               />
-              <span>WHAT-IF SCENARIO</span>
+              <span>COMPARE SCENARIO</span>
               <span
                 className={cn(
                   'text-[9px] px-1 rounded font-bold uppercase',
@@ -197,10 +199,10 @@ export function TopHeader({
         {/* Current Time Indicator Chip */}
         <div
           className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-200/80 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700 whitespace-nowrap"
-          title={`Active timeline cursor: ${timeChipLabel}`}
+          title={peakSummary ? 'Run peak-summary comparison, not a timeline cursor' : `Illustrative timeline cursor: ${timeChipLabel}`}
         >
           <span className="font-bold tracking-wide text-slate-900 tabular-nums">
-            {timeChipLabel}
+            {peakSummary ? 'Peak summary' : timeChipLabel}
           </span>
         </div>
 
@@ -210,7 +212,7 @@ export function TopHeader({
             onClick={onRunSimulation}
             disabled={isSimulationRunning}
             className="flex items-center gap-1 px-2.5 py-1 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white rounded-md text-[11px] font-bold shadow-xs transition-colors cursor-pointer"
-            title="Execute on-demand SFINCS hydrodynamic simulation (<15s)"
+            title="Open comparison workflow to create or select a completed baseline"
           >
             {isSimulationRunning ? (
               <>
@@ -220,7 +222,7 @@ export function TopHeader({
             ) : (
               <>
                 <Zap className="w-3.5 h-3.5 fill-current" />
-                <span className="hidden sm:inline">Run Solver</span>
+                <span className="hidden sm:inline">Create Baseline</span>
               </>
             )}
           </button>

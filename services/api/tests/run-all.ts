@@ -6,6 +6,7 @@ import { runDbTests } from "./db.test.js";
 import { runContractTests } from "./contracts.test.js";
 import { runSimulationTests } from "./simulation.test.js";
 import { runEnvironmentalTests } from "./environmental.test.js";
+import { runComparisonTests } from "./comparison.test.js";
 
 const envLocalPath = resolve(process.cwd(), ".env.local");
 if (existsSync(envLocalPath)) {
@@ -29,6 +30,7 @@ async function runAllTests() {
     { name: "Hono API & Health Endpoints", fn: runHealthTests },
     { name: "SFINCS Hydrodynamic Simulation Integration", fn: runSimulationTests },
     { name: "Environmental Observation Pipeline & Ingestion", fn: runEnvironmentalTests },
+    { name: "Scenario Impact Comparison", fn: runComparisonTests },
   ];
 
 

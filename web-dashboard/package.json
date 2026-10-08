@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "copy:worker": "cp node_modules/maplibre-gl/dist/maplibre-gl-worker* public/ 2>/dev/null || true",
+    "predev": "npm run copy:worker",
+    "prebuild": "npm run copy:worker",
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@next/swc-win32-x64-msvc": "^16.4.0",

@@ -4,6 +4,7 @@ import type {
   RunSimulationResponse,
   EventEnvironmentResponse,
 } from './types';
+import type { Comparison, ComparisonRequest, RunSnapshot } from '../../../../packages/contracts/src/comparison';
 
 const resolveApiBaseUrl = (): string => {
   if (typeof window !== 'undefined') {
@@ -31,6 +32,40 @@ class ApiClient {
 
   public getBaseUrl(): string {
     return this.baseUrl;
+  }
+
+  private async readComparisonResponse<T>(res: Response): Promise<T> {
+    const data = await res.json().catch(() => null);
+    if (!res.ok || data?.success === false) {
+      throw new Error(data?.message || data?.error || `Request failed (HTTP ${res.status})`);
+    }
+    return data as T;
+  }
+
+  async listComparisonBaselines(): Promise<SimulationEventSummary[]> {
+    const res = await fetch(`${this.baseUrl}/api/v1/simulations`, { cache: 'no-store' });
+    const data = await this.readComparisonResponse<{ simulations: SimulationEventSummary[] }>(res);
+    if (!Array.isArray(data.simulations)) throw new Error('The run catalog response is invalid.');
+    return data.simulations;
+  }
+
+  async fetchRunSnapshot(runId: string): Promise<RunSnapshot> {
+    const res = await fetch(`${this.baseUrl}/api/v1/simulations/${encodeURIComponent(runId)}/run`, { cache: 'no-store' });
+    const snapshot = await this.readComparisonResponse<RunSnapshot>(res);
+    if (snapshot.runId !== runId) throw new Error('The server returned a different baseline run.');
+    return snapshot;
+  }
+
+  async compareSimulations(request: ComparisonRequest): Promise<Comparison> {
+    const res = await fetch(`${this.baseUrl}/api/v1/simulations/compare`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request),
+    });
+    const data = await this.readComparisonResponse<{ success: boolean; comparison: Comparison }>(res);
+    const comparison = data.comparison;
+    if (!comparison || comparison.baseline?.runId !== request.baselineRunId || comparison.mode !== 'HYPOTHETICAL_SCENARIO') {
+      throw new Error('The comparison response does not match the selected baseline.');
+    }
+    return comparison;
   }
 
   /**
@@ -106,18 +141,27 @@ class ApiClient {
   async fetchEventEnvironment(
     eventId: string = 'mangaluru-historical-2018'
   ): Promise<EventEnvironmentResponse> {
-    const url = `${this.baseUrl}/api/v1/environmental/events/${encodeURIComponent(eventId)}/summary`;
+    const canonicalUrl = `${this.baseUrl}/api/v1/events/${encodeURIComponent(eventId)}/environment`;
+    const fallbackUrl = `${this.baseUrl}/api/v1/environmental/events/${encodeURIComponent(eventId)}/summary`;
     try {
-      const res = await fetch(url, {
+      const res = await fetch(canonicalUrl, {
         headers: { Accept: 'application/json' },
         cache: 'no-store',
       });
-      if (!res.ok) {
+      if (res.ok) {
+        return (await res.json()) as EventEnvironmentResponse;
+      }
+      // Fallback
+      const fallbackRes = await fetch(fallbackUrl, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!fallbackRes.ok) {
         throw new Error(`API returned HTTP ${res.status}: ${res.statusText}`);
       }
-      return (await res.json()) as EventEnvironmentResponse;
+      return (await fallbackRes.json()) as EventEnvironmentResponse;
     } catch (err) {
-      console.warn(`[ApiClient] Failed to fetch event environment from ${url}:`, err);
+      console.warn(`[ApiClient] Failed to fetch event environment from ${canonicalUrl}:`, err);
       throw err;
     }
   }
@@ -172,6 +216,7 @@ class ApiClient {
     surgeLevelM?: number;
     durationHours?: number;
     scenarioName?: string;
+    useLiveWeather?: boolean;
   } = {}): Promise<RunSimulationResponse> {
     const url = `${this.baseUrl}/api/v1/simulations/run`;
     const res = await fetch(url, {

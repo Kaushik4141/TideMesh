@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { getDb } from "../db/index.js";
-import { simulationService } from "../services/simulation.service.js";
+import { SimulationError, SimulationService, simulationService } from "../services/simulation.service.js";
+import { ComparisonRequestSchema } from "@tidemesh/contracts";
+import { ComparisonError, ComparisonService } from "../services/comparison.service.js";
 
 type Bindings = {
   DATABASE_URL?: string;
@@ -9,13 +11,49 @@ type Bindings = {
 
 export const simulationRouter = new Hono<{ Bindings: Bindings }>();
 
+/** Validate at the boundary, then delegate orchestration to the comparison service. */
+simulationRouter.post("/compare", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = ComparisonRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ success: false, error: "Invalid comparison request", issues: parsed.error.issues }, 400);
+  }
+  const runner = new SimulationService(c.env?.ML_API_URL);
+  let db;
+  let databaseWarning: string | undefined;
+  try {
+    db = getDb(c.env);
+  } catch {
+    databaseWarning = "Database configuration is unavailable; spatial impact and comparison persistence are unavailable.";
+  }
+  try {
+    const comparison = await new ComparisonService(runner, c.env?.ML_API_URL).compare(parsed.data, db, databaseWarning);
+    return c.json({ success: true, comparison }, 201);
+  } catch (error) {
+    if (error instanceof ComparisonError || error instanceof SimulationError) {
+      return c.json({ success: false, error: error.message }, error.status);
+    }
+    return c.json({ success: false, error: "Comparison failed unexpectedly." }, 500);
+  }
+});
+
+simulationRouter.get("/:eventId/run", async (c) => {
+  try {
+    const snapshot = await new SimulationService(c.env?.ML_API_URL).getRunSnapshot(c.req.param("eventId"));
+    return c.json(snapshot);
+  } catch (error) {
+    if (error instanceof SimulationError) return c.json({ success: false, error: error.message }, error.status);
+    return c.json({ success: false, error: "Failed to retrieve run snapshot." }, 500);
+  }
+});
+
 /**
  * GET /api/v1/simulations
  * Lists available hydrodynamic simulation events.
  */
 simulationRouter.get("/", async (c) => {
   try {
-    const list = await simulationService.listSimulations();
+    const list = await new SimulationService(c.env?.ML_API_URL).listSimulations();
     return c.json({
       success: true,
       count: list.length,
@@ -42,7 +80,7 @@ simulationRouter.get("/", async (c) => {
 simulationRouter.get("/live/forecast", async (c) => {
   try {
     const db = getDb(c.env);
-    const forecast = await simulationService.getLiveForecast(db);
+    const forecast = await new SimulationService(c.env?.ML_API_URL).getLiveForecast(db);
     return c.json(forecast);
   } catch (error) {
     const err = error as Error;
@@ -90,10 +128,11 @@ simulationRouter.post("/scenario", async (c) => {
  */
 simulationRouter.post("/run", async (c) => {
   try {
-    const db = getDb(c.env);
+    let db;
+    try { db = getDb(c.env); } catch { /* Artifact-backed runs do not require a database. */ }
     const body = await c.req.json().catch(() => ({}));
 
-    const result = await simulationService.runSimulation(db, {
+    const result = await new SimulationService(c.env?.ML_API_URL).runSimulation(db, {
       eventId: body.eventId,
       zoneId: body.zoneId || "zone-mangaluru-coastal",
       rainfallRateMmHr:
@@ -113,19 +152,22 @@ simulationRouter.post("/run", async (c) => {
       {
         success: true,
         message:
-          "SFINCS hydrodynamic simulation executed and saved to PostGIS successfully",
+          result.dbRecord ? "SFINCS simulation completed and saved to PostGIS" : "SFINCS simulation completed; database persistence is unavailable. Immutable artifacts remain in the simulation service.",
         executionTimeMs: result.executionTimeMs,
         simulation: result.simulation,
         persistedRecord: result.dbRecord?.prediction,
+        persistence: result.dbRecord ? "database" : "unavailable",
       },
       201
     );
   } catch (error) {
-    const err = error as Error;
+    if (error instanceof SimulationError) {
+      return c.json({ success: false, error: error.message }, error.status);
+    }
     return c.json(
       {
         success: false,
-        error: `Simulation run failed: ${err.message}`,
+        error: "Simulation run failed. Inspect service availability and validated inputs before retrying.",
       },
       500
     );
@@ -141,7 +183,7 @@ simulationRouter.get("/:eventId/forecast", async (c) => {
   const zoneId = c.req.query("zoneId") || "zone-mangaluru-coastal";
 
   try {
-    const forecast = await simulationService.getForecast(eventId, zoneId);
+    const forecast = await new SimulationService(c.env?.ML_API_URL).getForecast(eventId, zoneId);
     return c.json({
       success: true,
       forecast,
@@ -167,7 +209,7 @@ simulationRouter.get("/:eventId/extent", async (c) => {
   const eventId = c.req.param("eventId");
 
   try {
-    const extent = await simulationService.getFloodExtent(eventId);
+    const extent = await new SimulationService(c.env?.ML_API_URL).getFloodExtent(eventId);
     return c.json(extent);
   } catch (error) {
     const err = error as Error;
@@ -192,7 +234,7 @@ simulationRouter.post("/:eventId/sync", async (c) => {
 
   try {
     const db = getDb(c.env);
-    const result = await simulationService.syncToDatabase(db, eventId, zoneId);
+    const result = await new SimulationService(c.env?.ML_API_URL).syncToDatabase(db, eventId, zoneId);
 
     return c.json({
       success: true,
@@ -233,4 +275,3 @@ simulationRouter.get("/:eventId/replay", async (c) => {
     );
   }
 });
-

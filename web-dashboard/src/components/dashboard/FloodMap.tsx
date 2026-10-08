@@ -218,7 +218,7 @@ export function FloodMap({
   } | null>(null);
 
   const currentFactor = TIMESTEP_EXPANSION_FACTORS[currentTime] ?? 0.65;
-  const currentSwellMeters = Math.round(currentFactor * 520);
+  const currentSwellMeters = Math.round(currentFactor * 135);
   const selectedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
   const activeRegion = INDIA_COASTAL_REGIONS.find((r) => r.id === selectedRegionId) || INDIA_COASTAL_REGIONS[0];
 
@@ -231,6 +231,12 @@ export function FloodMap({
 
       try {
         const maplibregl: any = await import('maplibre-gl');
+
+        if (typeof maplibregl.setWorkerUrl === 'function') {
+          maplibregl.setWorkerUrl('/maplibre-gl-worker.mjs');
+        } else if (typeof maplibregl.default?.setWorkerUrl === 'function') {
+          maplibregl.default.setWorkerUrl('/maplibre-gl-worker.mjs');
+        }
 
         if (!isMounted || !mapContainerRef.current) return;
 
@@ -323,7 +329,7 @@ export function FloodMap({
       },
       paint: {
         'fill-color': ['get', 'color'],
-        'fill-opacity': 0.48 + factor * 0.22, // 0.50 to 0.70 opacity
+        'fill-opacity': 0.36 + factor * 0.16, // Clean translucent aquatic water fill (0.38 to 0.52)
       },
     });
 
@@ -337,7 +343,7 @@ export function FloodMap({
       },
       paint: {
         'line-color': ['get', 'glowColor'],
-        'line-width': 2.2,
+        'line-width': 1.6,
         'line-dasharray': [4, 2],
       },
     });
@@ -387,8 +393,8 @@ export function FloodMap({
       },
       paint: {
         'line-color': ['get', 'glowColor'],
-        'line-width': 18 + factor * 14, // 20px to 32px glowing highway halo
-        'line-opacity': 0.38,
+        'line-width': 12 + factor * 8, // 13px to 20px glowing halo
+        'line-opacity': 0.30,
       },
     });
 
@@ -404,8 +410,8 @@ export function FloodMap({
       },
       paint: {
         'line-color': ['get', 'casingColor'],
-        'line-width': 10 + factor * 6, // 11px to 16px outer casing
-        'line-opacity': 0.95,
+        'line-width': 6 + factor * 3, // 6px to 9px outer casing
+        'line-opacity': 0.90,
       },
     });
 
@@ -421,7 +427,7 @@ export function FloodMap({
       },
       paint: {
         'line-color': ['get', 'color'],
-        'line-width': 6.5,
+        'line-width': 4.5,
         'line-opacity': 1.0,
       },
     });
@@ -438,9 +444,9 @@ export function FloodMap({
       },
       paint: {
         'line-color': '#FFFFFF',
-        'line-width': 2.5,
+        'line-width': 1.8,
         'line-dasharray': [2, 3],
-        'line-opacity': 0.9,
+        'line-opacity': 0.85,
       },
     });
 
@@ -467,33 +473,16 @@ export function FloodMap({
   function renderInundation(map: any, geojson: Record<string, unknown> | null | undefined) {
     if (!map || !map.isStyleLoaded()) return;
 
-    const fallbackInundation = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: { depth: '1.2m' },
-          geometry: {
-            type: 'Polygon',
-            coordinates: [
-              [
-                [74.810, 12.955],
-                [74.835, 12.955],
-                [74.845, 12.915],
-                [74.835, 12.875],
-                [74.825, 12.845],
-                [74.815, 12.845],
-                [74.810, 12.890],
-                [74.805, 12.930],
-                [74.810, 12.955],
-              ],
-            ],
-          },
-        },
-      ],
-    };
+    // Render genuine SFINCS geojson if available; avoid arbitrary fallback polygons across dry terrain
+    const hasFeatures = Boolean(
+      geojson &&
+      Array.isArray((geojson as any).features) &&
+      (geojson as any).features.length > 0
+    );
 
-    const targetData = geojson || fallbackInundation;
+    const targetData = hasFeatures
+      ? geojson
+      : { type: 'FeatureCollection', features: [] };
 
     if (map.getSource('sfincs-inundation-source')) {
       map.getSource('sfincs-inundation-source').setData(targetData);

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useFloodDashboard } from '@/hooks/useFloodDashboard';
+import { useScenarioComparison } from '@/hooks/useScenarioComparison';
 import { TopHeader } from '@/components/dashboard/TopHeader';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { KpiStrip } from '@/components/dashboard/KpiStrip';
@@ -10,225 +11,80 @@ import { Timeline } from '@/components/dashboard/Timeline';
 import { ZoneDrawer } from '@/components/dashboard/ZoneDrawer';
 import { ShortcutsModal } from '@/components/dashboard/ShortcutsModal';
 import { ScenarioModal } from '@/components/dashboard/ScenarioModal';
+import { ComparisonResults } from '@/components/dashboard/ComparisonResults';
+import { comparisonMapData, type ComparisonMapMode } from '@/lib/comparison/mapData';
 
 export default function OverviewPage() {
-  const {
-    zones,
-    facilities,
-    selectedZone,
-    selectedZoneId,
-    selectZone,
-    drawerOpen,
-    setDrawerOpen,
-    kpi,
-    currentTime,
-    setCurrentTime,
-    availableTimestamps,
-    stepForward,
-    stepBackward,
-    countdownMinutes,
-    currentZoneAcknowledgment,
-    acknowledgeCurrentZone,
-    actionsState,
-    assignAction,
-    isPlaying,
-    togglePlay,
-    playbackSpeed,
-    setPlaybackSpeed,
-    shortcutsModalOpen,
-    setShortcutsModalOpen,
-    floodExtentGeoJson,
-    eventData,
-    environmentalData,
-    isLoading,
-    isSimulationRunning,
-    triggerSimulationRun,
-    refreshData,
-    // Operational 3-Mode Architecture
-    activeMode,
-    switchMode,
-    scenarioParams,
-    triggerScenarioRun,
-    clockTimes,
-    isHypothetical,
-    disclaimer,
-    currentConditions,
-    // Replay controls
-    currentReplayState,
-    resetTimeline,
-  } = useFloodDashboard();
-
+  const dashboard = useFloodDashboard();
+  const comparison = useScenarioComparison();
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
+  const [mapMode, setMapMode] = useState<ComparisonMapMode>('scenario');
+  const comparisonActive = dashboard.activeMode === 'SCENARIO';
+  const selectZone = dashboard.selectZone;
+  const mapData = useMemo(() => comparison.result ? comparisonMapData(comparison.result, mapMode) : undefined, [comparison.result, mapMode]);
 
-  // Sync with URL query parameter e.g. /?zone=B
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const zoneParam = params.get('zone');
-      if (zoneParam) {
-        selectZone(zoneParam.toUpperCase());
-        setDrawerOpen(true);
-      }
-    }
-  }, [selectZone, setDrawerOpen]);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('zone')) selectZone(params.get('zone')!.toUpperCase());
+    const timer = params.get('compare') ? window.setTimeout(() => setScenarioModalOpen(true), 0) : null;
+    return () => { if (timer !== null) window.clearTimeout(timer); };
+  }, [selectZone]);
 
-  return (
-    <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans antialiased text-slate-900 select-none">
-      {/* Top Header with 3-Mode Segmented Switcher & Live Telemetry Controls */}
-      <TopHeader
-        onOpenShortcuts={() => setShortcutsModalOpen(true)}
-        activeMode={activeMode}
-        onSwitchMode={switchMode}
-        onOpenScenario={() => setScenarioModalOpen(true)}
-        eventName={eventData?.name}
-        currentTime={currentTime}
-        clockTimes={clockTimes}
-        isSimulationRunning={isSimulationRunning}
-        onRunSimulation={() => triggerSimulationRun()}
-        onRefresh={() => refreshData()}
-        isLoading={isLoading}
-      />
-
-      {/* Main Body */}
-      <div className="flex flex-1 pt-14 overflow-hidden">
-        {/* Left Sidebar with Scenario dialog trigger and telemetry data */}
-        <Sidebar
-          environmentalData={environmentalData}
-          activeMode={activeMode}
-          currentConditions={currentConditions}
-          scenarioParams={scenarioParams}
-          onOpenScenario={() => setScenarioModalOpen(true)}
-        />
-
-        {/* Content Area */}
-        <main className="flex-1 ml-[220px] lg:ml-[232px] p-2.5 lg:p-3 overflow-hidden flex flex-col gap-2">
-          {/* Operational Mode Callout Banner */}
-          {activeMode === 'SCENARIO' ? (
-            <div className="bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-lg flex items-center justify-between text-xs text-amber-900 shadow-2xs shrink-0 animate-in fade-in">
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500 text-white text-[10px] tracking-wider">
-                  Scenario
-                </span>
-                <span className="font-semibold">
-                  <strong>Hypothetical Stress Test:</strong> Simulating Cloudburst (+{scenarioParams?.rainfallRateMmHr ?? 110} mm/hr) & High Surge (+{scenarioParams?.surgeLevelM ?? 2.8}m). NOT a live forecast.
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setScenarioModalOpen(true)}
-                  className="px-2 py-0.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] cursor-pointer"
-                >
-                  Adjust Parameters
-                </button>
-                <button
-                  onClick={() => switchMode('LIVE_FORECAST')}
-                  className="px-2 py-0.5 rounded border border-amber-600 text-amber-900 hover:bg-amber-100 font-bold text-[11px] cursor-pointer"
-                >
-                  Back to Live Mode
-                </button>
-              </div>
-            </div>
-          ) : activeMode === 'HISTORICAL_REPLAY' ? (
-            <div className="bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 rounded-lg flex items-center justify-between text-xs text-blue-900 shadow-2xs shrink-0 animate-in fade-in">
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-600 text-white text-[10px] tracking-wider">
-                  Replay
-                </span>
-                <span className="font-semibold">
-                  <strong>Validation Hindcast:</strong> Calibrated reproduction of the May 29, 2018 Cyclone Mekunu event (14:00–16:00 IST).
-                </span>
-              </div>
-              <button
-                onClick={() => switchMode('LIVE_FORECAST')}
-                className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] cursor-pointer"
-              >
-                Switch to Live Forecast
-              </button>
-            </div>
-          ) : (
-            <div className="bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-lg flex items-center justify-between text-[11px] text-emerald-900 shadow-2xs shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
-                </span>
-                <span className="font-semibold">
-                  <strong>Operational Live Forecast:</strong> 0–6 hour forward hydrodynamic prediction generated from real-time meteorological & marine conditions.
-                </span>
-              </div>
-              <span className="text-[10px] text-emerald-700 font-mono font-semibold">
-                SFINCS-v2.4 Solver · Continuous Auto-Cycle
-              </span>
-            </div>
-          )}
-
-          {/* KPI Strip */}
-          <KpiStrip kpi={kpi} />
-
-          {/* Workspace Area: Map + Timeline on Left, Zone Drawer on Right */}
+  return <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans antialiased text-slate-900">
+    <TopHeader
+      onOpenShortcuts={() => dashboard.setShortcutsModalOpen(true)}
+      activeMode={dashboard.activeMode} onSwitchMode={dashboard.switchMode}
+      onOpenScenario={() => setScenarioModalOpen(true)}
+      eventName={comparisonActive ? 'Hypothetical scenario impact comparison' : dashboard.eventData?.name}
+      currentTime={dashboard.currentTime} clockTimes={dashboard.clockTimes}
+      peakSummary={comparisonActive}
+      isSimulationRunning={comparison.busy} onRunSimulation={() => setScenarioModalOpen(true)}
+      onRefresh={comparisonActive ? () => setScenarioModalOpen(true) : () => void dashboard.refreshData()}
+      isLoading={dashboard.isLoading}
+    />
+    <div className="flex flex-1 pt-14 overflow-hidden">
+      <Sidebar environmentalData={dashboard.environmentalData} activeMode={dashboard.activeMode}
+        currentConditions={dashboard.currentConditions} comparisonActive={comparisonActive}
+        onOpenScenario={() => setScenarioModalOpen(true)} />
+      <main className="flex-1 ml-[220px] lg:ml-[232px] p-2.5 lg:p-3 overflow-hidden flex flex-col gap-2">
+        <div className="bg-amber-50 border border-amber-300 px-3 py-2 rounded-lg text-xs text-amber-950 shrink-0 flex justify-between gap-3">
+          <p>{comparisonActive ? <><strong>HYPOTHETICAL SCENARIO — UNVALIDATED:</strong> Exact baseline/scenario solver artifacts, peak-summary impacts.</> : <><strong>ILLUSTRATIVE / UNVALIDATED DATASET:</strong> Live-mode and historical replay include demonstration zones, probabilities, attribution percentages, facilities and sensor status. No calibration or operational forecast validity has been established.</>}</p>
+          <button className="font-bold underline shrink-0" onClick={() => setScenarioModalOpen(true)}>Compare runs</button>
+        </div>
+        {comparison.error && <p role="alert" className="text-xs text-red-800 bg-red-50 border border-red-200 rounded p-2">{comparison.error}{comparison.result ? ' The last successful comparison is still shown.' : ''}</p>}
+        {comparison.busy && <p role="status" className="text-xs bg-blue-50 p-2">{comparison.baselineRunning ? 'Creating baseline' : 'Running comparison'}… {comparison.elapsedSeconds}s elapsed.</p>}
+        {comparisonActive ? comparison.result ? <div className="flex-1 min-h-0 flex flex-col xl:flex-row gap-2.5 overflow-auto">
+          <FloodMap zones={[]} facilities={[]} selectedZoneId="" onSelectZone={() => {}}
+            comparisonData={mapData} comparisonMode={mapMode}
+            className="flex-1 min-h-[330px] xl:h-full" />
+          <ComparisonResults comparison={comparison.result} mode={mapMode} onModeChange={setMapMode} />
+        </div> : <section className="p-6 bg-white rounded border text-sm space-y-3">
+          <h1 className="text-lg font-bold">Compare scenario impacts</h1>
+          <p>Select a genuine completed baseline, inspect its forcing inputs, then run the rainfall and coastal water-level experiment.</p>
+          <button className="bg-amber-700 text-white rounded px-4 py-2" onClick={() => setScenarioModalOpen(true)}>Choose baseline and compare</button>
+        </section> : <>
+          {dashboard.error && <p role="alert" className="text-xs text-red-700">Dataset load failed: {dashboard.error}. Illustrative fallback data are shown.</p>}
+          <KpiStrip kpi={dashboard.kpi} />
           <div className="flex-1 min-h-0 flex flex-col xl:flex-row gap-2.5 overflow-hidden">
-            {/* Map and Timeline Column */}
             <div className="flex-1 min-w-0 flex flex-col gap-2.5 overflow-hidden">
-              {/* Flood Map Canvas (≥ 55% of workspace) */}
-              <div className="flex-1 min-h-0 relative">
-                <FloodMap
-                  zones={zones}
-                  facilities={facilities}
-                  selectedZoneId={selectedZoneId}
-                  onSelectZone={selectZone}
-                  floodExtentGeoJson={floodExtentGeoJson}
-                  currentTime={currentTime}
-                  className="w-full h-full"
-                />
-              </div>
-
-              {/* Timeline (Always visible in first viewport, fully connected to replay states) */}
-              <Timeline
-                currentTime={currentTime}
-                availableTimestamps={availableTimestamps}
-                clockTimes={clockTimes}
-                activeMode={activeMode}
-                onSelectTime={setCurrentTime}
-                isPlaying={isPlaying}
-                onTogglePlay={togglePlay}
-                playbackSpeed={playbackSpeed}
-                onChangeSpeed={setPlaybackSpeed}
-                onStepForward={stepForward}
-                onStepBackward={stepBackward}
-                onReset={resetTimeline}
-                currentFloodDepth={currentReplayState.floodDepth}
-                statusLabel={currentReplayState.statusLabel}
-              />
+              <div className="flex-1 min-h-0 relative"><FloodMap zones={dashboard.zones} facilities={dashboard.facilities}
+                selectedZoneId={dashboard.selectedZoneId} onSelectZone={dashboard.selectZone}
+                floodExtentGeoJson={dashboard.floodExtentGeoJson} currentTime={dashboard.currentTime} className="w-full h-full" /></div>
+              <Timeline currentTime={dashboard.currentTime} availableTimestamps={dashboard.availableTimestamps}
+                clockTimes={dashboard.clockTimes} activeMode={dashboard.activeMode} onSelectTime={dashboard.setCurrentTime}
+                isPlaying={dashboard.isPlaying} onTogglePlay={dashboard.togglePlay} playbackSpeed={dashboard.playbackSpeed}
+                onChangeSpeed={dashboard.setPlaybackSpeed} onStepForward={dashboard.stepForward} onStepBackward={dashboard.stepBackward}
+                onReset={dashboard.resetTimeline} currentFloodDepth={dashboard.currentReplayState.floodDepth} statusLabel={dashboard.currentReplayState.statusLabel} />
             </div>
-
-            {/* Zone Detail Drawer */}
-            <ZoneDrawer
-              zone={selectedZone}
-              isOpen={drawerOpen}
-              onClose={() => setDrawerOpen(false)}
-              countdownMinutes={countdownMinutes}
-              acknowledgment={currentZoneAcknowledgment}
-              onAcknowledge={acknowledgeCurrentZone}
-              actionsState={actionsState}
-              onAssignAction={assignAction}
-            />
+            <ZoneDrawer zone={dashboard.selectedZone} isOpen={dashboard.drawerOpen} onClose={() => dashboard.setDrawerOpen(false)}
+              countdownMinutes={dashboard.countdownMinutes} acknowledgment={dashboard.currentZoneAcknowledgment}
+              onAcknowledge={dashboard.acknowledgeCurrentZone} actionsState={dashboard.actionsState} onAssignAction={dashboard.assignAction} />
           </div>
-        </main>
-      </div>
-
-      {/* Keyboard Shortcuts Modal */}
-      <ShortcutsModal
-        open={shortcutsModalOpen}
-        onClose={() => setShortcutsModalOpen(false)}
-      />
-
-      {/* What-If Contingency Scenario Dialog */}
-      <ScenarioModal
-        open={scenarioModalOpen}
-        onClose={() => setScenarioModalOpen(false)}
-        initialParams={scenarioParams}
-        onRunScenario={triggerScenarioRun}
-      />
+        </>}
+      </main>
     </div>
-  );
+    <ShortcutsModal open={dashboard.shortcutsModalOpen} onClose={() => dashboard.setShortcutsModalOpen(false)} />
+    <ScenarioModal open={scenarioModalOpen} onClose={() => setScenarioModalOpen(false)} workflow={comparison}
+      onCompleted={() => { dashboard.switchMode('SCENARIO'); dashboard.setIsPlaying(false); }} />
+  </div>;
 }

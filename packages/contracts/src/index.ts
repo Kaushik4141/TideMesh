@@ -6,4 +6,4 @@ export * from "./alert.js";
 export * from "./zone.js";
 export * from "./user.js";
 export * from "./observation.js";
-
+export * from "./comparison.js";

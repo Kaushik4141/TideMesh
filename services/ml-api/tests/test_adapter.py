@@ -45,4 +45,6 @@ def test_adapter_normalization():
     # Physical metrics and drivers
     assert prediction.metrics["floodedAreaKm2"] == 8.8
     assert prediction.metrics["gridResolutionM"] == 50
-    assert len(prediction.drivers) >= 2
+    assert prediction.drivers == [], "Prescribed forcing is not quantitative attribution"
+    assert prediction.onset is None and prediction.peak is None
+    assert "heuristic" in prediction.metrics["timingSource"]

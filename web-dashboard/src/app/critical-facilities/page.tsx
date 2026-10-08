@@ -324,6 +324,7 @@ export default function CriticalFacilitiesPage() {
 
         {/* Content Body */}
         <div className="flex-1 ml-[220px] lg:ml-[232px] flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden bg-slate-50">
+          <div className="bg-amber-50 border-b border-amber-300 px-5 py-3 text-sm text-amber-950 shrink-0"><strong>ILLUSTRATIVE / UNVALIDATED DATASET.</strong> These facilities and hardcoded fallback impacts, capacity and sensor claims are not linked to a selected run. <Link href="/?compare=1" className="font-bold underline">Compare real run-linked assets in Overview</Link>.</div>
           {/* Header & Sub-Bar */}
           <div className="px-5 py-3 bg-white border-b border-slate-200 shrink-0 shadow-2xs">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -370,7 +371,7 @@ export default function CriticalFacilitiesPage() {
                 </div>
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 text-white rounded text-[10px] font-bold">
                   <RefreshCw className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Telemetry Live · Delta 12s</span>
+                  <span>Illustrative telemetry · Unvalidated</span>
                 </div>
               </div>
             </div>

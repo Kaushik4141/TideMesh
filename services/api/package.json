@@ -13,7 +13,8 @@
     "check:postgis": "tsx scripts/check-postgis.ts",
     "ingest:env": "tsx scripts/ingest-environmental.ts",
     "cron:hourly": "tsx src/jobs/hourly-runner.ts",
-    "test": "tsx tests/run-all.ts"
+    "test": "tsx tests/run-all.ts",
+    "test:comparison": "tsx tests/comparison.test.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.4",

@@ -34,4 +34,9 @@ def test_catalog_outputs():
 
     assert catalog.simulation_id == "mangaluru-historical-2018"
     assert catalog.flood_extent_geojson_path is not None
-    assert Path(catalog.flood_extent_geojson_path).exists()
+    assert catalog.flood_extent_geojson_path == "mangaluru-historical-2018/flood_extent.geojson"
+
+def test_explicit_missing_directory_never_falls_back(tmp_path):
+    parser = SFINCSOutputParser(base_outputs_dir=settings.outputs_dir)
+    with pytest.raises(FileNotFoundError):
+        parser.parse_metadata(tmp_path / "missing")

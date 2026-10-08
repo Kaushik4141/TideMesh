@@ -205,7 +205,7 @@ export function ZoneDrawer({
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] text-slate-500 font-medium">
-                Flood probability
+                Illustrative risk % (unvalidated)
               </span>
               <span className="text-xl font-bold tabular-nums text-slate-900 mt-0.5">
                 {zone.probability}%
