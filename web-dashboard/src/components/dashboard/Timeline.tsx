@@ -4,9 +4,13 @@ import React from 'react';
 import { RotateCcw, RotateCw, Play, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+import type { DashboardMode } from '@/lib/api/types';
+
 interface TimelineProps {
   currentTime: string;
   availableTimestamps?: string[];
+  clockTimes?: Record<string, string>;
+  activeMode?: DashboardMode;
   onSelectTime?: (time: string) => void;
   isPlaying: boolean;
   onTogglePlay: () => void;
@@ -21,21 +25,23 @@ interface TimelineProps {
 }
 
 const DEFAULT_TIMESTAMPS = [
-  '14:00',
-  '14:15',
-  '14:26',
-  '14:30',
-  '14:45',
-  '15:00',
-  '15:15',
-  '15:30',
-  '15:45',
-  '16:00',
+  'NOW',
+  '+15m',
+  '+30m',
+  '+45m',
+  '+1h',
+  '+1h 30m',
+  '+2h',
+  '+3h',
+  '+4h',
+  '+6h',
 ];
 
 export function Timeline({
   currentTime,
   availableTimestamps = DEFAULT_TIMESTAMPS,
+  clockTimes = {},
+  activeMode = 'LIVE_FORECAST',
   onSelectTime,
   isPlaying,
   onTogglePlay,
@@ -50,10 +56,60 @@ export function Timeline({
 }: TimelineProps) {
   const currentIndex = availableTimestamps.indexOf(currentTime);
   const activeIdx = currentIndex === -1 ? 0 : currentIndex;
+  const totalSteps = availableTimestamps.length;
   const progressPct =
-    availableTimestamps.length > 1
-      ? (activeIdx / (availableTimestamps.length - 1)) * 100
-      : 0;
+    totalSteps > 1 ? (activeIdx / (totalSteps - 1)) * 100 : 0;
+
+  // Milestone Calculations
+  const onsetKey =
+    activeMode === 'LIVE_FORECAST'
+      ? '+45m'
+      : activeMode === 'SCENARIO'
+      ? 'T+30'
+      : '14:30';
+
+  const peakKey =
+    activeMode === 'LIVE_FORECAST'
+      ? '+2h'
+      : activeMode === 'SCENARIO'
+      ? 'T+2h'
+      : '15:15';
+
+  const onsetIdx = availableTimestamps.indexOf(onsetKey);
+  const peakIdx = availableTimestamps.indexOf(peakKey);
+
+  const onsetPct =
+    onsetIdx !== -1 && totalSteps > 1
+      ? (onsetIdx / (totalSteps - 1)) * 100
+      : 33;
+
+  const peakPct =
+    peakIdx !== -1 && totalSteps > 1
+      ? (peakIdx / (totalSteps - 1)) * 100
+      : 66;
+
+  const onsetLabel =
+    activeMode === 'LIVE_FORECAST'
+      ? 'ONSET +45m'
+      : activeMode === 'SCENARIO'
+      ? 'ONSET T+30'
+      : 'ONSET 14:30';
+
+  const peakLabel =
+    activeMode === 'LIVE_FORECAST'
+      ? 'PEAK +2h (1.00 m)'
+      : activeMode === 'SCENARIO'
+      ? 'PEAK T+2h (1.50 m)'
+      : 'PEAK 15:15 (0.71 m)';
+
+  const cursorLabel =
+    activeMode === 'LIVE_FORECAST'
+      ? clockTimes[currentTime]
+        ? `${currentTime} (${clockTimes[currentTime]})`
+        : `NOW ${currentTime}`
+      : activeMode === 'SCENARIO'
+      ? `${currentTime} Stress`
+      : `${currentTime} IST`;
 
   return (
     <div
@@ -87,7 +143,14 @@ export function Timeline({
         {/* Base Progress Rail */}
         <div className="w-full h-1.5 bg-slate-200 rounded-full relative z-0 flex items-center overflow-hidden">
           <div
-            className="h-full bg-slate-500 rounded-full transition-all duration-300"
+            className={cn(
+              'h-full rounded-full transition-all duration-300',
+              activeMode === 'LIVE_FORECAST'
+                ? 'bg-emerald-600'
+                : activeMode === 'SCENARIO'
+                ? 'bg-amber-600'
+                : 'bg-slate-600'
+            )}
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -97,24 +160,48 @@ export function Timeline({
           className="absolute -top-1 flex flex-col items-center z-20 -translate-x-1/2 transition-all duration-300"
           style={{ left: `${progressPct}%` }}
         >
-          <span className="bg-teal-700 text-white px-1.5 py-0.2 rounded text-[10px] font-bold shadow-xs whitespace-nowrap">
-            NOW {currentTime}
+          <span
+            className={cn(
+              'text-white px-1.5 py-0.2 rounded text-[10px] font-bold shadow-xs whitespace-nowrap',
+              activeMode === 'LIVE_FORECAST'
+                ? 'bg-emerald-700'
+                : activeMode === 'SCENARIO'
+                ? 'bg-amber-700'
+                : 'bg-slate-900'
+            )}
+          >
+            {cursorLabel}
           </span>
-          <div className="w-0.5 h-4 bg-teal-700 mt-0.5" />
+          <div
+            className={cn(
+              'w-0.5 h-4 mt-0.5',
+              activeMode === 'LIVE_FORECAST'
+                ? 'bg-emerald-700'
+                : activeMode === 'SCENARIO'
+                ? 'bg-amber-700'
+                : 'bg-slate-900'
+            )}
+          />
         </div>
 
-        {/* Static Milestone: ONSET 14:30 */}
-        <div className="absolute left-[25%] -top-1.5 flex flex-col items-center z-10 -translate-x-1/2 pointer-events-none">
+        {/* Dynamic Milestone: ONSET */}
+        <div
+          className="absolute -top-1.5 flex flex-col items-center z-10 -translate-x-1/2 pointer-events-none"
+          style={{ left: `${onsetPct}%` }}
+        >
           <span className="bg-red-600 text-white px-1.5 py-0.2 rounded text-[9px] font-bold shadow-xs whitespace-nowrap">
-            ONSET 14:30
+            {onsetLabel}
           </span>
           <div className="w-0.5 h-3 bg-red-600 mt-0.5" />
         </div>
 
-        {/* Static Milestone: PEAK 15:10 */}
-        <div className="absolute left-[58%] -top-1.5 flex flex-col items-center z-10 -translate-x-1/2 pointer-events-none">
+        {/* Dynamic Milestone: PEAK */}
+        <div
+          className="absolute -top-1.5 flex flex-col items-center z-10 -translate-x-1/2 pointer-events-none"
+          style={{ left: `${peakPct}%` }}
+        >
           <span className="bg-slate-900 text-white px-1.5 py-0.2 rounded text-[9px] font-bold shadow-xs whitespace-nowrap">
-            PEAK 15:10 (0.71 m)
+            {peakLabel}
           </span>
           <div className="w-0.5 h-3 bg-slate-900 mt-0.5" />
         </div>
@@ -136,7 +223,14 @@ export function Timeline({
           <button
             type="button"
             onClick={onTogglePlay}
-            className="w-6 h-6 flex items-center justify-center rounded bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-slate-900 shadow-2xs transition-colors cursor-pointer"
+            className={cn(
+              'w-6 h-6 flex items-center justify-center rounded text-white focus-visible:ring-2 focus-visible:ring-slate-900 shadow-2xs transition-colors cursor-pointer',
+              activeMode === 'LIVE_FORECAST'
+                ? 'bg-emerald-700 hover:bg-emerald-800'
+                : activeMode === 'SCENARIO'
+                ? 'bg-amber-700 hover:bg-amber-800'
+                : 'bg-slate-900 hover:bg-slate-800'
+            )}
             title={isPlaying ? 'Pause simulation (Space)' : 'Play simulation (Space)'}
             aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
           >
@@ -157,26 +251,48 @@ export function Timeline({
           </button>
         </div>
 
-        {/* Clickable Timestep Scrub Buttons */}
+        {/* Clickable Timestep Scrub Buttons with clock time sublabels */}
         <div className="flex items-center justify-between flex-1 max-w-xl px-2 overflow-x-auto gap-1">
-          {availableTimestamps.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => onSelectTime?.(t)}
-              className={cn(
-                'px-1.5 py-0.5 rounded text-[11px] font-semibold tabular-nums transition-colors cursor-pointer',
-                t === currentTime
-                  ? 'bg-slate-900 text-white font-bold'
-                  : t === '14:30'
-                  ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
-                  : 'text-slate-500 hover:bg-slate-100'
-              )}
-            >
-              {t}
-              {t === '14:30' && <span className="ml-0.5 text-[8px] font-bold text-red-600">!</span>}
-            </button>
-          ))}
+          {availableTimestamps.map((t) => {
+            const isSelected = t === currentTime;
+            const clock = clockTimes[t];
+            const isOnset = t === onsetKey;
+
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => onSelectTime?.(t)}
+                className={cn(
+                  'px-1.5 py-0.5 rounded text-[11px] font-semibold tabular-nums transition-colors cursor-pointer flex flex-col items-center leading-tight',
+                  isSelected
+                    ? activeMode === 'LIVE_FORECAST'
+                      ? 'bg-emerald-700 text-white font-bold shadow-xs'
+                      : activeMode === 'SCENARIO'
+                      ? 'bg-amber-700 text-white font-bold shadow-xs'
+                      : 'bg-slate-900 text-white font-bold shadow-xs'
+                    : isOnset
+                    ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                    : 'text-slate-600 hover:bg-slate-100'
+                )}
+              >
+                <div className="flex items-center gap-0.5">
+                  <span>{t}</span>
+                  {isOnset && <span className="text-[8px] font-bold text-red-600">!</span>}
+                </div>
+                {clock && activeMode === 'LIVE_FORECAST' && (
+                  <span
+                    className={cn(
+                      'text-[8px] font-normal leading-none',
+                      isSelected ? 'text-emerald-100' : 'text-slate-400'
+                    )}
+                  >
+                    {clock}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Playback Speed Multipliers & Delta */}

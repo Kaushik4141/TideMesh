@@ -22,20 +22,45 @@ export interface ReplayTimestep {
   priorities: PriorityItem[];
 }
 
+export type DashboardMode = 'LIVE_FORECAST' | 'HISTORICAL_REPLAY' | 'SCENARIO';
+
+export interface CurrentConditions {
+  rainfallMmHr: number;
+  tideSurgeM: number;
+  windSpeedKmh: number;
+  source?: string;
+  marineDatum?: string;
+}
+
+export interface ScenarioParameters {
+  rainfallRateMmHr?: number;
+  surgeLevelM?: number;
+  scenarioName?: string;
+  breachSeaWall?: boolean;
+}
+
 export interface ReplayEventResponse {
   success: boolean;
+  mode?: DashboardMode;
   event: {
     id: string;
     name: string;
-    type: 'HISTORICAL REPLAY' | 'SIMULATION';
+    type: string;
     mode: string;
     status: string;
+    isHypothetical?: boolean;
+    disclaimer?: string;
     location: string;
     model: string;
     gridResolutionM: number;
     crs: string;
-    timeStepMinutes: number;
+    timeStepMinutes?: number;
+    generatedAt?: string;
+    validUntil?: string;
+    currentConditions?: CurrentConditions;
+    parameters?: ScenarioParameters;
     timestamps: string[];
+    clockTimes?: Record<string, string>;
     timesteps: Record<string, ReplayTimestep>;
   };
 }

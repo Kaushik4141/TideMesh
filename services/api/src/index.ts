@@ -61,6 +61,20 @@ app.route("/api/v1/simulations", simulationRouter);
 app.route("/api/v1/environmental-observations", environmentalRouter);
 app.route("/api/v1/events", eventEnvironmentRouter);
 
+// Top-level operational alias: GET /api/v1/forecast/live
+app.get("/api/v1/forecast/live", async (c) => {
+  const { getDb } = await import("./db/index.js");
+  const { simulationService } = await import("./services/simulation.service.js");
+  try {
+    const db = getDb(c.env);
+    const forecast = await simulationService.getLiveForecast(db);
+    return c.json(forecast);
+  } catch (error) {
+    const err = error as Error;
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
 
 
 // Cloudflare Workers entrypoint
