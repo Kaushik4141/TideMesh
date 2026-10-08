@@ -148,6 +148,37 @@ vite.config.ts.timestamp-*
 # Turbo Repo
 .turbo
 
+# Python & Virtual Environments
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.egg-info/
+.deps/
+
+# SFINCS Simulation Binary Outputs & Runtime Logs
+*.log
+docker_stdout.log
+docker_stderr.log
+hydromt.log
+sfincs.log
+*.nc
+*.dat
+
+# Keep standardized contract outputs committed
+!outputs/*.tif
+!outputs/*.geojson
+!outputs/*.json
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
 # ==============================================================================
 # TideMesh Specific Ignores
 # ==============================================================================

@@ -1,0 +1,22 @@
+# Python Virtual Environment & Bytecode
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Simulation Runtime Logs
+*.log
+docker_stdout.log
+docker_stderr.log
+hydromt.log
+sfincs.log
+
+# Large NetCDF / Binary Hydrodynamic Output Files
+*.nc
+zsmax.dat
+zs.dat
+
+# OS / Editor Files
+.DS_Store
+Thumbs.db
