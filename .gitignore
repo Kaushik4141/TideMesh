@@ -179,3 +179,51 @@ Thumbs.db
 .vscode/
 .idea/
 
+# ==============================================================================
+# TideMesh Specific Ignores
+# ==============================================================================
+
+# Neon & Cloudflare Workers
+.neon
+.wrangler/
+
+# Coding Agent / Assistant Workspace Data
+.agents/
+
+# Python & ML Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Large Model Artifacts & Geospatial Datasets (keep in Cloudflare R2)
+*.pkl
+*.pickle
+*.joblib
+*.onnx
+*.pt
+*.pth
+*.h5
+*.parquet
+*.tif
+*.tiff
+*.geotiff
+*.gpkg
+
+# OS & Editor Files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+*.swo
