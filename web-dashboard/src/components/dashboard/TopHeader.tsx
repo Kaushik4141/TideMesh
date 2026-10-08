@@ -2,12 +2,19 @@
 
 import React from 'react';
 import { Shield, Droplets, Building2, Bell, User, Keyboard } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TopHeaderProps {
   onOpenShortcuts?: () => void;
+  currentTime?: string;
+  isSimulation?: boolean;
 }
 
-export function TopHeader({ onOpenShortcuts }: TopHeaderProps) {
+export function TopHeader({
+  onOpenShortcuts,
+  currentTime = '14:26',
+  isSimulation = true,
+}: TopHeaderProps) {
   const eventTitle = 'Coastal Flood Event — Mangaluru Coast';
 
   return (
@@ -40,16 +47,28 @@ export function TopHeader({ onOpenShortcuts }: TopHeaderProps) {
 
       {/* Center: Status Chips */}
       <div className="flex items-center gap-2 lg:gap-3 shrink-0">
-        {/* LIVE Chip */}
+        {/* SIMULATION Demo Chip */}
+        <div
+          className={cn(
+            'flex items-center gap-1.5 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded text-[10px] font-bold text-amber-800 tracking-wider uppercase whitespace-nowrap',
+            !isSimulation && 'hidden'
+          )}
+          title="Historical Replay / Demonstration Dataset"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span>SIMULATION</span>
+        </div>
+
+        {/* LIVE Time Chip */}
         <div
           className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-200/80 px-2.5 py-1 rounded-md text-[11px] lg:text-xs font-semibold text-slate-700 whitespace-nowrap"
-          title="Telemetry feed status and time"
+          title="Simulation replay clock"
         >
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
           </span>
-          <span className="font-bold tracking-wide">LIVE · 14:26</span>
+          <span className="font-bold tracking-wide">LIVE · {currentTime}</span>
         </div>
 
         {/* EOC Chip */}

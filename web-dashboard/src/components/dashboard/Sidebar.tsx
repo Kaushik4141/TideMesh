@@ -21,7 +21,11 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function Sidebar() {
+interface SidebarProps {
+  onOpenScenario?: () => void;
+}
+
+export function Sidebar({ onOpenScenario }: SidebarProps) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [engineOpen, setEngineOpen] = useState(false);
@@ -31,7 +35,7 @@ export function Sidebar() {
     { name: 'Alerts', href: '/degraded-state', icon: Bell, badge: '3', badgeColor: 'bg-red-500/10 text-red-700 border-red-500/20' },
     { name: 'Zones', href: '/zones', icon: Grid },
     { name: 'Critical Facilities', href: '/critical-facilities', icon: Hospital },
-    { name: 'Scenarios', href: '#scenarios', icon: Sliders },
+    { name: 'Scenarios', href: '#scenarios', icon: Sliders, onClick: onOpenScenario },
   ];
 
   const moreNav = [
@@ -53,17 +57,9 @@ export function Sidebar() {
           {primaryNav.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center justify-between px-3 py-2 rounded-md transition-colors text-xs font-semibold group',
-                  isActive
-                    ? 'bg-slate-100 text-slate-900 border-l-4 border-slate-900 shadow-2xs font-bold'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-l-4 border-transparent'
-                )}
-              >
+
+            const content = (
+              <>
                 <div className="flex items-center gap-2.5 truncate">
                   <Icon
                     className={cn(
@@ -83,6 +79,33 @@ export function Sidebar() {
                     {item.badge}
                   </span>
                 )}
+              </>
+            );
+
+            if (item.onClick) {
+              return (
+                <button
+                  key={item.name}
+                  onClick={item.onClick}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors text-xs font-semibold group text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-l-4 border-transparent text-left"
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  'flex items-center justify-between px-3 py-2 rounded-md transition-colors text-xs font-semibold group',
+                  isActive
+                    ? 'bg-slate-100 text-slate-900 border-l-4 border-slate-900 shadow-2xs font-bold'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-l-4 border-transparent'
+                )}
+              >
+                {content}
               </Link>
             );
           })}

@@ -150,27 +150,31 @@ export function ZoneDrawer({
             </button>
           )}
 
-          {/* Secondary Action: Assign Team (Dynamically dispatches first pending action for this zone) */}
+          {/* Secondary Action: Assign Team (Dynamically dispatches first pending action for this zone as Team Delta) */}
           {(() => {
             const firstPendingAction = zone.actions.find((a) => {
               const st = actionsState[a.id]?.status || a.status;
               return st === 'unassigned';
             });
+            const assignedTeam = zone.actions.find((a) => actionsState[a.id]?.team)?.id
+              ? actionsState[zone.actions.find((a) => actionsState[a.id]?.team)!.id]?.team
+              : null;
+
             return (
               <button
                 onClick={() => {
                   if (firstPendingAction) {
-                    onAssignAction(firstPendingAction.id, 'Team 1');
+                    onAssignAction(firstPendingAction.id, 'Team Delta');
                   } else if (zone.actions[0]) {
-                    onAssignAction(zone.actions[0].id, 'Team 1');
+                    onAssignAction(zone.actions[0].id, 'Team Delta');
                   }
                 }}
                 disabled={!firstPendingAction && zone.actions.length === 0}
                 className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold transition-colors focus-visible:ring-2 focus-visible:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={firstPendingAction ? `Assign Team for ${firstPendingAction.title}` : 'All actions assigned'}
+                title={firstPendingAction ? `Assign Team Delta for ${firstPendingAction.title}` : 'All actions assigned'}
               >
                 <Send className="w-3.5 h-3.5 text-slate-500" />
-                <span>Assign Team</span>
+                <span>{assignedTeam ? `${assignedTeam} Assigned` : 'Assign Team'}</span>
               </button>
             );
           })()}
@@ -258,7 +262,7 @@ export function ZoneDrawer({
             <div className="bg-slate-50 p-2 rounded-md border border-slate-200/70 flex flex-col">
               <span className="text-[11px] text-slate-500 font-medium">Roads affected</span>
               <span className="text-base font-bold tabular-nums text-slate-900 mt-0.5">
-                {zone.roadsAffectedKm} km
+                {zone.roadsAffectedKm} {zone.id === 'B' ? 'roads' : 'km'}
               </span>
             </div>
             <div className="bg-slate-50 p-2 rounded-md border border-slate-200/70 flex flex-col">
@@ -274,6 +278,33 @@ export function ZoneDrawer({
               </span>
             </div>
           </div>
+
+          {/* Road Inundation Details for Zone B */}
+          {zone.id === 'B' && (
+            <div className="mt-2 bg-slate-50 p-2 rounded-md border border-slate-200 text-xs space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                Critical Road Inundations:
+              </span>
+              <div className="grid grid-cols-2 gap-1 text-[11px]">
+                <div className="flex items-center justify-between bg-white px-2 py-1 rounded border border-slate-200">
+                  <span className="font-bold text-slate-900">R12</span>
+                  <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 rounded">HIGH IMPACT</span>
+                </div>
+                <div className="flex items-center justify-between bg-white px-2 py-1 rounded border border-slate-200">
+                  <span className="font-bold text-slate-900">R18</span>
+                  <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 rounded">MODERATE</span>
+                </div>
+                <div className="flex items-center justify-between bg-white px-2 py-1 rounded border border-slate-200">
+                  <span className="font-bold text-slate-900">R21</span>
+                  <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 rounded">MODERATE</span>
+                </div>
+                <div className="flex items-center justify-between bg-white px-2 py-1 rounded border border-slate-200">
+                  <span className="font-bold text-slate-900">R24</span>
+                  <span className="text-[9px] font-bold text-slate-600 bg-slate-100 px-1 rounded">LOW IMPACT</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 8. CRITICAL FACILITIES LIST FOR THIS ZONE */}

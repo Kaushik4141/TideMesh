@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
 import {
   Plus,
   Minus,
@@ -11,9 +11,9 @@ import {
   Home,
   ShieldCheck,
   Zap,
-  OctagonAlert,
-  TriangleAlert,
-  AlertCircle,
+  MapPin,
+  ExternalLink,
+  Map as MapIcon,
 } from 'lucide-react';
 import type { ZoneData, CriticalFacility } from '@/types/dashboard';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,173 @@ interface FloodMapProps {
   className?: string;
 }
 
+// OpenStreetMap tile sources
+const MAP_API_KEY = process.env.NEXT_PUBLIC_MAP_API_KEY || '';
+
+const getBasemapTiles = () => {
+  const authQuery = MAP_API_KEY ? `?api_key=${MAP_API_KEY}` : '';
+  return {
+    osm: {
+      name: 'OSM Standard',
+      url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    },
+    hot: {
+      name: 'OSM Relief',
+      url: 'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    },
+    voyager: {
+      name: 'OSM Voyager',
+      url: `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png${authQuery}`,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; CARTO',
+      maxZoom: 19,
+    },
+    positron: {
+      name: 'OSM Light',
+      url: `https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png${authQuery}`,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors &copy; CARTO',
+      maxZoom: 19,
+    },
+  };
+};
+
+const BASEMAP_TILES = getBasemapTiles();
+type BasemapKey = keyof typeof BASEMAP_TILES;
+
+// Real-world GeoJSON coordinates for Mangaluru coastal zones
+const ZONE_COORDINATES: Record<string, { center: [number, number]; coordinates: [number, number][] }> = {
+  B: {
+    center: [74.808, 12.945],
+    coordinates: [
+      [74.795, 12.965],
+      [74.825, 12.965],
+      [74.828, 12.928],
+      [74.798, 12.928],
+      [74.795, 12.965],
+    ],
+  },
+  F: {
+    center: [74.815, 12.905],
+    coordinates: [
+      [74.802, 12.928],
+      [74.830, 12.928],
+      [74.826, 12.880],
+      [74.808, 12.880],
+      [74.802, 12.928],
+    ],
+  },
+  C: {
+    center: [74.795, 13.000],
+    coordinates: [
+      [74.780, 13.025],
+      [74.815, 13.025],
+      [74.818, 12.975],
+      [74.785, 12.975],
+      [74.780, 13.025],
+    ],
+  },
+  H: {
+    center: [74.825, 12.860],
+    coordinates: [
+      [74.812, 12.880],
+      [74.838, 12.880],
+      [74.836, 12.840],
+      [74.818, 12.840],
+      [74.812, 12.880],
+    ],
+  },
+  A: {
+    center: [74.845, 12.825],
+    coordinates: [
+      [74.825, 12.840],
+      [74.868, 12.840],
+      [74.865, 12.805],
+      [74.832, 12.805],
+      [74.825, 12.840],
+    ],
+  },
+  D: {
+    center: [74.835, 12.915],
+    coordinates: [
+      [74.828, 12.930],
+      [74.860, 12.930],
+      [74.860, 12.900],
+      [74.828, 12.900],
+      [74.828, 12.930],
+    ],
+  },
+  E: {
+    center: [74.825, 12.975],
+    coordinates: [
+      [74.818, 12.990],
+      [74.855, 12.990],
+      [74.852, 12.965],
+      [74.818, 12.965],
+      [74.818, 12.990],
+    ],
+  },
+  G: {
+    center: [74.848, 12.880],
+    coordinates: [
+      [74.835, 12.895],
+      [74.870, 12.895],
+      [74.870, 12.865],
+      [74.835, 12.865],
+      [74.835, 12.895],
+    ],
+  },
+  I: {
+    center: [74.845, 12.855],
+    coordinates: [
+      [74.835, 12.865],
+      [74.862, 12.865],
+      [74.860, 12.842],
+      [74.835, 12.842],
+      [74.835, 12.865],
+    ],
+  },
+  J: {
+    center: [74.865, 12.890],
+    coordinates: [
+      [74.855, 12.910],
+      [74.890, 12.910],
+      [74.890, 12.870],
+      [74.855, 12.870],
+      [74.855, 12.910],
+    ],
+  },
+  K: {
+    center: [74.855, 12.935],
+    coordinates: [
+      [74.845, 12.955],
+      [74.880, 12.955],
+      [74.880, 12.920],
+      [74.845, 12.920],
+      [74.845, 12.955],
+    ],
+  },
+};
+
+// Real-world Mangaluru GPS coordinates for facilities
+const FACILITY_GEO: Record<string, [number, number]> = {
+  'district-hospital-h1': [74.808, 12.946],
+  'city-hospital': [74.808, 12.946],
+  'panambur-fire': [74.802, 12.952],
+  'govt-school-shelter': [74.818, 12.941],
+  'govt-school-4': [74.818, 12.941],
+  'tannirbhavi-marine': [74.811, 12.895],
+  'tannirbhavi-cg': [74.811, 12.895],
+  'substation-f': [74.821, 12.905],
+  'surathkal-health': [74.792, 13.005],
+  'surathkal-substation': [74.792, 13.005],
+  'bengre-spit-shelter': [74.828, 12.858],
+  'bengre-chc': [74.828, 12.858],
+  'st-aloysius-hall': [74.848, 12.875],
+};
+
 export function FloodMap({
   zones,
   selectedZoneId,
@@ -33,12 +200,377 @@ export function FloodMap({
   facilities,
   className,
 }: FloodMapProps) {
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [showContours, setShowContours] = useState<boolean>(true);
-  const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+
+  const [basemap, setBasemap] = useState<BasemapKey>('osm');
+  const [showInundation, setShowInundation] = useState<boolean>(true);
+  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [hoveredFacility, setHoveredFacility] = useState<CriticalFacility | null>(null);
 
-  const selectedZone = zones.find((z) => z.id === selectedZoneId);
+  const selectedZone = zones.find((z) => z.id === selectedZoneId) || zones[0];
+
+  // Initialize MapLibre GL with OpenStreetMap tiles
+  useEffect(() => {
+    let isMounted = true;
+
+    async function initMap() {
+      if (!mapContainerRef.current) return;
+
+      try {
+        const maplibregl: any = await import('maplibre-gl');
+
+        if (!isMounted || !mapContainerRef.current) return;
+
+        // Clean up previous instance if any
+        if (mapRef.current) {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+
+        const tileConfig = BASEMAP_TILES[basemap];
+
+        const map = new maplibregl.Map({
+          container: mapContainerRef.current,
+          style: {
+            version: 8,
+            sources: {
+              'osm-tiles': {
+                type: 'raster',
+                tiles: [tileConfig.url],
+                tileSize: 256,
+                attribution: tileConfig.attribution,
+              },
+            },
+            layers: [
+              {
+                id: 'osm-tiles-layer',
+                type: 'raster',
+                source: 'osm-tiles',
+                minzoom: 0,
+                maxzoom: tileConfig.maxZoom,
+              },
+            ],
+          },
+          center: [74.815, 12.925], // Mangaluru coastal centroid
+          zoom: 11.8,
+          pitch: 0,
+          attributionControl: false,
+        });
+
+        map.on('load', () => {
+          if (!isMounted) return;
+          mapRef.current = map;
+          setMapLoaded(true);
+          renderRiskLayers(map, maplibregl);
+          renderMarkers(map, maplibregl);
+        });
+      } catch (err) {
+        console.warn('MapLibre GL initialization error, falling back:', err);
+      }
+    }
+
+    initMap();
+
+    return () => {
+      isMounted = false;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [basemap]);
+
+  // Update polygon risk layers
+  function renderRiskLayers(map: any, maplibregl: any) {
+    if (!map || !map.isStyleLoaded()) return;
+
+    // Build GeoJSON features for all configured zones
+    const features = zones.map((z) => {
+      const geo = ZONE_COORDINATES[z.id];
+      if (!geo) return null;
+
+      let fillColor = '#64748B';
+      let fillOpacity = 0.05;
+      let strokeColor = '#64748B';
+      let strokeWidth = 1.2;
+
+      if (z.severity === 'CRITICAL') {
+        fillColor = '#DC2626';
+        fillOpacity = 0.32;
+        strokeColor = '#DC2626';
+        strokeWidth = 2.5;
+      } else if (z.severity === 'HIGH') {
+        fillColor = '#EA580C';
+        fillOpacity = 0.28;
+        strokeColor = '#EA580C';
+        strokeWidth = 2.0;
+      } else if (z.severity === 'ELEVATED') {
+        fillColor = '#CA8A04';
+        fillOpacity = 0.22;
+        strokeColor = '#CA8A04';
+        strokeWidth = 1.5;
+      }
+
+      return {
+        type: 'Feature',
+        id: z.id,
+        properties: {
+          id: z.id,
+          name: z.name,
+          locality: z.locality,
+          severity: z.severity,
+          probability: z.probability,
+          fillColor,
+          fillOpacity,
+          strokeColor,
+          strokeWidth,
+          isSelected: z.id === selectedZoneId,
+        },
+        geometry: {
+          type: 'Polygon',
+          coordinates: [geo.coordinates],
+        },
+      };
+    }).filter(Boolean);
+
+    const geojsonData: any = {
+      type: 'FeatureCollection',
+      features,
+    };
+
+    // Remove existing zone source if present
+    if (map.getSource('flood-zones-source')) {
+      map.getSource('flood-zones-source').setData(geojsonData);
+      return;
+    }
+
+    map.addSource('flood-zones-source', {
+      type: 'geojson',
+      data: geojsonData,
+    });
+
+    // 1. Zone Fills
+    map.addLayer({
+      id: 'flood-zones-fill',
+      type: 'fill',
+      source: 'flood-zones-source',
+      layout: {
+        visibility: showInundation ? 'visible' : 'none',
+      },
+      paint: {
+        'fill-color': ['get', 'fillColor'],
+        'fill-opacity': [
+          'case',
+          ['boolean', ['get', 'isSelected'], false],
+          0.45,
+          ['get', 'fillOpacity'],
+        ],
+      },
+    });
+
+    // 2. Zone Boundaries
+    map.addLayer({
+      id: 'flood-zones-outline',
+      type: 'line',
+      source: 'flood-zones-source',
+      paint: {
+        'line-color': ['get', 'strokeColor'],
+        'line-width': [
+          'case',
+          ['boolean', ['get', 'isSelected'], false],
+          3.5,
+          ['get', 'strokeWidth'],
+        ],
+      },
+    });
+
+    // Interactive zone clicks on polygons
+    map.on('click', 'flood-zones-fill', (e: any) => {
+      if (e.features && e.features.length > 0) {
+        const zoneId = e.features[0].properties.id;
+        if (zoneId) onSelectZone(zoneId);
+      }
+    });
+
+    map.on('mouseenter', 'flood-zones-fill', () => {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+    map.on('mouseleave', 'flood-zones-fill', () => {
+      map.getCanvas().style.cursor = '';
+    });
+  }
+
+  // Render HTML Markers for Facilities and Zone Labels
+  function renderMarkers(map: any, maplibregl: any) {
+    // Clear old markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
+    // 1. Zone Centroid Labels
+    zones.forEach((z) => {
+      const geo = ZONE_COORDINATES[z.id];
+      if (!geo) return;
+
+      const isCritical = z.severity === 'CRITICAL';
+      const isHigh = z.severity === 'HIGH';
+      const isElevated = z.severity === 'ELEVATED';
+
+      const labelEl = document.createElement('div');
+      labelEl.className = 'cursor-pointer select-none transition-transform hover:scale-105';
+      labelEl.innerHTML = `
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          background: rgba(255, 255, 255, 0.95);
+          padding: 2px 6px;
+          border-radius: 4px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+          border: 1px solid ${isCritical ? '#DC2626' : isHigh ? '#EA580C' : isElevated ? '#CA8A04' : '#94A3B8'};
+          font-family: Inter, sans-serif;
+          font-size: 11px;
+          font-weight: 700;
+          color: #0F172A;
+        ">
+          <span style="
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: ${isCritical ? '#DC2626' : isHigh ? '#EA580C' : isElevated ? '#CA8A04' : '#94A3B8'};
+            display: inline-block;
+          "></span>
+          <span>${z.name}</span>
+        </div>
+      `;
+
+      labelEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onSelectZone(z.id);
+      });
+
+      const marker = new maplibregl.Marker({
+        element: labelEl,
+        anchor: 'center',
+      })
+        .setLngLat(geo.center)
+        .addTo(map);
+
+      markersRef.current.push(marker);
+    });
+
+    // 2. Critical Facilities Markers
+    facilities.forEach((fac) => {
+      const coords = FACILITY_GEO[fac.id] || (ZONE_COORDINATES[fac.zoneId]?.center ?? [74.815, 12.925]);
+      const isCritical = fac.severity === 'CRITICAL';
+
+      const facEl = document.createElement('div');
+      facEl.className = 'cursor-pointer select-none group';
+      facEl.style.width = '28px';
+      facEl.style.height = '28px';
+      facEl.style.position = 'relative';
+
+      let iconSvg = `+`;
+      if (fac.category === 'fire') iconSvg = `▲`;
+      if (fac.category === 'shelter') iconSvg = `⌂`;
+      if (fac.category === 'security') iconSvg = `🛡`;
+      if (fac.category === 'utility') iconSvg = `⚡`;
+
+      facEl.innerHTML = `
+        <div style="
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          background: ${isCritical ? 'rgba(220, 38, 38, 0.25)' : 'transparent'};
+          ${isCritical ? 'animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;' : ''}
+        "></div>
+        <div style="
+          width: 24px;
+          height: 24px;
+          margin: 2px;
+          border-radius: 50%;
+          background: ${isCritical ? '#DC2626' : '#0F172A'};
+          color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: bold;
+          border: 2px solid #ffffff;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          transition: transform 0.15s ease;
+        ">
+          ${iconSvg}
+        </div>
+      `;
+
+      facEl.addEventListener('mouseenter', () => setHoveredFacility(fac));
+      facEl.addEventListener('mouseleave', () => setHoveredFacility(null));
+      facEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onSelectZone(fac.zoneId);
+      });
+
+      const facMarker = new maplibregl.Marker({
+        element: facEl,
+        anchor: 'center',
+      })
+        .setLngLat(coords)
+        .addTo(map);
+
+      markersRef.current.push(facMarker);
+    });
+  }
+
+  // Sync selected zone & visibility when props change
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return;
+    const map = mapRef.current;
+
+    if (map.getSource('flood-zones-source')) {
+      import('maplibre-gl').then((mod: any) => {
+        const maplibregl = mod.default || mod;
+        renderRiskLayers(map, maplibregl);
+      });
+    }
+
+    if (map.getLayer('flood-zones-fill')) {
+      map.setLayoutProperty('flood-zones-fill', 'visibility', showInundation ? 'visible' : 'none');
+    }
+
+    // Smoothly fly to selected zone if it changes
+    const geo = ZONE_COORDINATES[selectedZoneId];
+    if (geo && map) {
+      map.flyTo({
+        center: geo.center,
+        zoom: Math.max(map.getZoom(), 12.2),
+        essential: true,
+        speed: 1.2,
+      });
+    }
+  }, [selectedZoneId, showInundation, mapLoaded]);
+
+  // Controls: Zoom in/out, Fly to Zone B
+  const handleZoomIn = () => {
+    if (mapRef.current) mapRef.current.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    if (mapRef.current) mapRef.current.zoomOut();
+  };
+
+  const handleResetToZoneB = () => {
+    onSelectZone('B');
+    if (mapRef.current) {
+      mapRef.current.flyTo({
+        center: ZONE_COORDINATES['B'].center,
+        zoom: 12.8,
+        essential: true,
+        speed: 1.5,
+      });
+    }
+  };
 
   return (
     <div
@@ -47,430 +579,12 @@ export function FloodMap({
         className
       )}
     >
-      {/* SVG Map Canvas */}
-      <svg
-        className="absolute inset-0 w-full h-full object-cover"
-        preserveAspectRatio="xMidYMid slice"
-        viewBox="0 0 960 580"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <defs>
-          {/* Critical Diagonal Hatch Pattern ONLY for CRITICAL zones */}
-          <pattern
-            id="criticalHatchRefined"
-            patternUnits="userSpaceOnUse"
-            width="10"
-            height="10"
-            patternTransform="rotate(45 0 0)"
-          >
-            <line
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="10"
-              stroke="#DC2626"
-              strokeWidth="2.5"
-              opacity="0.35"
-            />
-          </pattern>
+      {/* MapLibre GL OpenStreetMap Container */}
+      <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
-          {/* Subtle Coastal Grid */}
-          <pattern
-            id="coastalGridRefined"
-            patternUnits="userSpaceOnUse"
-            width="40"
-            height="40"
-          >
-            <path
-              d="M 40 0 L 0 0 0 40"
-              fill="none"
-              stroke="#CBD5E1"
-              strokeWidth="0.5"
-              opacity="0.5"
-            />
-          </pattern>
-
-          {/* White halo filter for zone labels */}
-          <filter id="whiteHalo" x="-20%" y="-20%" width="140%" height="140%">
-            <feMorphology in="SourceAlpha" result="DILATED" operator="dilate" radius="2" />
-            <feFlood floodColor="#FFFFFF" floodOpacity="1" result="WHITE" />
-            <feComposite in="WHITE" in2="DILATED" operator="in" result="OUTLINE" />
-            <feMerge>
-              <feMergeNode in="OUTLINE" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        {/* 1. Base Landmass & Grid */}
-        <rect width="960" height="580" fill="#F8FAFC" />
-        <rect width="960" height="580" fill="url(#coastalGridRefined)" />
-
-        {/* 2. Water Bodies (Arabian Sea & Estuaries) */}
-        <path
-          d="M 0,0 L 260,0 C 255,90 270,160 250,240 C 235,300 240,360 215,440 C 190,520 180,580 180,580 L 0,580 Z"
-          fill="#E0F2FE"
-        />
-        <path
-          d="M 260,0 C 255,90 270,160 250,240 C 235,300 240,360 215,440 C 190,520 180,580 180,580"
-          fill="none"
-          stroke="#7DD3FC"
-          strokeWidth="2"
-        />
-
-        {/* Gurupura River Estuary */}
-        <path
-          d="M 250,185 C 310,180 380,210 450,195 C 520,180 610,215 670,190 L 675,208 C 610,230 525,198 450,212 C 380,228 310,198 248,202 Z"
-          fill="#E0F2FE"
-          stroke="#7DD3FC"
-          strokeWidth="1.2"
-        />
-
-        {/* Netravati River Estuary */}
-        <path
-          d="M 215,440 C 290,430 380,480 470,470 C 560,460 690,510 760,500 L 760,522 C 690,532 560,482 470,492 C 380,502 290,452 210,462 Z"
-          fill="#E0F2FE"
-          stroke="#7DD3FC"
-          strokeWidth="1.2"
-        />
-
-        {/* 3. Road Network (White casing + Slate highway strokes with fill="none" to prevent black artifacts) */}
-        <g stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none">
-          <path d="M 275,0 L 285,170 L 360,250 L 375,420 L 320,580" />
-          <path d="M 285,170 L 610,140 L 780,160" />
-          <path d="M 360,250 L 590,280 L 880,310" />
-          <path d="M 375,420 L 620,410 L 850,440" />
-          <path d="M 255,80 L 410,95 L 480,180" />
-          <path d="M 235,320 L 365,340" />
-        </g>
-        <g stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
-          <path d="M 275,0 L 285,170 L 360,250 L 375,420 L 320,580" />
-          <path d="M 285,170 L 610,140 L 780,160" />
-          <path d="M 360,250 L 590,280 L 880,310" />
-          <path d="M 375,420 L 620,410 L 850,440" />
-          <path d="M 255,80 L 410,95 L 480,180" />
-          <path d="M 235,320 L 365,340" />
-        </g>
-
-        {/* 4. Zone Polygons (Strictly ~30% fills, 1.5px outline, hatch only on CRITICAL) */}
-
-        {/* LOW Risk Zones (Outline only, 1.5px dashed outline, NO dark fill) */}
-        {/* Zone D */}
-        <polygon
-          points="460,50 630,40 650,135 480,150"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('D')}
-        />
-        {/* Zone E */}
-        <polygon
-          points="640,40 820,30 840,140 660,135"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('E')}
-        />
-        {/* Zone G */}
-        <polygon
-          points="490,225 650,215 670,330 495,310"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('G')}
-        />
-        {/* Zone I */}
-        <polygon
-          points="680,210 880,220 890,340 680,330"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('I')}
-        />
-        {/* Zone J */}
-        <polygon
-          points="500,340 700,335 690,450 490,440"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('J')}
-        />
-        {/* Zone K */}
-        <polygon
-          points="710,345 890,350 880,480 700,460"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('K')}
-        />
-        {/* Zone L */}
-        <polygon
-          points="480,510 680,500 670,570 470,570"
-          fill="none"
-          stroke="#64748B"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          className="cursor-pointer hover:stroke-slate-900 transition-colors"
-          onClick={() => onSelectZone('L')}
-        />
-
-        {/* ELEVATED Zones (Yellow tint ~25% opacity, 1.5px yellow border) */}
-        {/* Zone A (Ullal Estuary) */}
-        <polygon
-          points="200,470 370,460 380,570 190,570"
-          fill="rgba(234, 179, 8, 0.25)"
-          stroke="#CA8A04"
-          strokeWidth={selectedZoneId === 'A' ? 2.5 : 1.5}
-          className="cursor-pointer hover:fill-yellow-400/35 transition-colors"
-          onClick={() => onSelectZone('A')}
-        />
-        {/* Zone H */}
-        <polygon
-          points="370,250 480,230 480,350 365,360"
-          fill="rgba(234, 179, 8, 0.25)"
-          stroke="#CA8A04"
-          strokeWidth={selectedZoneId === 'H' ? 2.5 : 1.5}
-          className="cursor-pointer hover:fill-yellow-400/35 transition-colors"
-          onClick={() => onSelectZone('H')}
-        />
-
-        {/* HIGH Risk Zones (Orange tint ~30% opacity, 1.5px orange border) */}
-        {/* Zone C */}
-        <polygon
-          points="230,270 355,270 360,420 220,425"
-          fill="rgba(249, 115, 22, 0.3)"
-          stroke="#EA580C"
-          strokeWidth={selectedZoneId === 'C' ? 2.5 : 1.5}
-          className="cursor-pointer hover:fill-orange-500/40 transition-colors"
-          onClick={() => onSelectZone('C')}
-        />
-        {/* Zone F */}
-        <polygon
-          points="280,185 450,195 440,245 285,240"
-          fill="rgba(249, 115, 22, 0.3)"
-          stroke="#EA580C"
-          strokeWidth={selectedZoneId === 'F' ? 2.5 : 1.5}
-          className="cursor-pointer hover:fill-orange-500/40 transition-colors"
-          onClick={() => onSelectZone('F')}
-        />
-
-        {/* CRITICAL Zone B (Hatch pattern + ~30% red tint + distinct 2px red border) */}
-        <polygon
-          points="255,30 420,35 435,175 270,170"
-          fill="url(#criticalHatchRefined)"
-          className="pointer-events-none"
-        />
-        <polygon
-          points="255,30 420,35 435,175 270,170"
-          fill="rgba(220, 38, 38, 0.28)"
-          stroke="#DC2626"
-          strokeWidth={selectedZoneId === 'B' ? 3 : 2}
-          className="cursor-pointer hover:fill-red-600/35 transition-colors"
-          onClick={() => onSelectZone('B')}
-        />
-
-        {/* 5. Zone Labels (Dark navy #0F172A with white halo + small severity icon) */}
-        {/* Zone B (CRITICAL) */}
-        <g
-          className="cursor-pointer select-none"
-          onClick={() => onSelectZone('B')}
-        >
-          <circle cx="282" cy="50" r="4.5" fill="#DC2626" />
-          <text
-            x="292"
-            y="54"
-            fill="#0F172A"
-            fontFamily="Inter, sans-serif"
-            fontSize="12"
-            fontWeight="700"
-            filter="url(#whiteHalo)"
-          >
-            Zone B
-          </text>
-        </g>
-
-        {/* Zone F (HIGH) */}
-        <g
-          className="cursor-pointer select-none"
-          onClick={() => onSelectZone('F')}
-        >
-          <circle cx="332" cy="216" r="4" fill="#EA580C" />
-          <text
-            x="341"
-            y="220"
-            fill="#0F172A"
-            fontFamily="Inter, sans-serif"
-            fontSize="12"
-            fontWeight="700"
-            filter="url(#whiteHalo)"
-          >
-            Zone F
-          </text>
-        </g>
-
-        {/* Zone C (HIGH) */}
-        <g
-          className="cursor-pointer select-none"
-          onClick={() => onSelectZone('C')}
-        >
-          <circle cx="262" cy="346" r="4" fill="#EA580C" />
-          <text
-            x="271"
-            y="350"
-            fill="#0F172A"
-            fontFamily="Inter, sans-serif"
-            fontSize="12"
-            fontWeight="700"
-            filter="url(#whiteHalo)"
-          >
-            Zone C
-          </text>
-        </g>
-
-        {/* Zone H (ELEVATED) */}
-        <g
-          className="cursor-pointer select-none"
-          onClick={() => onSelectZone('H')}
-        >
-          <circle cx="395" cy="301" r="3.5" fill="#CA8A04" />
-          <text
-            x="404"
-            y="305"
-            fill="#0F172A"
-            fontFamily="Inter, sans-serif"
-            fontSize="12"
-            fontWeight="700"
-            filter="url(#whiteHalo)"
-          >
-            Zone H
-          </text>
-        </g>
-
-        {/* Zone A (ELEVATED - Ullal Estuary) */}
-        <g
-          className="cursor-pointer select-none"
-          onClick={() => onSelectZone('A')}
-        >
-          <circle cx="265" cy="510" r="3.5" fill="#CA8A04" />
-          <text
-            x="274"
-            y="514"
-            fill="#0F172A"
-            fontFamily="Inter, sans-serif"
-            fontSize="12"
-            fontWeight="700"
-            filter="url(#whiteHalo)"
-          >
-            Zone A
-          </text>
-        </g>
-
-        {/* LOW Zone Labels (No bracketed severity) */}
-        <text x="540" y="95" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone D
-        </text>
-        <text x="730" y="85" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone E
-        </text>
-        <text x="560" y="275" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone G
-        </text>
-        <text x="760" y="275" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone I
-        </text>
-        <text x="580" y="390" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone J
-        </text>
-        <text x="780" y="415" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone K
-        </text>
-        <text x="560" y="545" fill="#475569" fontFamily="Inter, sans-serif" fontSize="11" fontWeight="600" filter="url(#whiteHalo)">
-          Zone L
-        </text>
-
-        {/* 6. Facility Markers (Icon-only by default, NO overlapping text labels) */}
-        {facilities.map((fac) => {
-          const isSelectedZone = fac.zoneId === selectedZoneId;
-          const isCritical = fac.severity === 'CRITICAL';
-          const isHovered = hoveredFacility?.id === fac.id;
-
-          return (
-            <g
-              key={fac.id}
-              transform={`translate(${fac.x}, ${fac.y})`}
-              className="cursor-pointer"
-              onMouseEnter={() => setHoveredFacility(fac)}
-              onMouseLeave={() => setHoveredFacility(null)}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectZone(fac.zoneId);
-              }}
-            >
-              {/* Invisible generous hit target to prevent enter/leave jitter */}
-              <circle cx="0" cy="0" r="22" fill="transparent" />
-
-              {isCritical && (
-                <circle
-                  cx="0"
-                  cy="0"
-                  r={isHovered ? 17 : 14}
-                  fill="#FEE2E2"
-                  className="animate-pulse pointer-events-none"
-                />
-              )}
-              <circle
-                cx="0"
-                cy="0"
-                r={isHovered ? 13 : 11}
-                fill="#FFFFFF"
-                stroke={isCritical ? '#DC2626' : '#0F172A'}
-                strokeWidth={isCritical ? 2.5 : 1.5}
-                className="shadow-sm pointer-events-none transition-all duration-150"
-              />
-              {/* Category-specific icon rendering */}
-              {fac.category === 'hospital' ? (
-                <path
-                  d="M 0,-5 L 0,5 M -5,0 L 5,0"
-                  stroke={isCritical ? '#DC2626' : '#0F172A'}
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  className="pointer-events-none"
-                />
-              ) : fac.category === 'fire' ? (
-                <polygon
-                  points="0,-5 4,4 -4,4"
-                  fill={isCritical ? '#DC2626' : '#EA580C'}
-                  className="pointer-events-none"
-                />
-              ) : (
-                <circle
-                  cx="0"
-                  cy="0"
-                  r="4"
-                  fill={isCritical ? '#DC2626' : '#475569'}
-                  className="pointer-events-none"
-                />
-              )}
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* Floating Selected Zone Indicator (Positioned absolute top-3 left-3 without layout jumping) */}
+      {/* Floating Selected Zone Indicator (Top-Left) */}
       {selectedZone && (
-        <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none z-10">
+        <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none z-20">
           <div className="bg-slate-900/95 backdrop-blur-xs text-white px-3 py-1.5 rounded-md shadow-md flex items-center gap-2.5 pointer-events-auto border border-slate-800">
             <div
               className={cn(
@@ -494,13 +608,14 @@ export function FloodMap({
         </div>
       )}
 
-      {/* Hover Facility Tooltip (Strict pointer-events-none, offset below marker so it never intersects cursor) */}
+      {/* Hover Facility Tooltip */}
       {hoveredFacility && (
         <div
-          className="absolute z-40 pointer-events-none select-none bg-slate-900/95 text-white px-2.5 py-1.5 rounded shadow-lg text-xs transition-opacity duration-100"
+          className="absolute z-40 pointer-events-none select-none bg-slate-900/95 text-white px-2.5 py-1.5 rounded shadow-lg text-xs transition-opacity duration-100 border border-slate-700"
           style={{
-            left: `${Math.min(Math.max((hoveredFacility.x / 960) * 100, 15), 75)}%`,
-            top: `${Math.min((hoveredFacility.y / 580) * 100 + 7, 78)}%`,
+            left: '50%',
+            top: '20px',
+            transform: 'translateX(-50%)',
           }}
         >
           <div className="font-bold flex items-center gap-1.5">
@@ -527,19 +642,19 @@ export function FloodMap({
         </div>
       )}
 
-      {/* Map Controls (Top-Right) */}
-      <div className="absolute top-3 right-3 flex flex-col gap-1 bg-white/95 backdrop-blur-xs border border-slate-200 rounded-md shadow-xs p-1 z-10">
+      {/* Map Controls Toolbar (Top-Right) */}
+      <div className="absolute top-3 right-3 flex flex-col gap-1 bg-white/95 backdrop-blur-xs border border-slate-200 rounded-md shadow-xs p-1 z-20">
         <button
-          onClick={() => setZoomLevel((z) => Math.min(z + 0.25, 2))}
-          className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900"
+          onClick={handleZoomIn}
+          className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 cursor-pointer"
           title="Zoom In"
           aria-label="Zoom In"
         >
           <Plus className="w-4 h-4" />
         </button>
         <button
-          onClick={() => setZoomLevel((z) => Math.max(z - 0.25, 0.75))}
-          className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900"
+          onClick={handleZoomOut}
+          className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 cursor-pointer"
           title="Zoom Out"
           aria-label="Zoom Out"
         >
@@ -547,57 +662,73 @@ export function FloodMap({
         </button>
         <div className="h-px bg-slate-200 my-0.5" />
         <button
-          onClick={() => setShowContours((prev) => !prev)}
+          onClick={() => setShowInundation((prev) => !prev)}
           className={cn(
-            'w-7 h-7 flex items-center justify-center rounded text-slate-700 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 transition-colors',
-            showContours ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'
+            'w-7 h-7 flex items-center justify-center rounded text-slate-700 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 transition-colors cursor-pointer',
+            showInundation ? 'bg-slate-100 font-bold text-blue-700' : 'hover:bg-slate-50'
           )}
-          title="Toggle Depth Inundation Layers"
-          aria-label="Toggle Inundation Layers"
+          title="Toggle Flood Inundation Layer"
+          aria-label="Toggle Inundation Layer"
         >
           <Layers className="w-4 h-4" />
         </button>
         <button
-          onClick={() => {
-            setZoomLevel(1);
-            onSelectZone('B');
-          }}
-          className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900"
-          title="Reset to Critical Zone B"
+          onClick={handleResetToZoneB}
+          className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 rounded text-slate-700 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-slate-900 cursor-pointer"
+          title="Focus Critical Zone B"
           aria-label="Reset Map View"
         >
-          <LocateFixed className="w-4 h-4" />
+          <LocateFixed className="w-4 h-4 text-red-600" />
         </button>
       </div>
 
+      {/* Basemap Switcher Chips (Center-Top) */}
+      <div className="absolute top-3 right-16 flex items-center gap-1 bg-white/95 backdrop-blur-xs px-1.5 py-1 rounded-md border border-slate-200 shadow-2xs z-20">
+        <span className="text-[10px] font-bold text-slate-500 uppercase px-1">Basemap:</span>
+        {(['osm', 'hot', 'voyager', 'positron'] as const).map((key) => (
+          <button
+            key={key}
+            onClick={() => setBasemap(key)}
+            className={cn(
+              'px-2 py-0.5 rounded text-[10px] font-bold transition-colors cursor-pointer',
+              basemap === key
+                ? 'bg-slate-900 text-white'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            )}
+          >
+            {BASEMAP_TILES[key].name}
+          </button>
+        ))}
+      </div>
+
       {/* Map Legend (Bottom-Left) */}
-      <div className="relative m-2.5 flex flex-wrap items-end justify-between pointer-events-none gap-2 z-10">
+      <div className="relative m-2.5 flex flex-wrap items-end justify-between pointer-events-none gap-2 z-20">
         <div className="bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded-md border border-slate-200/90 shadow-2xs flex items-center gap-3 pointer-events-auto">
           {/* Critical */}
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 bg-red-600/25 border-1.5 border-red-600 rounded-2xs flex items-center justify-center">
+          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onSelectZone('B')}>
+            <span className="w-3 h-3 bg-red-600/30 border-2 border-red-600 rounded-2xs flex items-center justify-center">
               <span className="w-2 h-0.5 bg-red-600 rotate-45" />
             </span>
-            <span className="text-[10px] font-bold text-slate-900 uppercase">Critical</span>
+            <span className="text-[10px] font-bold text-red-700 uppercase">Critical</span>
           </div>
           {/* High */}
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 bg-orange-500/30 border border-orange-600 rounded-2xs" />
-            <span className="text-[10px] font-bold text-slate-700 uppercase">High</span>
+          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onSelectZone('F')}>
+            <span className="w-3 h-3 bg-orange-500/30 border-1.5 border-orange-600 rounded-2xs" />
+            <span className="text-[10px] font-bold text-orange-700 uppercase">High</span>
           </div>
           {/* Elevated */}
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 bg-yellow-400/25 border border-yellow-500 rounded-2xs" />
-            <span className="text-[10px] font-bold text-slate-700 uppercase">Elevated</span>
+          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onSelectZone('A')}>
+            <span className="w-3 h-3 bg-yellow-400/25 border border-yellow-600 rounded-2xs" />
+            <span className="text-[10px] font-bold text-yellow-800 uppercase">Elevated</span>
           </div>
           {/* Low */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onSelectZone('D')}>
             <span className="w-3 h-3 bg-transparent border border-dashed border-slate-400 rounded-2xs" />
             <span className="text-[10px] font-bold text-slate-500 uppercase">Low</span>
           </div>
         </div>
 
-        {/* Map Scale & Reference */}
+        {/* Map Scale & OpenStreetMap Attribution */}
         <div className="bg-white/95 backdrop-blur-xs px-2.5 py-1.5 rounded-md border border-slate-200/90 shadow-2xs flex items-center gap-2 text-slate-500 text-[10px] font-medium pointer-events-auto">
           <div className="flex items-center gap-1">
             <span className="w-5 h-1 bg-slate-900 inline-block" />
@@ -606,7 +737,10 @@ export function FloodMap({
           <span>·</span>
           <span>12.914°N, 74.856°E</span>
           <span>·</span>
-          <span className="text-slate-700 font-semibold">Live Raster</span>
+          <span className="text-slate-800 font-semibold flex items-center gap-1">
+            <MapIcon className="w-3 h-3 text-emerald-600" />
+            <span>OpenStreetMap Live</span>
+          </span>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useFloodDashboard } from '@/hooks/useFloodDashboard';
 import { TopHeader } from '@/components/dashboard/TopHeader';
 import { Sidebar } from '@/components/dashboard/Sidebar';
@@ -9,6 +9,7 @@ import { FloodMap } from '@/components/dashboard/FloodMap';
 import { Timeline } from '@/components/dashboard/Timeline';
 import { ZoneDrawer } from '@/components/dashboard/ZoneDrawer';
 import { ShortcutsModal } from '@/components/dashboard/ShortcutsModal';
+import { ScenarioModal } from '@/components/dashboard/ScenarioModal';
 
 export default function OverviewPage() {
   const {
@@ -32,17 +33,41 @@ export default function OverviewPage() {
     setPlaybackSpeed,
     shortcutsModalOpen,
     setShortcutsModalOpen,
+    // Replay controls
+    currentReplayState,
+    stepForward,
+    stepBackward,
+    resetTimeline,
+    scenario,
   } = useFloodDashboard();
+
+  const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
+
+  // Sync with URL query parameter e.g. /?zone=B
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const zoneParam = params.get('zone');
+      if (zoneParam) {
+        selectZone(zoneParam.toUpperCase());
+        setDrawerOpen(true);
+      }
+    }
+  }, [selectZone, setDrawerOpen]);
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans antialiased text-slate-900 select-none">
-      {/* Top Header */}
-      <TopHeader onOpenShortcuts={() => setShortcutsModalOpen(true)} />
+      {/* Top Header with SIMULATION badge & live simulation clock */}
+      <TopHeader
+        onOpenShortcuts={() => setShortcutsModalOpen(true)}
+        currentTime={currentTime}
+        isSimulation={true}
+      />
 
       {/* Main Body */}
       <div className="flex flex-1 pt-14 overflow-hidden">
-        {/* Left Sidebar */}
-        <Sidebar />
+        {/* Left Sidebar with Scenario dialog trigger */}
+        <Sidebar onOpenScenario={() => setScenarioModalOpen(true)} />
 
         {/* Content Area */}
         <main className="flex-1 ml-[220px] lg:ml-[232px] p-2.5 lg:p-3 overflow-hidden flex flex-col gap-2.5">
@@ -64,13 +89,18 @@ export default function OverviewPage() {
                 />
               </div>
 
-              {/* Timeline (Always visible in first viewport at 1440x900 and 1280x720) */}
+              {/* Timeline (Always visible in first viewport, fully connected to replay states) */}
               <Timeline
                 currentTime={currentTime}
                 isPlaying={isPlaying}
                 onTogglePlay={() => setIsPlaying((p) => !p)}
                 playbackSpeed={playbackSpeed}
                 onChangeSpeed={setPlaybackSpeed}
+                onStepForward={stepForward}
+                onStepBackward={stepBackward}
+                onReset={resetTimeline}
+                currentFloodDepth={currentReplayState.floodDepth}
+                statusLabel={currentReplayState.statusLabel}
               />
             </div>
 
@@ -97,6 +127,13 @@ export default function OverviewPage() {
       <ShortcutsModal
         open={shortcutsModalOpen}
         onClose={() => setShortcutsModalOpen(false)}
+      />
+
+      {/* What-If Heavier Rainfall Scenario Dialog */}
+      <ScenarioModal
+        open={scenarioModalOpen}
+        onClose={() => setScenarioModalOpen(false)}
+        scenario={scenario}
       />
     </div>
   );
