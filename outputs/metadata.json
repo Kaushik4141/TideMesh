@@ -1,22 +1,22 @@
 {
   "model": "SFINCS",
   "model_version": "v2.4.2",
-  "location": "Mangaluru Coastal / Netravati River Estuary",
-  "event_name": "May 29, 2018 Cyclone Mekunu / Monsoon Extreme Flood Event",
-  "simulation_id": "mangaluru-historical-2018",
-  "start_time": "2018-05-29T00:00:00Z",
-  "end_time": "2018-05-29T06:00:00Z",
+  "location": "Mangaluru Coastal / Netravati Estuary Domain",
+  "simulation_id": "sim-live-test-01",
+  "start_time": "2026-10-08T15:04:08.203465+00:00",
+  "end_time": "2026-10-08T21:04:08.203465+00:00",
   "time_step_minutes": 5,
   "grid_resolution_m": 50,
   "crs": "EPSG:32643",
   "vertical_datum": "MSL",
-  "max_depth_m": 3.0,
-  "mean_flooded_depth_m": 1.6967145204544067,
-  "flooded_area_km2": 8.8,
+  "max_depth_m": 1.0,
+  "mean_flooded_depth_m": 0.790827214717865,
+  "flooded_area_km2": 1.075,
   "onset_threshold_m": 0.05,
   "flood_threshold_m": 0.1,
   "forcing": {
-    "rainfall_source": "IMD Mangaluru Extreme Downpour (Peak 75 mm/hr)",
-    "tide_source": "Panambur Port Spring Tide + Surge (Peak 2.25m MSL)"
-  }
+    "tide_source": "Panambur Dynamic Tide (Peak 1.80m MSL)",
+    "rainfall_source": "Dynamic Forcing (Peak 55.0 mm/hr)"
+  },
+  "event_name": "On-Demand High Monsoon Test"
 }

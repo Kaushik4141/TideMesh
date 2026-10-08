@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Any, Optional
 from app.schemas.prediction import NormalizedFloodPrediction
-from app.schemas.sfincs import SFINCSOutputsCatalog
+from app.schemas.sfincs import SFINCSOutputsCatalog, SimulationRunRequest
 from app.services.simulation_service import simulation_service
 
 router = APIRouter(prefix="/simulations", tags=["SFINCS Hydrodynamic Simulations"])
@@ -52,3 +52,25 @@ def get_simulation_catalog(event_id: str):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load catalog: {str(e)}")
+
+@router.post("/run", response_model=NormalizedFloodPrediction, status_code=201)
+def run_simulation(request: SimulationRunRequest):
+    """
+    Triggers an on-demand SFINCS hydrodynamic simulation (<10-15s execution).
+    Accepts dynamic boundary forcing (rainfall, tide, storm surge),
+    runs the hydrodynamic solver in Docker, extracts flood extent polygons,
+    and returns a normalized CoastShield FloodPrediction.
+    """
+    try:
+        return simulation_service.run_simulation(
+            event_id=request.eventId,
+            zone_id=request.zoneId or "zone-mangaluru-coastal",
+            rainfall_rate_mm_hr=request.rainfallRateMmHr,
+            rainfall_series=request.rainfallSeries,
+            surge_level_m=request.surgeLevelM,
+            duration_hours=request.durationHours,
+            scenario_name=request.scenarioName,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Simulation run failed: {str(e)}")
+
