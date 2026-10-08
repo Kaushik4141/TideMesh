@@ -4,6 +4,7 @@ import { resolve } from "path";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { healthRouter } from "./routes/health.js";
+import { simulationRouter } from "./routes/simulation.js";
 import { errorHandler } from "./middleware/error.middleware.js";
 import { requestLogger } from "./middleware/logger.middleware.js";
 
@@ -17,6 +18,7 @@ if (existsSync(envLocalPath)) {
 
 type Bindings = {
   DATABASE_URL?: string;
+  ML_API_URL?: string;
   NODE_ENV?: string;
 };
 
@@ -38,12 +40,17 @@ app.get("/", (c) => {
     endpoints: {
       health: "/api/v1/health",
       databaseHealth: "/api/v1/health/db",
+      simulations: "/api/v1/simulations",
+      mangaluruForecast: "/api/v1/simulations/mangaluru-historical-2018/forecast",
+      mangaluruExtent: "/api/v1/simulations/mangaluru-historical-2018/extent",
     },
   });
 });
 
 // Mount routes
 app.route("/api/v1/health", healthRouter);
+app.route("/api/v1/simulations", simulationRouter);
+
 
 // Cloudflare Workers entrypoint
 export default app;
