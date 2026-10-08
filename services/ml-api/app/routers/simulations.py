@@ -52,3 +52,24 @@ def get_simulation_catalog(event_id: str):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load catalog: {str(e)}")
+
+@router.post("/run", response_model=NormalizedFloodPrediction)
+def run_simulation(
+    req: Dict[str, Any] = {},
+):
+    """
+    Triggers an on-demand SFINCS hydrodynamic simulation in Docker.
+    Returns normalized FloodPrediction with real PostGIS geometries.
+    """
+    try:
+        return simulation_service.run_simulation(
+            event_id=req.get("eventId"),
+            zone_id=req.get("zoneId", "zone-mangaluru-coastal"),
+            rainfall_rate_mm_hr=req.get("rainfallRateMmHr"),
+            rainfall_series=req.get("rainfallSeries"),
+            surge_level_m=req.get("surgeLevelM", 1.5),
+            duration_hours=req.get("durationHours", 6),
+            scenario_name=req.get("scenarioName"),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Simulation run failed: {str(e)}")

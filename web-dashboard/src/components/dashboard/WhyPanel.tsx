@@ -6,15 +6,16 @@ import type { FactorContribution } from '@/types/dashboard';
 interface WhyPanelProps {
   factors: FactorContribution[];
   explanation: string;
+  title?: string;
 }
 
-export function WhyPanel({ factors, explanation }: WhyPanelProps) {
+export function WhyPanel({ factors, explanation, title = 'Why is this critical?' }: WhyPanelProps) {
   return (
     <div className="flex flex-col gap-2 pt-1 border-t border-slate-200">
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-xs text-slate-900 font-bold uppercase tracking-wider">
-          Why is this critical?
+          {title}
         </span>
         <span className="text-[11px] text-slate-500 font-medium">Model v1.2</span>
       </div>
