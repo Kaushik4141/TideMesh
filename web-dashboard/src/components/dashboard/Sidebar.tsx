@@ -33,7 +33,7 @@ export function Sidebar({ environmentalData }: SidebarProps = {}) {
 
   const primaryNav = [
     { name: 'Overview', href: '/', icon: LayoutDashboard },
-    { name: 'Alerts', href: '/degraded-state', icon: Bell, badge: '3', badgeColor: 'bg-red-500/10 text-red-700 border-red-500/20' },
+    { name: 'Alerts', href: '/zones', icon: Bell, badge: '3', badgeColor: 'bg-red-500/10 text-red-700 border-red-500/20' },
     { name: 'Zones', href: '/zones', icon: Grid },
     { name: 'Critical Facilities', href: '/critical-facilities', icon: Hospital },
     { name: 'Scenarios', href: '#scenarios', icon: Sliders },
@@ -42,7 +42,7 @@ export function Sidebar({ environmentalData }: SidebarProps = {}) {
   const moreNav = [
     { name: 'Response & Actions', href: '#actions', icon: Siren, badge: '3 Pending', badgeColor: 'bg-red-500/10 text-red-700 border-red-500/20' },
     { name: 'Evacuation Routes', href: '#routes', icon: Route },
-    { name: 'Sensor Telemetry', href: '/degraded-state', icon: Radio },
+    { name: 'Degraded Mode (SOP Drill)', href: '/degraded-state', icon: Radio },
     { name: 'Reports & Briefings', href: '#reports', icon: FileText },
   ];
 

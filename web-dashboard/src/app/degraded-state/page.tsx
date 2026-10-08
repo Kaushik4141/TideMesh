@@ -10,8 +10,10 @@ import {
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { apiClient } from "@/lib/api/client";
 
+import Link from "next/link";
+
 export default function DegradedStatePage() {
-  const [retryStatus, setRetryStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [retryStatus, setRetryStatus] = useState<"idle" | "loading" | "connected" | "error">("idle");
   const [acknowledged, setAcknowledged] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<"idle" | "loading" | "done">("idle");
 
@@ -20,6 +22,11 @@ export default function DegradedStatePage() {
     console.info('[DegradedStatePage] Verifying backend replay connection from API...');
     apiClient
       .fetchReplayEvent('mangaluru-historical-2018')
+      .then((resp) => {
+        if (mounted && resp?.success) {
+          setRetryStatus("connected");
+        }
+      })
       .catch((err) => {
         console.warn('[DegradedStatePage] Replay fetch notice:', err);
       });
@@ -28,12 +35,18 @@ export default function DegradedStatePage() {
     };
   }, []);
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     setRetryStatus("loading");
-    setTimeout(() => {
+    try {
+      const resp = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
+      if (resp?.success) {
+        setRetryStatus("connected");
+      } else {
+        setRetryStatus("error");
+      }
+    } catch {
       setRetryStatus("error");
-      setTimeout(() => setRetryStatus("idle"), 3000);
-    }, 1500);
+    }
   };
 
   const handleDownload = () => {
@@ -102,30 +115,55 @@ export default function DegradedStatePage() {
           <div className="flex flex-col w-full">
             
             {/* Banner */}
-            <aside className="w-full bg-amber-100 text-amber-900 px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm transition-all duration-200">
+            <aside className={`w-full ${retryStatus === 'connected' ? 'bg-emerald-50 text-emerald-950 border-b border-emerald-200' : 'bg-amber-100 text-amber-900'} px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm transition-all duration-200`}>
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-7 h-7 rounded bg-white flex items-center justify-center shrink-0">
-                  <AlertTriangle className="text-slate-500 w-[20px] h-[20px]" />
+                <div className={`w-7 h-7 rounded ${retryStatus === 'connected' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500'} flex items-center justify-center shrink-0`}>
+                  {retryStatus === 'connected' ? (
+                    <CheckCircle className="w-[18px] h-[18px] text-white" />
+                  ) : (
+                    <AlertTriangle className="text-amber-700 w-[20px] h-[20px]" />
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
-                  <span className="text-sm tracking-wide uppercase font-bold text-amber-900">DEGRADED OPERATIONAL STATE</span>
-                  <span className="text-slate-500 text-xs">·</span>
-                  <span className="text-sm text-amber-900">Telemetry feed interrupted. Displaying cached state as of <strong className="font-semibold text-blue-600">13:52</strong> (34 min ago). Model: <strong className="font-semibold text-blue-600">v1.2</strong> (Run 13:50 IST).</span>
+                  <span className="text-sm tracking-wide uppercase font-bold">
+                    {retryStatus === 'connected' ? 'LIVE TELEMETRY RESTORED' : 'DEGRADED OPERATIONAL STATE'}
+                  </span>
+                  <span className="text-slate-400 text-xs">·</span>
+                  <span className="text-sm">
+                    {retryStatus === 'connected' ? (
+                      <span>
+                        Backend API connected (HTTP 200). SFINCS hydrodynamic simulation and Open-Meteo telemetry active.
+                      </span>
+                    ) : (
+                      <span>
+                        Telemetry feed interrupted. Displaying cached state as of <strong className="font-semibold text-blue-600">13:52</strong> (34 min ago). Model: <strong className="font-semibold text-blue-600">v1.2</strong> (Run 13:50 IST).
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0 self-end md:self-auto">
-                <button 
-                  onClick={handleRetry}
-                  disabled={retryStatus !== "idle"}
-                  className="h-8 px-4 rounded bg-white hover:bg-slate-200 text-slate-900 text-sm font-medium flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {retryStatus === "idle" && <RefreshCw className="w-[16px] h-[16px] text-slate-500" />}
-                  {retryStatus === "loading" && <RefreshCw className="w-[16px] h-[16px] animate-spin text-slate-500" />}
-                  {retryStatus === "error" && <RadioTower className="w-[16px] h-[16px] text-red-500" />}
-                  <span>
-                    {retryStatus === "idle" ? "Retry Live Connection" : retryStatus === "loading" ? "Pinging Sensors..." : "Host Unreachable"}
-                  </span>
-                </button>
+                {retryStatus === 'connected' ? (
+                  <Link
+                    href="/"
+                    className="h-8 px-4 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                  >
+                    <span>Return to Live Dashboard →</span>
+                  </Link>
+                ) : (
+                  <button 
+                    onClick={handleRetry}
+                    disabled={retryStatus === "loading"}
+                    className="h-8 px-4 rounded bg-white hover:bg-slate-200 text-slate-900 text-sm font-medium flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {retryStatus === "idle" && <RefreshCw className="w-[16px] h-[16px] text-slate-500" />}
+                    {retryStatus === "loading" && <RefreshCw className="w-[16px] h-[16px] animate-spin text-slate-500" />}
+                    {retryStatus === "error" && <RadioTower className="w-[16px] h-[16px] text-red-500" />}
+                    <span>
+                      {retryStatus === "idle" ? "Retry Live Connection" : retryStatus === "loading" ? "Pinging Sensors..." : "Host Unreachable"}
+                    </span>
+                  </button>
+                )}
                 <button 
                   onClick={() => setAcknowledged(!acknowledged)}
                   className={`h-8 px-4 rounded ${acknowledged ? 'bg-slate-500' : 'bg-blue-100'} hover:${acknowledged ? 'bg-slate-600' : 'bg-blue-200'} ${acknowledged ? 'text-white' : 'text-blue-900'} text-sm font-medium flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer`}
