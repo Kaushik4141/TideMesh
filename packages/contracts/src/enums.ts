@@ -18,3 +18,11 @@ export const FacilityTypeEnum = [
 ] as const;
 export const FacilityTypeSchema = z.enum(FacilityTypeEnum);
 export type FacilityType = z.infer<typeof FacilityTypeSchema>;
+
+export const DashboardModeEnum = [
+  "LIVE_FORECAST",
+  "HISTORICAL_REPLAY",
+  "SCENARIO",
+] as const;
+export const DashboardModeSchema = z.enum(DashboardModeEnum);
+export type DashboardMode = z.infer<typeof DashboardModeSchema>;
