@@ -10,6 +10,7 @@ import { getDb, type DatabaseInstance } from "../src/db/index.js";
 import { ComparisonService, comparisonSpatialSql, querySpatialComparison } from "../src/services/comparison.service.js";
 import { SimulationService } from "../src/services/simulation.service.js";
 
+// Synthetic WGS84 geometry fixtures, not measured local assets or solver outputs.
 const polygon = (west = 74.85, east = 74.86) => ({
   type: "Polygon", coordinates: [[[west, 12.85], [east, 12.85], [east, 12.86], [west, 12.86], [west, 12.85]]],
 });
@@ -194,6 +195,36 @@ export async function runComparisonTests() {
   assert.equal(query.params.length, 2);
   assert.equal(query.sql.includes("74.85"), false, "Geometry must be bound parameters");
 
+  for (const invalidGeometry of [
+    { type: "Point", coordinates: [74.85, 12.85] },
+    { type: "LineString", coordinates: [[74.85, 12.85], [74.86, 12.86]] },
+    polygon(698000, 698050), // Projected metre coordinates must not be relabelled as degrees.
+    { type: "Polygon", coordinates: [[[74.85, 12.85], [74.86, 12.85], [74.86, 12.86]]] },
+    { type: "Polygon", coordinates: [[[74.85, 91], [74.86, 91], [74.86, 92], [74.85, 91]]] },
+    { type: "MultiPolygon", coordinates: [[]] },
+    { ...polygon(), crs: { type: "name", properties: { name: "EPSG:3857" } } },
+  ]) {
+    assert.throws(() => comparisonSpatialSql({ ...snapshot("before"), floodGeometry: invalidGeometry }, snapshot("after", true)), /polygon|WGS84|ring/i,
+      "Malformed, non-area or projected geometry cannot become a verified dry extent");
+  }
+
+  for (const threshold of [0.2, null]) {
+    await withSimulationApi(async () => {
+      const result = await runComparison(db);
+      assert.equal(result.baseline.metrics.inundatedAreaKm2, 1, "Retain each run's genuine area");
+      assert.equal(result.scenario.metrics.inundatedAreaKm2, 2);
+      assert.equal(result.delta.inundatedAreaKm2, null);
+      assert.equal(result.delta.affectedRoads, null);
+      assert.equal(result.delta.affectedBuildings, null);
+      assert.equal(result.delta.affectedFacilities, null);
+      assert.equal(result.delta.newlyInundatedGeometry, null);
+      assert.equal(result.delta.newlyAffectedAssets, null);
+      assert.equal(result.delta.maximumDepthM, 1, "Raster maximum depth is independent of extent threshold");
+      assert.ok(result.dataQuality.warnings.some(w => w.includes("threshold")));
+      assert.equal(result.explanations.some(text => /scenario minus baseline 1\.000 km/.test(text)), false);
+    }, { after: run => ({ ...run, floodThresholdM: threshold }) });
+  }
+
   await withSimulationApi(async () => {
     const failingDb = { execute: async () => { throw new Error("database offline"); } } as unknown as DatabaseInstance;
     const result = await runComparison(failingDb);
@@ -236,6 +267,48 @@ export async function runComparisonTests() {
     assert.equal(result.delta.affectedBuildings, null);
     assert.equal(result.delta.affectedRoads, 1);
     assert.ok(result.dataQuality.warnings.some(w => w.includes("No building inventory")));
+  });
+
+  await withSimulationApi(async () => {
+    const nonlocalDb = { execute: async (statement: Parameters<PgDialect["sqlToQuery"]>[0]) => {
+      if (dialect.sqlToQuery(statement).sql.includes("WITH inputs")) return { rows: [{ ...spatialRow, assets: [], available_kinds: ["road", "facility"] }] };
+      return { rows: [{ id: "00000000-0000-4000-8000-000000000001" }] };
+    } } as unknown as DatabaseInstance;
+    const result = await runComparison(nonlocalDb);
+    assert.equal(result.scenario.metrics.affectedRoads, 0, "Zero is inventory-only intersection count");
+    assert.equal(result.scenario.metrics.affectedBuildings, null);
+    assert.ok(result.dataQuality.warnings.some(w => w.includes("No building inventory")), "Missing-kind warning must survive the no-intersection branch");
+    assert.ok(result.dataQuality.warnings.some(w => w.includes("not verified absence")));
+    assert.ok(result.dataQuality.infrastructureSource?.includes("synthetic NYC"));
+  });
+  await withSimulationApi(async () => {
+    const dryDb = { execute: async (statement: Parameters<PgDialect["sqlToQuery"]>[0]) => {
+      if (dialect.sqlToQuery(statement).sql.includes("WITH inputs")) return { rows: [{
+        ...spatialRow, scenario_area_km2: 0, newly_inundated_geometry: { type: "Polygon", coordinates: [] },
+        assets: assets.filter(asset => asset.baselineAffected).map(asset => ({ ...asset, scenarioAffected: false })),
+      }] };
+      return { rows: [{ id: "00000000-0000-4000-8000-000000000001" }] };
+    } } as unknown as DatabaseInstance;
+    const result = await runComparison(dryDb);
+    assert.equal(result.delta.inundatedAreaKm2, -1, "A genuine contraction keeps its negative delta");
+    assert.equal(result.delta.maximumDepthM, -1, "A supplied zero depth is not missing");
+    assert.equal(result.delta.affectedRoads, -1);
+    assert.deepEqual(result.delta.newlyAffectedAssets, []);
+    assert.deepEqual(result.delta.newlyInundatedGeometry?.coordinates, []);
+  }, { after: run => ({ ...run, maximumDepthM: 0, floodGeometry: { type: "Polygon", coordinates: [] } }) });
+  await withSimulationApi(async () => {
+    const collapsedDb = { execute: async (statement: Parameters<PgDialect["sqlToQuery"]>[0]) => {
+      if (dialect.sqlToQuery(statement).sql.includes("WITH inputs")) return { rows: [{
+        ...spatialRow, baseline_area_km2: null, assets: null, newly_inundated_geometry: null,
+      }] };
+      return { rows: [{ id: "00000000-0000-4000-8000-000000000001" }] };
+    } } as unknown as DatabaseInstance;
+    const result = await runComparison(collapsedDb);
+    assert.equal(result.baseline.metrics.inundatedAreaKm2, null);
+    assert.equal(result.scenario.metrics.inundatedAreaKm2, 2);
+    assert.equal(result.delta.inundatedAreaKm2, null);
+    assert.equal(result.scenario.metrics.affectedRoads, null);
+    assert.ok(result.dataQuality.warnings.some(w => w.includes("collapsed to non-area")));
   });
 
   // The legacy direct runner also persists the exact returned forecast.
@@ -359,9 +432,22 @@ export async function runComparisonTests() {
     assert.equal(dry.baselineAreaKm2, 0, "A verified dry run is zero area, not unavailable");
     assert.ok(dry.scenarioAreaKm2! > 0);
     assert.ok(dry.newlyInundatedGeometry);
+    const dryMulti = await querySpatialComparison(liveDb, { ...before, floodGeometry: { type: "MultiPolygon", coordinates: [] } }, after);
+    assert.equal(dryMulti.baselineAreaKm2, 0);
+    const collapsed = await querySpatialComparison(liveDb, { ...before, floodGeometry: {
+      type: "Polygon", coordinates: [[[74.85, 12.85], [74.855, 12.85], [74.86, 12.85], [74.85, 12.85]]],
+    } }, after);
+    assert.equal(collapsed.baselineAreaKm2, null, "A polygon repaired into a line is unavailable, not verified dry");
+    assert.ok(collapsed.scenarioAreaKm2! > 0);
+    assert.equal(collapsed.assets, null);
+    assert.equal(collapsed.newlyInundatedGeometry, null);
     const multi = { ...after, floodGeometry: { type: "MultiPolygon", coordinates: [polygon().coordinates, polygon(74.86, 74.87).coordinates] } };
     const dissolved = await querySpatialComparison(liveDb, before, multi);
     assert.ok(Math.abs(dissolved.scenarioAreaKm2! - spatial.scenarioAreaKm2!) < 0.00001);
+    const overlapping = await querySpatialComparison(liveDb, before, { ...after, floodGeometry: {
+      type: "MultiPolygon", coordinates: [polygon().coordinates, polygon().coordinates],
+    } });
+    assert.ok(Math.abs(overlapping.scenarioAreaKm2! - spatial.baselineAreaKm2!) < 0.00001, "Duplicate polygon fixtures must not double-count area");
 
     // Read-only CTE inventories exercise actual PostGIS intersections with controlled data.
     // These are labelled fixtures and never inserted into the live infrastructure tables.

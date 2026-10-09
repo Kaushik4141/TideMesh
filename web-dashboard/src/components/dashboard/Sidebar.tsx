@@ -17,9 +17,9 @@ import {
   FileText,
   PhoneCall,
   Activity,
-  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { ComparisonViewContext } from '@/lib/comparison/mapData';
 
 import type {
   EventEnvironmentResponse,
@@ -35,15 +35,16 @@ interface SidebarProps {
   scenarioParams?: ScenarioParameters;
   onOpenScenario?: () => void;
   comparisonActive?: boolean;
+  comparisonContext?: ComparisonViewContext;
 }
 
 export function Sidebar({
-  environmentalData,
   activeMode = 'LIVE_FORECAST',
   currentConditions,
   scenarioParams,
   onOpenScenario,
   comparisonActive = false,
+  comparisonContext,
 }: SidebarProps = {}) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -89,7 +90,7 @@ export function Sidebar({
                   />
                   <span className="truncate">{item.name}</span>
                 </div>
-                {item.badge && (
+                {item.badge && !comparisonActive && (
                   <span
                     className={cn(
                       'px-1.5 py-0.2 rounded text-[10px] font-bold border shrink-0',
@@ -162,7 +163,7 @@ export function Sidebar({
                       <Icon className="w-4 h-4 shrink-0 text-slate-400 group-hover:text-slate-700" />
                       <span className="truncate">{item.name}</span>
                     </div>
-                    {item.badge && (
+                    {item.badge && !comparisonActive && (
                       <span
                         className={cn(
                           'px-1.5 py-0.2 rounded text-[10px] font-bold border shrink-0',
@@ -182,6 +183,19 @@ export function Sidebar({
 
       {/* Footer Area: Data Engine & Hotline */}
       <div className="p-2 border-t border-slate-200 bg-slate-50/70 space-y-2">
+        {comparisonActive && <section aria-label="Selected comparison context" className="bg-white border rounded p-2 text-[11px] space-y-2 select-text max-h-[45vh] overflow-y-auto break-all">
+          <h2 className="font-bold">{comparisonContext?.label ?? 'No completed comparison selected'}</h2>
+          {comparisonContext ? <>
+            <p>Comparison: {comparisonContext.comparisonId}<br />Created: {comparisonContext.createdAt}</p>
+            {comparisonContext.runs.map(run => <div key={run.label}>
+              <h3 className="font-bold capitalize">{run.label} · {run.runId}</h3>
+              <p>Generated: {run.generatedAt ?? 'Unavailable'}</p>
+              <p>Simulation window: {run.simulationStart} – {run.simulationEnd}</p>
+              <p>Forcing: {run.forcing}</p>
+            </div>)}
+            <p>Hypothetical, unvalidated peak summary. No live/replay cursor applies. Coastal water-level control sets the +3h profile sample, not additive surge.</p>
+          </> : <p>Choose a baseline and complete a comparison to show run-linked values.</p>}
+        </section>}
         {/* Compact DATA ENGINE (Collapsed by default with ONLINE status dot) */}
         {!comparisonActive && <div className="rounded-md border border-slate-200 bg-white p-2 text-xs shadow-2xs">
           <button
@@ -295,14 +309,14 @@ export function Sidebar({
         </div>}
 
         {/* EOC Hotline button styled as tel:1077 link */}
-        <a
+        {!comparisonActive && <a
           href="tel:1077"
           className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition-colors focus-visible:ring-2 focus-visible:ring-slate-900"
           title="Call District Disaster Management Control Room (1077)"
         >
           <PhoneCall className="w-3.5 h-3.5 text-sky-400" />
           <span>EOC Hotline: 1077</span>
-        </a>
+        </a>}
       </div>
     </aside>
   );

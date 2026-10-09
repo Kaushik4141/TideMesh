@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { X } from 'lucide-react';
 import type { useScenarioComparison } from '@/hooks/useScenarioComparison';
@@ -14,6 +14,30 @@ interface ScenarioModalProps {
 
 export function ScenarioModal({ open, onClose, workflow, onCompleted }: ScenarioModalProps) {
   const [edited, setEdited] = useState<{ runId: string | null; rainfallRateMmHr: number; surgeLevelM: number } | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
+  useEffect(() => {
+    if (!open) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    dialog?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Keep dashboard timeline/action shortcuts out of the modal.
+      event.stopPropagation();
+      if (event.key === 'Escape') {
+        event.preventDefault(); closeRef.current();
+      } else if (event.key === 'Tab' && dialog) {
+        const controls = [...dialog.querySelectorAll<HTMLElement>('button, a[href], input, select, summary, [tabindex="0"]')].filter(element => !element.matches(':disabled'));
+        const first = controls[0], last = controls[controls.length - 1];
+        if (!first) { event.preventDefault(); dialog.focus(); }
+        else if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) { event.preventDefault(); first.focus(); }
+      }
+    };
+    dialog?.addEventListener('keydown', handleKeyDown);
+    return () => { dialog?.removeEventListener('keydown', handleKeyDown); if (previousFocus?.isConnected) previousFocus.focus(); };
+  }, [open]);
   const snapshotId = workflow?.snapshot?.runId ?? null;
   const rainfallRateMmHr = edited?.runId === snapshotId ? edited.rainfallRateMmHr : workflow?.snapshot?.inputs?.rainfallRateMmHr ?? 75;
   const surgeLevelM = edited?.runId === snapshotId ? edited.surgeLevelM : workflow?.snapshot?.inputs?.surgeLevelM ?? 1.5;
@@ -28,7 +52,7 @@ export function ScenarioModal({ open, onClose, workflow, onCompleted }: Scenario
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="scenario-modal-title">
-      <div className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-xl w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div ref={dialogRef} tabIndex={-1} className="bg-white rounded-xl border border-slate-200 shadow-2xl max-w-xl w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto focus-visible:ring-2 focus-visible:ring-blue-700">
         <div className="flex justify-between items-center">
           <h2 id="scenario-modal-title" className="font-bold">Scenario impact comparison</h2>
           <button onClick={onClose} aria-label="Close scenario modal"><X className="w-5 h-5" /></button>
@@ -49,6 +73,8 @@ export function ScenarioModal({ open, onClose, workflow, onCompleted }: Scenario
               <button className="border rounded px-2 disabled:opacity-50" disabled={workflow.busy || workflow.catalogLoading} onClick={() => void workflow.refreshCatalog()}>Refresh</button>
             </div>
             {workflow.snapshotLoading && <p role="status">Inspecting exact run snapshot…</p>}
+            {workflow.catalogLoading && <p role="status">Loading completed-run catalog…</p>}
+            {!workflow.catalogLoading && !workflow.catalogError && workflow.catalog.length === 0 && <p>No completed baseline runs are available. Create a baseline using the controls below.</p>}
             {workflow.snapshot && <div className="bg-slate-50 rounded p-2 text-xs space-y-1 break-all">
               <p>Run ID: {workflow.snapshot.runId}</p>
               <p>Generated: {workflow.snapshot.generatedAt ?? 'Unavailable (legacy provenance)'}</p>
@@ -69,7 +95,7 @@ export function ScenarioModal({ open, onClose, workflow, onCompleted }: Scenario
           <p className="text-xs text-slate-600">Coastal water-level control sets the +3h sample in the existing runner’s profile; it is not additive surge or necessarily the peak. Comparison duration is inherited from the baseline. No sea-wall breach model or return-period claim is available.</p>
           {invalid && <p role="alert" className="text-xs text-red-700">Enter rainfall from 0–300 mm/hr and coastal water level from 0–5 m.</p>}
           {[workflow.catalogError, workflow.snapshotError, workflow.baselineError, workflow.error].filter(Boolean).map((error, index) => <p key={index} role="alert" className="text-sm text-red-700 bg-red-50 rounded p-2">{error}</p>)}
-          {workflow.busy && <p role="status" aria-live="polite" className="text-sm">{workflow.baselineRunning ? 'Creating baseline' : 'Running comparison'}… {workflow.elapsedSeconds}s elapsed. Waiting for real solver results.</p>}
+          {workflow.busy && <p role="status" aria-live="polite" className="text-sm">{workflow.baselineRunning ? 'Creating baseline' : 'Running comparison'}… {workflow.elapsedSeconds}s elapsed. Waiting for real solver results. Closing this dialog does not cancel the run.</p>}
           <div className="flex justify-between gap-2">
             <button className="text-xs border rounded px-3 py-2 disabled:opacity-50" disabled={workflow.busy || workflow.catalogLoading || workflow.snapshotLoading || invalid} onClick={() => void workflow.createBaseline(scenario)}>Create baseline (6h, current controls)</button>
             <button className="text-xs bg-amber-700 text-white rounded px-3 py-2 disabled:bg-slate-400" disabled={workflow.busy || workflow.snapshotLoading || workflow.catalogLoading || !!workflow.baselineProblem || invalid} onClick={async () => { if (await workflow.runComparison(scenario)) { onCompleted?.(); onClose(); } }}>Compare impacts</button>

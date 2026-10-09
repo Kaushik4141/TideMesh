@@ -1,5 +1,55 @@
 # Scenario Impact Comparison — implementation and demo report
 
+## Three-agent follow-up
+
+The follow-up used exactly three parallel agents on isolated worktrees containing
+the existing implementation. Working features were retained, not rebuilt:
+
+- `demo/sfincs-scenario-reliability`: raw solver/log validation, local manifest v2
+  provenance and safer latest publication. See `SFINCS_SCENARIO_RELIABILITY.md`.
+- `demo/impact-delta`: geometry/threshold compatibility and metric-source fixes.
+  See `IMPACT_DELTA.md`.
+- `demo/scenario-comparison-ui`: real supplied-priority rendering, consistent
+  selected-run context, empty/map-error states and accessible controls. See
+  `SCENARIO_COMPARISON_UI.md`.
+
+Their increments were integrated into `feature/scenario-impact-comparison` without
+making new commits. During execution this branch advanced to `17dd08d`; that
+concurrent commit and its legacy-map styling/removal of arbitrary fallback polygons
+were preserved. Shared contracts, Hono routes and database schema were not changed
+by this follow-up. Agent worktrees remain available under `/tmp/omnirush/` with
+their uncommitted work; they must not be removed before preserving that work.
+
+Combined verification of the follow-up: **71 Python tests**, **10 frontend tests**,
+**6 API suites**, API/dashboard builds, frontend typecheck, focused UI lint and
+read-only live PostGIS checks passed. Full legacy lint and browser/WebGL/focus
+interaction remain separate limitations. Supplied-priority UI tests are labelled
+mocks; the actual backend still returns null priorities, not recalculated ranks.
+
+### Integrated follow-up receipt and current preview
+
+The latest integrated preview is **http://localhost:3230/?compare=1**, using
+FastAPI 8130 and Hono 3130 so existing checkout services were not replaced.
+Dashboard, worker, exact run snapshot and catalog proxy were checked over HTTP.
+
+- Fresh v2 baseline `sim-a9bb6c65-895d-4b74-ba19-c82d01c6bda8`:
+  65 mm/hr, 1.5m +3h water-level control, 6h; HTTP 201, about 7.67s.
+- Fresh v2 scenario `sim-736c1ada-3736-47c5-ab74-7abec11eebaa`:
+  110 mm/hr, 2.8m control, 6h; comparison HTTP 201, about 10.96s.
+- Comparison `comparison-6b911eb4-3ac2-4136-9b0d-d23ccc75ad8d`:
+  area 14.432101 → 17.743983 km², depth 2.287975 → 2.805469m,
+  genuine MultiPolygon difference and database persistence.
+- A database read-back confirmed scenario prediction identity and SRID4326.
+  An unchanged forcing request returned 422, and the baseline snapshot remained
+  identical before/after. Source observation/issue times remain null; local v2
+  manifests contain execution-stage and file integrity records.
+
+To reproduce this preview use the original setup commands below but substitute
+FastAPI port **8130**, Hono `PORT=3130 ML_API_URL=http://127.0.0.1:8130`, and
+Next.js `INTERNAL_API_URL=http://127.0.0.1:3130` on port **3230**. The current
+catalog baseline is named **Integrated three-agent baseline**. The ordinary
+8000/3000 conventions still work when those ports belong to the intended checkout.
+
 ## Status
 
 Branch: `feature/scenario-impact-comparison`. No commit or deployment was made.

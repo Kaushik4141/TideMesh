@@ -1,4 +1,5 @@
 import hashlib
+import fcntl
 import json
 import logging
 import math
@@ -6,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Optional
@@ -19,6 +21,9 @@ from app.schemas.sfincs import SFINCSOutputsCatalog
 from app.adapters.sfincs.parser import SFINCSOutputParser
 from app.adapters.sfincs.adapter import SFINCSAdapter
 from app.adapters.sfincs.integration import OUTPUTS, read_config, write_forcing, normalize_extraction
+from app.adapters.sfincs.reliability import (STATIC_FILES, FORCING_FILES, EVIDENCE_FILES,
+                                            file_record, validate_static_grid,
+                                            validate_solver_output, validate_manifest_forcing)
 
 logger = logging.getLogger(__name__)
 EVENT_ID = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
@@ -79,6 +84,11 @@ class SimulationService:
             raise ValueError("Invalid run manifest")
         if manifest.get("status") != "completed":
             raise FileNotFoundError("Simulation has not completed successfully")
+        version = manifest.get("schemaVersion", 1)
+        if type(version) is not int or version not in (1, 2):
+            raise ValueError("Unsupported run manifest version")
+        if not all(isinstance(manifest.get(key), dict) for key in ("forcingHashes", "artifactHashes")):
+            raise ValueError("Invalid run integrity records")
         return manifest
 
     def _completed(self, directory: Path):
@@ -102,6 +112,29 @@ class SimulationService:
                 if (not path.is_file() or path.is_symlink()
                         or hashlib.sha256(path.read_bytes()).hexdigest() != manifest.get("forcingHashes", {}).get(name)):
                     raise ValueError("Completed simulation forcing was modified")
+            validate_manifest_forcing(directory.parent, manifest)
+            if manifest.get("schemaVersion", 1) >= 2:
+                records = manifest.get("fileRecords")
+                if not isinstance(records, dict):
+                    raise ValueError("Run evidence records are missing")
+                required = (*EVIDENCE_FILES, *(f"outputs/{name}" for name in OUTPUTS))
+                for name in required:
+                    if file_record(directory.parent / name) != records.get(name):
+                        raise ValueError("Completed simulation evidence was modified")
+                if manifest.get("solverVersion") != solver_revision(directory.parent):
+                    raise ValueError("Solver revision does not match execution evidence")
+                if manifest.get("generatedAt") != json.loads(metadata_path.read_text()).get("generated_at"):
+                    raise ValueError("Output generation time does not match the manifest")
+                provenance = manifest.get("sourceProvenance")
+                if not isinstance(provenance, dict) or not isinstance(provenance.get("template"), dict):
+                    raise ValueError("Template source provenance is missing")
+                source_records = provenance["template"].get("sourceFileRecords")
+                if not isinstance(source_records, dict):
+                    raise ValueError("Template file provenance is missing")
+                for name in ("sfincs.inp", *STATIC_FILES):
+                    copied = "template.inp" if name == "sfincs.inp" else name
+                    if source_records.get(name) != records[copied]:
+                        raise ValueError("Template source provenance does not match copied inputs")
         for name in OUTPUTS:
             path = directory / name
             # Older zero-inundation extraction legitimately omits the vector file.
@@ -206,7 +239,8 @@ class SimulationService:
                  "P1 onset/peak-time rasters are estimates, not extracted solver time series.",
                  "Demo-template terrain provenance and calibration are not independently validated; its generator constructs synthetic terrain.",
                  "Flood extent is the wet-cell threshold footprint; permanent waterways are not separated from land inundation."]
-        revision = solver_revision(directory.parent) if manifest else None
+        # Old manifests did not bind the nearby log to their completed artifacts.
+        revision = solver_revision(directory.parent) if manifest and manifest.get("schemaVersion", 1) >= 2 else None
         if revision:
             notes[0] = f"Solver software revision read from this run's sfincs.log: {revision}. This does not establish scientific calibration."
         if manifest:
@@ -215,6 +249,8 @@ class SimulationService:
             levels = manifest["waterLevelSeries"]
             generated_at = manifest["generatedAt"]
             notes.extend(manifest.get("qualityNotes", []))
+            if manifest.get("schemaVersion", 1) < 2:
+                notes.append("Older run manifest has no static-grid, raw-output, or solver-log integrity records; file and execution-stage timestamps were not recorded.")
         else:
             inputs = rainfall = levels = generated_at = None
             notes.append("Legacy artifacts have no verified execution/forcing association; inputs and generatedAt are unknown.")
@@ -234,7 +270,9 @@ class SimulationService:
                             if (directory / name).is_file()] + (
                                 [f"{metadata.simulation_id}/inputs/{name}" for name in
                                  ("sfincs.inp", "sfincs.precip", "sfincs.bzs", "sfincs.bnd")]
-                                + [f"{metadata.simulation_id}/run_manifest.json"] if manifest else []),
+                                 + [f"{metadata.simulation_id}/run_manifest.json"] if manifest else []) + (
+                                     [f"{metadata.simulation_id}/evidence/{name}" for name in EVIDENCE_FILES
+                                      if name not in FORCING_FILES] if manifest and manifest.get("schemaVersion", 1) >= 2 else []),
             "floodGeometry": self.parser.extract_primary_geometry(extent) if extent["features"] else {
                 "type": "Polygon", "coordinates": []
             },  # Verified dry output is an empty polygon, not missing geometry.
@@ -250,16 +288,26 @@ class SimulationService:
         latest = root / "latest"
         try:
             shutil.copytree(output_dir, stage)
-            if latest.exists():
-                latest.rename(backup)
-            try:
-                stage.rename(latest)
-            except OSError:
+            # Docker deployments are POSIX. Serialize across threads AND workers.
+            locks = root / "runs"
+            locks.mkdir(exist_ok=True)
+            with (locks / ".latest.lock").open("a") as lock:
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                generated = json.loads((output_dir / "metadata.json").read_text()).get("generated_at")
+                if generated and (latest / "metadata.json").is_file():
+                    previous = json.loads((latest / "metadata.json").read_text()).get("generated_at")
+                    if previous and datetime.fromisoformat(previous) > datetime.fromisoformat(generated):
+                        return  # A delayed publisher must not replace a newer success.
+                if latest.exists():
+                    latest.rename(backup)
+                try:
+                    stage.rename(latest)
+                except OSError:
+                    if backup.exists():
+                        backup.rename(latest)
+                    raise
                 if backup.exists():
-                    backup.rename(latest)
-                raise
-            if backup.exists():
-                shutil.rmtree(backup)
+                    shutil.rmtree(backup)
         finally:
             if stage.exists():
                 shutil.rmtree(stage)
@@ -305,18 +353,31 @@ class SimulationService:
         run_dir.mkdir(exist_ok=False)
         manifest_path = run_dir / "run_manifest.json"
         manifest = {
-            "schemaVersion": 1, "runId": sim_id, "status": "running",
+            "schemaVersion": 2, "runId": sim_id, "status": "running",
             "requestedAt": now.isoformat(), "generatedAt": None,
             "simulationStart": start.isoformat(), "simulationEnd": end.isoformat(),
             "inputs": {"rainfallRateMmHr": rate, "surgeLevelM": surge, "durationHours": duration_hours}
                       if rainfall_series is None else None,
             "rainfallSeries": rates, "waterLevelSeries": levels,
             "artifacts": [f"{sim_id}/{name}" for name in OUTPUTS], "artifactHashes": {},
+            "sourceProvenance": {
+                "rainfall": {"kind": "manual_prescribed_profile", "observedAt": None, "issuedAt": None},
+                "waterLevel": {"kind": "manual_prescribed_profile", "observedAt": None, "issuedAt": None},
+                "template": {"kind": "synthetic_unvalidated", "observedAt": None, "sourceFileRecords": {}},
+            },
+            "timestamps": {"inputsPreparedAt": None, "solverStartedAt": None, "solverFinishedAt": None,
+                           "extractionStartedAt": None, "extractionFinishedAt": None, "completedAt": None},
+            "fileRecords": {},
             "qualityNotes": ["Forcing series are hourly samples at seconds since simulationStart.",
                              "The original rainfall and water-level forcing profiles are preserved; durations beyond six hours extend the last sample.",
                              "surgeLevelM specifies the water-level sample at +3h; it is not additive surge or a guaranteed actual peak. Short-duration runs may not reach this sample.",
                              "P3 corrected P1 artifact origin and row orientation to the unchanged template grid."],
         }
+        manifest["qualityNotes"].extend([
+            "Manual forcing has unknown observation/issue timestamps. Simulation-window times are prescribed valid times, not observation times.",
+            "Local manifests preserve execution-stage times and file modification times; filesystem timestamps are not dataset observation or acquisition times.",
+            "The extractor's MSL datum and five-minute product interval are template labels, not independently verified datum or solver computational timestep.",
+        ])
         if duration_hours < 3:
             manifest["qualityNotes"].append(
                 "This run ends before +3h, so surgeLevelM is not present in the applied water-level forcing.")
@@ -332,55 +393,96 @@ class SimulationService:
                     "Known template geographic mismatch: EPSG:32643 origin (698000, 1422000) is near 76.82E, unlike Mangaluru near 74.85E. The template is unchanged; calibration and infrastructure coverage are not verified.")
             if int(config["nmax"]) != 100 or int(config["mmax"]) != 100:
                 raise RuntimeError("P1 extraction supports only the existing 100x100 template")
-            for name in ("sfincs.dep", "sfincs.msk", "sfincs.ind"):
-                shutil.copy2(template / name, run_dir / name)
+            for name in ("sfincs.inp", *STATIC_FILES):
+                source = file_record(template / name)
+                manifest["sourceProvenance"]["template"]["sourceFileRecords"][name] = source
+                destination = run_dir / ("template.inp" if name == "sfincs.inp" else name)
+                shutil.copy2(template / name, destination)
+                if file_record(destination) != source:
+                    raise RuntimeError("Template input changed while being copied")
+            validate_static_grid(run_dir, config)
+            if config != read_config(run_dir / "template.inp"):
+                raise RuntimeError("Template configuration changed during preparation")
             config.update(tref=start.strftime("%Y%m%d %H%M%S"),
                           tstart=start.strftime("%Y%m%d %H%M%S"),
                           tstop=end.strftime("%Y%m%d %H%M%S"))
             write_forcing(run_dir, config, rates, levels)
             manifest["forcingHashes"] = {name: hashlib.sha256((run_dir / name).read_bytes()).hexdigest()
-                                         for name in ("sfincs.inp", "sfincs.precip", "sfincs.bzs", "sfincs.bnd")}
+                                          for name in FORCING_FILES}
+            script = settings.repo_root / "ml" / "sfincs" / "mangaluru" / "scripts" / "extract_outputs.py"
+            extractor_source = file_record(script)
+            manifest["sourceProvenance"]["extractor"] = {"sourceFileRecord": extractor_source}
+            shutil.copy2(script, run_dir / "extract_outputs.py")
+            if file_record(run_dir / "extract_outputs.py") != extractor_source:
+                raise RuntimeError("Extractor changed while being copied")
+            manifest["fileRecords"] = {name: file_record(run_dir / name)
+                                       for name in (*STATIC_FILES, *FORCING_FILES, "template.inp", "extract_outputs.py")}
+            manifest["timestamps"]["inputsPreparedAt"] = datetime.now(timezone.utc).isoformat()
+            manifest["timestamps"]["solverStartedAt"] = datetime.now(timezone.utc).isoformat()
+            solver_started_ns = time.time_ns()
             write_json(manifest_path, manifest)
-            with (run_dir / "docker_stdout.log").open("w") as stdout, (run_dir / "docker_stderr.log").open("w") as stderr:
-                result = subprocess.run(["docker", "run", "--rm", "-v", f"{run_dir.resolve()}:/data",
-                                         "-w", "/data", "deltares/sfincs-cpu"],
-                                        stdout=stdout, stderr=stderr, timeout=180)
+            try:
+                with (run_dir / "docker_stdout.log").open("w") as stdout, (run_dir / "docker_stderr.log").open("w") as stderr:
+                    result = subprocess.run(["docker", "run", "--rm", "-v", f"{run_dir.resolve()}:/data",
+                                             "-w", "/data", "deltares/sfincs-cpu"],
+                                            stdout=stdout, stderr=stderr, timeout=180)
+                manifest["solverExitCode"] = result.returncode
+            finally:
+                # This is when the local Docker client ended, not a claim about a timed-out container.
+                manifest["timestamps"]["solverFinishedAt"] = datetime.now(timezone.utc).isoformat()
             if result.returncode != 0:
                 raise RuntimeError("SFINCS solver execution failed")
             # Nothing from the template's previous runs is copied; missing raw output cannot be reused.
-            if not (run_dir / "zsmax.dat").is_file() or (run_dir / "zsmax.dat").stat().st_size == 0:
-                raise RuntimeError("SFINCS solver did not produce peak water levels")
+            for name, expected in manifest["fileRecords"].items():
+                if file_record(run_dir / name) != expected:
+                    raise RuntimeError("Solver changed its prepared inputs")
+            manifest["solverValidation"] = validate_solver_output(run_dir, config, solver_started_ns)
+            validate_manifest_forcing(run_dir, manifest)
+            manifest["fileRecords"].update({name: file_record(run_dir / name)
+                                            for name in ("zsmax.dat", "sfincs.log", "docker_stdout.log", "docker_stderr.log")})
             output_dir = run_dir / "outputs"
             output_dir.mkdir(exist_ok=False)
-            script = settings.repo_root / "ml" / "sfincs" / "mangaluru" / "scripts" / "extract_outputs.py"
-            with (run_dir / "extraction_stdout.log").open("w") as stdout, (run_dir / "extraction_stderr.log").open("w") as stderr:
-                result = subprocess.run([sys.executable, str(script), "--sim-dir", str(run_dir),
-                                         "--output-dir", str(output_dir), "--threshold", "0.10"],
-                                        stdout=stdout, stderr=stderr, timeout=60)
+            manifest["timestamps"]["extractionStartedAt"] = datetime.now(timezone.utc).isoformat()
+            try:
+                with (run_dir / "extraction_stdout.log").open("w") as stdout, (run_dir / "extraction_stderr.log").open("w") as stderr:
+                    result = subprocess.run([sys.executable, str(run_dir / "extract_outputs.py"), "--sim-dir", str(run_dir),
+                                             "--output-dir", str(output_dir), "--threshold", "0.10"],
+                                            stdout=stdout, stderr=stderr, timeout=60)
+                manifest["extractionExitCode"] = result.returncode
+            finally:
+                manifest["timestamps"]["extractionFinishedAt"] = datetime.now(timezone.utc).isoformat()
             if result.returncode != 0:
                 raise RuntimeError("SFINCS output extraction failed")
             metadata = normalize_extraction(output_dir, config)
+            generated_at = datetime.now(timezone.utc).isoformat()
             metadata.update(simulation_id=sim_id, event_name=scenario_name or f"Hydrodynamic Run {sim_id}",
                             model_version=solver_revision(run_dir) or metadata.get("model_version"),
-                            start_time=start.isoformat(), end_time=end.isoformat(),
+                            start_time=start.isoformat(), end_time=end.isoformat(), generated_at=generated_at,
                             forcing={"rainfall_source": f"Prescribed rain profile (max {max(rates):.8f} mm/hr)",
                                      "tide_source": f"Prescribed water level profile (max {max(levels):.8f} m)"})
             write_json(output_dir / "metadata.json", metadata)
             prediction = self.adapter.normalize(self.parser.parse_metadata(output_dir), self._extent(output_dir), zone_id)
-            manifest.update(status="completed", generatedAt=datetime.now(timezone.utc).isoformat(),
+            for name, expected in manifest["fileRecords"].items():
+                if file_record(run_dir / name) != expected:
+                    raise RuntimeError("Extraction changed its source inputs")
+            manifest.update(status="completed", generatedAt=generated_at,
                              artifacts=[f"{sim_id}/{name}" for name in OUTPUTS],
                              solverVersion=solver_revision(run_dir),
                              artifactHashes={name: hashlib.sha256((output_dir / name).read_bytes()).hexdigest()
-                                            for name in OUTPUTS})
+                                             for name in OUTPUTS})
+            manifest["fileRecords"] = {name: file_record(run_dir / name)
+                                       for name in (*EVIDENCE_FILES, *(f"outputs/{name}" for name in OUTPUTS))}
+            manifest["timestamps"]["completedAt"] = datetime.now(timezone.utc).isoformat()
             write_json(manifest_path, manifest)
         except Exception:
-            manifest.update(status="failed", generatedAt=None, failureReason="Simulation execution or output validation failed")
+            manifest.update(status="failed", generatedAt=None, failedAt=datetime.now(timezone.utc).isoformat(),
+                            failureReason="Simulation execution or output validation failed")
             write_json(manifest_path, manifest)
             logger.exception("Simulation %s failed", sim_id)
             raise RuntimeError("Simulation execution or output validation failed") from None
         try:
             self._publish_latest(output_dir)
-        except OSError:
+        except (OSError, ValueError):
             logger.exception("Latest mirror update failed for completed run %s", sim_id)
         return prediction
 

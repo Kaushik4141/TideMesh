@@ -35,9 +35,10 @@ export default function OverviewPage() {
       onOpenShortcuts={() => dashboard.setShortcutsModalOpen(true)}
       activeMode={dashboard.activeMode} onSwitchMode={dashboard.switchMode}
       onOpenScenario={() => setScenarioModalOpen(true)}
-      eventName={comparisonActive ? 'Hypothetical scenario impact comparison' : dashboard.eventData?.name}
+      eventName={comparisonActive ? mapData ? `${mapData.context.label} · ${mapData.context.runs.map(run => run.runId).join(' → ')}` : 'Choose a completed comparison' : dashboard.eventData?.name}
       currentTime={dashboard.currentTime} clockTimes={dashboard.clockTimes}
       peakSummary={comparisonActive}
+      comparisonContext={comparisonActive ? mapData?.context : undefined}
       isSimulationRunning={comparison.busy} onRunSimulation={() => setScenarioModalOpen(true)}
       onRefresh={comparisonActive ? () => setScenarioModalOpen(true) : () => void dashboard.refreshData()}
       isLoading={dashboard.isLoading}
@@ -45,6 +46,7 @@ export default function OverviewPage() {
     <div className="flex flex-1 pt-14 overflow-hidden">
       <Sidebar environmentalData={dashboard.environmentalData} activeMode={dashboard.activeMode}
         currentConditions={dashboard.currentConditions} comparisonActive={comparisonActive}
+        comparisonContext={comparisonActive ? mapData?.context : undefined}
         onOpenScenario={() => setScenarioModalOpen(true)} />
       <main className="flex-1 ml-[220px] lg:ml-[232px] p-2.5 lg:p-3 overflow-hidden flex flex-col gap-2">
         <div className="bg-amber-50 border border-amber-300 px-3 py-2 rounded-lg text-xs text-amber-950 shrink-0 flex justify-between gap-3">
@@ -52,9 +54,11 @@ export default function OverviewPage() {
           <button className="font-bold underline shrink-0" onClick={() => setScenarioModalOpen(true)}>Compare runs</button>
         </div>
         {comparison.error && <p role="alert" className="text-xs text-red-800 bg-red-50 border border-red-200 rounded p-2">{comparison.error}{comparison.result ? ' The last successful comparison is still shown.' : ''}</p>}
-        {comparison.busy && <p role="status" className="text-xs bg-blue-50 p-2">{comparison.baselineRunning ? 'Creating baseline' : 'Running comparison'}… {comparison.elapsedSeconds}s elapsed.</p>}
+        {comparison.baselineError && <p role="alert" className="text-xs text-red-800 bg-red-50 border border-red-200 rounded p-2">Baseline creation: {comparison.baselineError}</p>}
+        {comparison.busy && <p role="status" className="text-xs bg-blue-50 p-2">{comparison.baselineRunning ? 'Creating baseline' : 'Running comparison'}… {comparison.elapsedSeconds}s elapsed.{comparisonActive && comparison.result ? ` The last successful result (${comparison.result.comparisonId}) remains displayed until a new comparison completes.` : ''}</p>}
         {comparisonActive ? comparison.result ? <div className="flex-1 min-h-0 flex flex-col xl:flex-row gap-2.5 overflow-auto">
           <FloodMap zones={[]} facilities={[]} selectedZoneId="" onSelectZone={() => {}}
+            key={`${comparison.result.comparisonId}:${mapMode}`}
             comparisonData={mapData} comparisonMode={mapMode}
             className="flex-1 min-h-[330px] xl:h-full" />
           <ComparisonResults comparison={comparison.result} mode={mapMode} onModeChange={setMapMode} />

@@ -3,8 +3,11 @@
 Successful runner tests execute the real P1 extraction script against binary fixtures.
 """
 import json
+import os
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import UUID
@@ -17,6 +20,7 @@ from fastapi.testclient import TestClient
 from app.config import settings
 from app.main import app
 from app.adapters.sfincs.integration import OUTPUTS, read_config
+from app.adapters.sfincs.reliability import EVIDENCE_FILES, file_record
 from app.services.simulation_service import SimulationService, RunConflictError, solver_revision
 
 REPO = settings.repo_root
@@ -90,7 +94,31 @@ def runner(isolated, monkeypatch):
             depth = np.zeros((100, 100), dtype="<f4")
             depth[0, 0] = state["depth"]
             depth[99, 99] = state["depth"]
+            if state["mode"] == "raw_nonfinite":
+                depth[5, 5] = -np.inf  # P1 previously clips this to a finite dry cell.
             depth.ravel(order="F").tofile(run_dir / "zsmax.dat")
+            log = ("Build-Revision: $Rev: v2.5.0-beta Hautacam\n"
+                   "Info : reading prcp file sfincs.precip\n"
+                   "Info : reading water level boundaries\n"
+                   "Precipitation : yes\n"
+                   "100% complete\nSimulation finished\nClosing off SFINCS\n")
+            if state["mode"] == "incomplete_log":
+                log = log.replace("Simulation finished", "Simulation stopped")
+            if state["mode"] == "no_forcing_read":
+                log = log.replace("reading water level boundaries", "no water level boundaries")
+            if state["mode"] == "error_log":
+                log += "ERROR: solver aborted\n"
+            (run_dir / "sfincs.log").write_text(log)
+            if state["mode"] == "stale_raw":
+                os.utime(run_dir / "zsmax.dat", (1, 1))
+            if state["mode"] == "oversized_raw":
+                with (run_dir / "zsmax.dat").open("ab") as stream:
+                    stream.write(b"ignored by P1")
+            if state["mode"] == "corrupt_record":
+                np.r_[np.uint32(0), depth.ravel(order="F").view("<u4"), np.uint32(0)].astype("<u4").tofile(run_dir / "zsmax.dat")
+            if state["mode"] == "mutated_static":
+                with (run_dir / "sfincs.dep").open("ab") as stream:
+                    stream.write(b"changed by solver")
             return SimpleNamespace(returncode=0)
         if state["mode"] == "missing_extraction":
             # Mirrors P1's successful process exit despite missing deliverables.
@@ -100,6 +128,9 @@ def runner(isolated, monkeypatch):
             Path(command[command.index("--output-dir") + 1], "flood_extent.geojson").unlink()
         if state["mode"] == "missing_raster":
             Path(command[command.index("--output-dir") + 1], "peak_time.tif").unlink()
+        if state["mode"] == "mutated_raw_extraction":
+            with Path(command[command.index("--sim-dir") + 1], "zsmax.dat").open("ab") as stream:
+                stream.write(b"changed by extractor")
         return result
 
     monkeypatch.setattr(subprocess, "run", mock_solver)
@@ -225,7 +256,9 @@ def datetime_string(sfincs_time):
     return datetime.strptime(sfincs_time, "%Y%m%d %H%M%S").replace(tzinfo=timezone.utc).isoformat()
 
 
-@pytest.mark.parametrize("mode", ["failure", "missing_raw", "missing_extraction", "missing_raster", "missing_vector"])
+@pytest.mark.parametrize("mode", ["failure", "missing_raw", "missing_extraction", "missing_raster", "missing_vector",
+                                   "raw_nonfinite", "stale_raw", "oversized_raw", "corrupt_record", "incomplete_log",
+                                   "no_forcing_read", "error_log", "mutated_static", "mutated_raw_extraction"])
 def test_failed_run_preserves_success_and_rejects_stale_outputs(runner, mode):
     service, state = runner
     previous = service.run_simulation()
@@ -237,7 +270,7 @@ def test_failed_run_preserves_success_and_rejects_stale_outputs(runner, mode):
     assert {path.name: path.read_bytes() for path in latest.iterdir()} == before
     runs = settings.repo_root / "simulations" / "runs"
     failed = [json.loads((path / "run_manifest.json").read_text()) for path in runs.iterdir()
-              if path.name != previous.eventId]
+              if path.is_dir() and path.name != previous.eventId]
     assert len(failed) == 1 and failed[0]["status"] == "failed"
     assert failed[0]["generatedAt"] is None
     with pytest.raises(FileNotFoundError):
@@ -297,3 +330,110 @@ def test_routes_sanitize_errors_and_expose_snapshot(isolated, monkeypatch):
     response = client.post("/api/v1/simulations/run", json={})
     assert response.status_code == 500
     assert response.json() == {"detail": "Simulation processing failed"}
+
+
+def test_run_records_unknown_source_times_and_preserved_file_times(runner):
+    service, _ = runner
+    prediction = service.run_simulation()
+    run_dir = settings.repo_root / "simulations" / "runs" / prediction.eventId
+    manifest = json.loads((run_dir / "run_manifest.json").read_text())
+    assert manifest["schemaVersion"] == 2
+    for key in ("rainfall", "waterLevel"):
+        source = manifest["sourceProvenance"][key]
+        assert source == {"kind": "manual_prescribed_profile", "observedAt": None, "issuedAt": None}
+    source = manifest["sourceProvenance"]["template"]["sourceFileRecords"]["sfincs.dep"]
+    assert source == file_record(run_dir / "sfincs.dep")
+    assert source == file_record(settings.repo_root / "simulations" / "mangaluru_demo" / "sfincs.dep")
+    times = [manifest["requestedAt"], *manifest["timestamps"].values()]
+    assert all(time is not None for time in times)
+    assert [datetime.fromisoformat(time) for time in times] == sorted(datetime.fromisoformat(time) for time in times)
+    assert (datetime.fromisoformat(manifest["timestamps"]["extractionFinishedAt"])
+            <= datetime.fromisoformat(manifest["generatedAt"])
+            <= datetime.fromisoformat(manifest["timestamps"]["completedAt"]))
+    for name in EVIDENCE_FILES:
+        assert manifest["fileRecords"][name] == file_record(run_dir / name)
+    assert manifest["solverValidation"] == {"completed": True, "rainfallRead": True, "rainfallEnabled": True,
+                                            "waterLevelBoundariesRead": True, "rawPeakValueCount": 10000,
+                                            "rawPeakFinite": True}
+    assert service.get_run(prediction.eventId)["generatedAt"] == manifest["generatedAt"]
+
+
+@pytest.mark.parametrize("name", ["sfincs.dep", "sfincs.msk", "sfincs.ind", "sfincs.log", "zsmax.dat",
+                                 "docker_stdout.log", "extract_outputs.py", "outputs/peak_depth.tif"])
+@pytest.mark.parametrize("change", ["content", "timestamp"])
+def test_completed_evidence_content_or_timestamp_tampering_invalidates_run(runner, name, change):
+    service, _ = runner
+    prediction = service.run_simulation()
+    path = settings.repo_root / "simulations" / "runs" / prediction.eventId / name
+    if change == "content":
+        with path.open("ab") as stream:
+            stream.write(b"tampered")
+    else:
+        os.utime(path, ns=(path.stat().st_atime_ns, path.stat().st_mtime_ns - 1000000))
+    with pytest.raises(FileNotFoundError):
+        service.get_run(prediction.eventId)
+    assert prediction.eventId not in {event["eventId"] for event in service.list_simulations()}
+
+
+@pytest.mark.parametrize("field", ["rainfallSeries", "inputs", "schemaVersion", "sourceProvenance"])
+def test_manifest_cannot_report_different_forcing_or_invalid_provenance(runner, field):
+    service, _ = runner
+    prediction = service.run_simulation()
+    path = settings.repo_root / "simulations" / "runs" / prediction.eventId / "run_manifest.json"
+    manifest = json.loads(path.read_text())
+    if field == "rainfallSeries":
+        manifest["rainfallSeries"][2] = 299
+    elif field == "inputs":
+        manifest["inputs"]["rainfallRateMmHr"] = 299
+    elif field == "schemaVersion":
+        manifest["schemaVersion"] = "2"
+    else:
+        manifest["sourceProvenance"] = None
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(FileNotFoundError):
+        service.get_run(prediction.eventId)
+    assert {event["eventId"] for event in service.list_simulations()} == {"historical"}
+
+
+def test_numeric_control_precision_still_matches_written_forcing(runner):
+    service, _ = runner
+    prediction = service.run_simulation(rainfall_rate_mm_hr=65.123456789, surge_level_m=2.123456789)
+    run = service.get_run(prediction.eventId)
+    assert run["inputs"]["surgeLevelM"] == 2.123456789
+    assert run["waterLevelSeries"][3] == 2.12345679
+
+
+@pytest.mark.parametrize("kind", ["nonfinite_bed", "sparse_grid"])
+def test_unsupported_template_rejected_before_docker(runner, kind):
+    service, state = runner
+    template = settings.repo_root / "simulations" / "mangaluru_demo"
+    if kind == "nonfinite_bed":
+        bed = np.zeros(10000, dtype="<f4")
+        bed[0] = -np.inf
+        bed.tofile(template / "sfincs.dep")
+    else:
+        np.r_[9999, np.arange(1, 10000)].astype("<u4").tofile(template / "sfincs.ind")
+    with pytest.raises(RuntimeError):
+        service.run_simulation()
+    assert state["calls"] == []
+
+
+def test_concurrent_latest_publication_keeps_newest_completed_run(isolated):
+    root = settings.repo_root / "simulations"
+    dirs = []
+    for index in range(6):
+        directory = root / f"source-{index}"
+        directory.mkdir(parents=True)
+        (directory / "metadata.json").write_text(json.dumps({"simulation_id": str(index),
+                                                            "generated_at": f"2026-10-09T00:00:0{index}+00:00"}))
+        (directory / "peak_depth.tif").write_bytes(str(index).encode())
+        dirs.append(directory)
+    isolated._publish_latest(dirs[0])
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        list(pool.map(isolated._publish_latest, reversed(dirs[1:])))
+    # A delayed publication of the oldest run must not downgrade the newest one.
+    isolated._publish_latest(dirs[0])
+    latest = root / "latest"
+    assert json.loads((latest / "metadata.json").read_text())["simulation_id"] == "5"
+    assert (latest / "peak_depth.tif").read_bytes() == b"5"
+    assert not list(root.glob(".latest-*")) and not list(root.glob(".previous-*"))

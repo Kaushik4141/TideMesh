@@ -4,7 +4,6 @@ import React from 'react';
 import {
   Shield,
   Droplets,
-  Building2,
   Bell,
   User,
   Keyboard,
@@ -15,6 +14,7 @@ import {
 import { cn } from '@/lib/utils';
 
 import type { DashboardMode } from '@/lib/api/types';
+import type { ComparisonViewContext } from '@/lib/comparison/mapData';
 
 interface TopHeaderProps {
   onOpenShortcuts?: () => void;
@@ -31,6 +31,7 @@ interface TopHeaderProps {
   onRefresh?: () => void;
   isLoading?: boolean;
   peakSummary?: boolean;
+  comparisonContext?: ComparisonViewContext;
 }
 
 export function TopHeader({
@@ -46,6 +47,7 @@ export function TopHeader({
   onRefresh,
   isLoading = false,
   peakSummary = false,
+  comparisonContext,
 }: TopHeaderProps) {
   const displayClock = clockTimes[currentTime];
   const timeChipLabel =
@@ -93,6 +95,7 @@ export function TopHeader({
             {/* Mode 1: LIVE FORECAST */}
             <button
               type="button"
+              aria-pressed={activeMode === 'LIVE_FORECAST'}
               onClick={() => onSwitchMode('LIVE_FORECAST')}
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] lg:text-xs font-bold transition-all cursor-pointer',
@@ -117,7 +120,7 @@ export function TopHeader({
                 />
               </span>
               <span>LIVE DEMO</span>
-              <span
+              {!peakSummary && <span
                 className={cn(
                   'text-[9px] px-1 rounded font-bold uppercase',
                   activeMode === 'LIVE_FORECAST'
@@ -126,12 +129,13 @@ export function TopHeader({
                 )}
               >
                 0–6h
-              </span>
+              </span>}
             </button>
 
             {/* Mode 2: HISTORICAL REPLAY */}
             <button
               type="button"
+              aria-pressed={activeMode === 'HISTORICAL_REPLAY'}
               onClick={() => onSwitchMode('HISTORICAL_REPLAY')}
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] lg:text-xs font-bold transition-all cursor-pointer',
@@ -148,7 +152,7 @@ export function TopHeader({
                 )}
               />
               <span>HISTORICAL REPLAY</span>
-              <span
+              {!peakSummary && <span
                 className={cn(
                   'text-[9px] px-1 rounded font-bold uppercase',
                   activeMode === 'HISTORICAL_REPLAY'
@@ -157,12 +161,13 @@ export function TopHeader({
                 )}
               >
                 2018
-              </span>
+              </span>}
             </button>
 
             {/* Mode 3: WHAT-IF SCENARIO */}
             <button
               type="button"
+              aria-pressed={activeMode === 'SCENARIO'}
               onClick={() => {
                 onSwitchMode('SCENARIO');
                 onOpenScenario?.();
@@ -173,7 +178,7 @@ export function TopHeader({
                   ? 'bg-white text-amber-900 shadow-xs border border-amber-300 font-extrabold'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               )}
-              title="Contingency Mode: Stress-test hypothetical cloudburst & storm surge parameters"
+              title="Hypothetical comparison of completed runs using rainfall and prescribed coastal water-level controls"
             >
               <span
                 className={cn(
@@ -190,7 +195,7 @@ export function TopHeader({
                     : 'bg-slate-200 text-slate-600'
                 )}
               >
-                Stress
+                Peak
               </span>
             </button>
           </div>
@@ -198,11 +203,11 @@ export function TopHeader({
 
         {/* Current Time Indicator Chip */}
         <div
-          className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-200/80 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700 whitespace-nowrap"
-          title={peakSummary ? 'Run peak-summary comparison, not a timeline cursor' : `Illustrative timeline cursor: ${timeChipLabel}`}
+          className={cn('items-center gap-1.5 bg-slate-100/90 border border-slate-200/80 px-2 py-1 rounded-md text-[11px] font-semibold text-slate-700 whitespace-nowrap max-w-[180px] xl:max-w-[270px]', peakSummary ? 'hidden lg:flex' : 'flex')}
+          title={peakSummary ? comparisonContext ? `${comparisonContext.label} · ${comparisonContext.runs.map(run => run.runId).join(' → ')} · Created: ${comparisonContext.createdAt}` : 'No completed comparison selected' : `Illustrative timeline cursor: ${timeChipLabel}`}
         >
-          <span className="font-bold tracking-wide text-slate-900 tabular-nums">
-            {peakSummary ? 'Peak summary' : timeChipLabel}
+          <span className="font-bold tracking-wide text-slate-900 tabular-nums truncate">
+            {peakSummary ? comparisonContext ? `${comparisonContext.label.split(' · ')[0]} · Created: ${comparisonContext.createdAt}` : 'No comparison selected' : timeChipLabel}
           </span>
         </div>
 
@@ -211,6 +216,7 @@ export function TopHeader({
           <button
             onClick={onRunSimulation}
             disabled={isSimulationRunning}
+            aria-label={isSimulationRunning ? 'Solver operation in progress' : 'Open baseline creation and comparison controls'}
             className="flex items-center gap-1 px-2.5 py-1 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white rounded-md text-[11px] font-bold shadow-xs transition-colors cursor-pointer"
             title="Open comparison workflow to create or select a completed baseline"
           >
@@ -232,11 +238,12 @@ export function TopHeader({
         {onRefresh && (
           <button
             onClick={onRefresh}
-            disabled={isLoading}
+            disabled={peakSummary ? isSimulationRunning : isLoading}
+            aria-label={peakSummary ? 'Open comparison controls' : 'Refresh illustrative dataset'}
             className="flex items-center gap-1 px-2 py-1 bg-slate-100 hover:bg-slate-200 disabled:opacity-60 text-slate-700 rounded-md text-[11px] font-semibold border border-slate-200 shadow-2xs transition-colors cursor-pointer"
-            title="Refresh live telemetry and forecast"
+            title={peakSummary ? 'Open comparison controls; the displayed result remains tied to its completed runs' : 'Refresh illustrative dataset'}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${!peakSummary && isLoading ? 'animate-spin' : ''}`} />
           </button>
         )}
       </div>
@@ -244,7 +251,7 @@ export function TopHeader({
       {/* Right: Shortcuts, Notifications, Duty Officer */}
       <div className="flex items-center gap-2.5 lg:gap-3.5 shrink-0">
         {/* Keyboard Shortcuts Trigger Button */}
-        {onOpenShortcuts && (
+        {onOpenShortcuts && !peakSummary && (
           <button
             onClick={onOpenShortcuts}
             className="hidden md:flex items-center gap-1 px-2 py-1 rounded border border-slate-200 hover:bg-slate-100 text-[11px] font-semibold text-slate-600 transition-colors focus-visible:ring-2 focus-visible:ring-slate-900"
@@ -260,7 +267,7 @@ export function TopHeader({
         )}
 
         {/* Notifications */}
-        <div
+        {!peakSummary && <div
           className="relative flex items-center justify-center w-8 h-8 text-slate-600 hover:text-slate-900 cursor-pointer rounded-md hover:bg-slate-100 transition-colors focus-visible:ring-2 focus-visible:ring-slate-900"
           title="3 active unacknowledged flood alerts"
           role="button"
@@ -271,12 +278,12 @@ export function TopHeader({
           <span className="absolute top-1 right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-600 text-white text-[9px] font-bold">
             3
           </span>
-        </div>
+        </div>}
 
         <div className="h-4 w-px bg-slate-200" />
 
         {/* Officer Profile */}
-        <div className="flex items-center gap-2.5">
+        {peakSummary ? <span className="hidden 2xl:inline text-xs text-slate-600">Comparison session</span> : <div className="flex items-center gap-2.5">
           <div className="hidden xl:flex flex-col text-right leading-tight">
             <span className="text-xs font-bold text-slate-900">R. Shetty</span>
             <span className="text-[10px] text-slate-500 font-medium">DK District Disaster Cell</span>
@@ -287,7 +294,7 @@ export function TopHeader({
           >
             <User className="w-4 h-4" />
           </div>
-        </div>
+        </div>}
       </div>
     </header>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import type { Map as MapLibreMap, GeoJSONSource, GeoJSONSourceSpecification, MapLayerMouseEvent } from 'maplibre-gl';
 import {
   Plus,
   Minus,
@@ -21,6 +22,7 @@ import {
   TIMESTEP_EXPANSION_FACTORS,
 } from '@/data/waterways';
 import { INDIA_COASTAL_REGIONS, type CoastalRegion } from '@/data/coastalRegions';
+import type { comparisonMapData, ComparisonMapMode } from '@/lib/comparison/mapData';
 
 interface FloodMapProps {
   zones: ZoneData[];
@@ -30,6 +32,8 @@ interface FloodMapProps {
   floodExtentGeoJson?: Record<string, unknown> | null;
   currentTime?: string;
   className?: string;
+  comparisonData?: ReturnType<typeof comparisonMapData>;
+  comparisonMode?: ComparisonMapMode;
 }
 
 // OpenStreetMap tile sources
@@ -197,7 +201,10 @@ export function FloodMap({
   floodExtentGeoJson,
   currentTime = '14:30',
   className,
+  comparisonData,
+  comparisonMode = 'scenario',
 }: FloodMapProps) {
+  const comparisonActive = comparisonData !== undefined;
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -207,8 +214,10 @@ export function FloodMap({
   const [showInundationSwath, setShowInundationSwath] = useState<boolean>(true);
   const [showZones, setShowZones] = useState<boolean>(true);
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [selectedRegionId, setSelectedRegionId] = useState<string>('mangaluru');
   const [regionMenuOpen, setRegionMenuOpen] = useState<boolean>(false);
+  const [hoveredAsset, setHoveredAsset] = useState<string | null>(null);
 
   const [hoveredFacility, setHoveredFacility] = useState<CriticalFacility | null>(null);
   const [hoveredWaterway, setHoveredWaterway] = useState<{
@@ -231,6 +240,8 @@ export function FloodMap({
 
       try {
         const maplibregl: any = await import('maplibre-gl');
+        setMapLoaded(false);
+        setMapError(null);
 
         if (typeof maplibregl.setWorkerUrl === 'function') {
           maplibregl.setWorkerUrl('/maplibre-gl-worker.mjs');
@@ -270,10 +281,14 @@ export function FloodMap({
               },
             ],
           },
-          center: activeRegion.center,
-          zoom: activeRegion.zoom,
+          center: comparisonActive ? comparisonData?.bounds?.[0] ?? [0, 0] : activeRegion.center,
+          zoom: comparisonActive ? 1 : activeRegion.zoom,
           pitch: 0,
           attributionControl: false,
+        });
+        mapRef.current = map;
+        map.on('error', (event: { error?: Error }) => {
+          if (isMounted && comparisonActive) setMapError(event.error?.message ?? 'The map could not render. Run-linked results remain available in the results panel.');
         });
 
         map.on('load', () => {
@@ -281,14 +296,19 @@ export function FloodMap({
           mapRef.current = map;
           setMapLoaded(true);
 
-          renderSwollenCorridors(map, currentFactor);
-          renderWaterwayRoutes(map, currentFactor);
-          renderInundation(map, floodExtentGeoJson);
-          renderRiskLayers(map);
-          renderMarkers(map, maplibregl);
+          if (comparisonActive) {
+            renderComparison(map);
+          } else {
+            renderSwollenCorridors(map, currentFactor);
+            renderWaterwayRoutes(map, currentFactor);
+            renderInundation(map, floodExtentGeoJson);
+            renderRiskLayers(map);
+            renderMarkers(map, maplibregl);
+          }
         });
       } catch (err) {
-        console.warn('MapLibre GL initialization error, falling back:', err);
+        if (isMounted) setMapError(err instanceof Error ? err.message : 'Map initialization failed.');
+        console.warn('MapLibre GL initialization error:', err);
       }
     }
 
@@ -296,12 +316,43 @@ export function FloodMap({
 
     return () => {
       isMounted = false;
+      markersRef.current.forEach(marker => marker.remove());
+      markersRef.current = [];
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
-  }, [basemap]);
+  }, [basemap, comparisonActive]);
+
+  function renderComparison(map: MapLibreMap) {
+    if (!comparisonData || !map.isStyleLoaded()) return;
+    // Both unavailable and verified empty geometry avoid the fixture fallback.
+    renderInundation(map, comparisonData.extent);
+    const color = comparisonMode === 'difference' ? '#D97706' : comparisonMode === 'baseline' ? '#2563EB' : '#7C3AED';
+    map.setPaintProperty('sfincs-inundation-fill', 'fill-color', color);
+    map.setPaintProperty('sfincs-inundation-outline', 'line-color', color);
+    if (map.getSource('comparison-assets')) {
+      (map.getSource('comparison-assets') as GeoJSONSource).setData(comparisonData.assets as unknown as GeoJSONSourceSpecification['data']);
+    } else {
+      map.addSource('comparison-assets', { type: 'geojson', data: comparisonData.assets as unknown as GeoJSONSourceSpecification['data'] });
+      map.addLayer({ id: 'comparison-assets-fill', type: 'fill', source: 'comparison-assets', paint: { 'fill-color': '#EF4444', 'fill-opacity': 0.55 } });
+      map.addLayer({ id: 'comparison-assets-line', type: 'line', source: 'comparison-assets', paint: { 'line-color': '#DC2626', 'line-width': 3 } });
+      map.addLayer({ id: 'comparison-assets-point', type: 'circle', source: 'comparison-assets', paint: { 'circle-color': '#DC2626', 'circle-radius': 5, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-width': 1 } });
+      for (const layer of ['comparison-assets-fill', 'comparison-assets-line', 'comparison-assets-point']) {
+        map.on('mouseenter', layer, (event: MapLayerMouseEvent) => {
+          const properties = event.features?.[0]?.properties;
+          if (properties) setHoveredAsset(`${properties.name} · ${properties.kind} · ID: ${properties.id}`);
+        });
+        map.on('mouseleave', layer, () => setHoveredAsset(null));
+      }
+    }
+    if (comparisonData.bounds) map.fitBounds(comparisonData.bounds, { padding: 45, maxZoom: 14, duration: 0 });
+  }
+
+  useEffect(() => {
+    if (comparisonActive && mapLoaded && mapRef.current) renderComparison(mapRef.current);
+  }, [comparisonData, comparisonMode, comparisonActive, mapLoaded]);
 
   // 1. Render Dynamically Expanding River Flood Corridor (Water Patch that swells with simulation)
   function renderSwollenCorridors(map: any, factor: number) {
@@ -762,6 +813,7 @@ export function FloodMap({
 
   // Update dynamic layers and swollen corridor width when simulation time changes
   useEffect(() => {
+    if (comparisonActive) return;
     if (!mapRef.current || !mapLoaded) return;
     const map = mapRef.current;
 
@@ -819,7 +871,7 @@ export function FloodMap({
         speed: 1.2,
       });
     }
-  }, [selectedZoneId, showRoutes, showInundationSwath, showZones, floodExtentGeoJson, currentTime, currentFactor, mapLoaded]);
+  }, [comparisonActive, selectedZoneId, showRoutes, showInundationSwath, showZones, floodExtentGeoJson, currentTime, currentFactor, mapLoaded]);
 
   // Handle India Region Selection
   const handleSelectRegion = (region: CoastalRegion) => {
@@ -855,6 +907,28 @@ export function FloodMap({
       });
     }
   };
+
+  if (comparisonData) return <div className={cn('relative bg-slate-100 rounded-lg overflow-hidden border border-slate-200', className)} aria-label={`${comparisonMode} peak-summary map`}>
+    <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" aria-label="Interactive run geometry map" />
+    <div className="absolute top-3 left-3 z-20 bg-white/95 border rounded p-2 text-xs max-w-[75%] max-h-[60%] overflow-y-auto break-all select-text">
+      <p className="font-bold">{comparisonData.context.label}</p>
+      <p>Comparison: {comparisonData.context.comparisonId}<br />Created: {comparisonData.context.createdAt}</p>
+      {comparisonData.context.runs.map(run => <p key={run.label} className="mt-1"><span className="capitalize font-semibold">{run.label}</span>: {run.runId}<br />Generated: {run.generatedAt ?? 'Unavailable'}<br />Window: {run.simulationStart} – {run.simulationEnd}</p>)}
+      <p>Flood extent + evaluated affected assets (red). OSM basemap.</p>
+      {!comparisonData.geometryAvailable && <p className="text-amber-800">Run geometry unavailable; no illustrative extent substituted.</p>}
+      {comparisonData.geometryEmpty && <p>{comparisonMode === 'difference' ? 'No newly inundated area in the computed difference.' : 'Computed flood extent is empty for this run.'}</p>}
+      {(!comparisonData.geometryAvailable || comparisonData.geometryEmpty) && comparisonData.bounds && <p>Map context uses a counterpart run extent from this comparison; no flood footprint is substituted.</p>}
+      {!comparisonData.assetsAvailable && <p className="text-amber-800">Asset geometry unavailable.</p>}
+      {comparisonData.assetsAvailable && comparisonData.assets.features.length === 0 && <p>No {comparisonMode === 'difference' ? 'newly ' : ''}affected assets in the evaluated dataset; this does not establish infrastructure safety.</p>}
+      {mapError ? <p role="alert" className="text-red-800">Map rendering error: {mapError}. Numeric results remain available.</p> : !mapLoaded && <p role="status">Loading map renderer…</p>}
+    </div>
+    {hoveredAsset && <p className="absolute bottom-3 left-3 right-3 z-20 bg-white border rounded p-2 text-xs">{hoveredAsset}</p>}
+    <div className="absolute top-3 right-3 z-20 bg-white border rounded flex flex-col">
+      <button className="p-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-700" disabled={!mapLoaded} aria-label="Zoom in" onClick={handleZoomIn}><Plus className="w-4 h-4" /></button>
+      <button className="p-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-700" disabled={!mapLoaded} aria-label="Zoom out" onClick={handleZoomOut}><Minus className="w-4 h-4" /></button>
+      <button className="p-2 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-blue-700" disabled={!mapLoaded || !comparisonData.bounds} aria-label="Fit selected comparison run extents" onClick={() => { if (mapRef.current && comparisonData.bounds) mapRef.current.fitBounds(comparisonData.bounds, { padding: 45, maxZoom: 14, duration: 0 }); }}><LocateFixed className="w-4 h-4" /></button>
+    </div>
+  </div>;
 
   return (
     <div
@@ -943,7 +1017,7 @@ export function FloodMap({
         <div className="bg-sky-950/95 backdrop-blur-xs text-sky-200 border border-sky-600/70 px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1.5 shadow-md pointer-events-auto">
           <Waves className="w-3.5 h-3.5 text-cyan-400 animate-pulse shrink-0" />
           <span>
-            Highlighted River Corridor: <strong className="text-cyan-300 font-bold">+{currentSwellMeters}m Swell</strong> · {currentTime} IST
+            Illustrative River Corridor: <strong className="text-cyan-300 font-bold">+{currentSwellMeters}m Demo Swell</strong> · {currentTime}
           </span>
         </div>
       </div>
@@ -1136,7 +1210,7 @@ export function FloodMap({
           <span>·</span>
           <span className="text-slate-800 font-semibold flex items-center gap-1">
             <MapIcon className="w-3 h-3 text-emerald-600" />
-            <span>OSM Live</span>
+            <span>OSM Basemap</span>
           </span>
         </div>
       </div>

@@ -1,6 +1,12 @@
 import type { Comparison, RunSnapshot } from '../../../../packages/contracts/src/comparison';
 
 export type ComparisonMapMode = 'baseline' | 'scenario' | 'difference';
+export type ComparisonViewContext = {
+  label: string;
+  comparisonId: string;
+  createdAt: string;
+  runs: { label: string; runId: string; generatedAt: string | null; simulationStart: string; simulationEnd: string; forcing: string }[];
+};
 type Geometry = NonNullable<RunSnapshot['floodGeometry']>;
 type MapFeature = { type: 'Feature'; geometry: Geometry; properties: Record<string, string | boolean> };
 type MapCollection = { type: 'FeatureCollection'; features: MapFeature[] };
@@ -11,6 +17,17 @@ function collection(features: MapFeature[]): MapCollection {
 
 // All map modes are peak summaries of exact run artifacts, never timestep fixtures.
 export function comparisonMapData(comparison: Comparison, mode: ComparisonMapMode) {
+  const runKeys = mode === 'difference' ? ['baseline', 'scenario'] as const : [mode];
+  const context: ComparisonViewContext = {
+    label: `${mode[0].toUpperCase()}${mode.slice(1)} · Hypothetical peak summary`,
+    comparisonId: comparison.comparisonId,
+    createdAt: comparison.createdAt,
+    runs: runKeys.map(key => ({
+      label: key, runId: comparison[key].runId, generatedAt: comparison[key].generatedAt,
+      simulationStart: comparison[key].simulationStart, simulationEnd: comparison[key].simulationEnd,
+      forcing: comparison[key].inputs ? `${comparison[key].inputs.rainfallRateMmHr} mm/hr rainfall; ${comparison[key].inputs.surgeLevelM} m coastal water-level control; ${comparison[key].inputs.durationHours}h` : 'Unavailable',
+    })),
+  };
   const geometry = mode === 'difference' ? comparison.delta.newlyInundatedGeometry : comparison[mode].floodGeometry;
   const assets = mode === 'difference' ? comparison.delta.newlyAffectedAssets : comparison.assets;
   const selectedAssets = assets?.filter(asset => mode === 'difference' ||
@@ -21,8 +38,12 @@ export function comparisonMapData(comparison: Comparison, mode: ComparisonMapMod
     properties: { id: asset.id, name: asset.name ?? asset.id, kind: asset.kind,
       baselineAffected: asset.baselineAffected, scenarioAffected: asset.scenarioAffected },
   })));
-  return { extent, assets: assetData, geometryAvailable: geometry !== null,
-    assetsAvailable: assets !== null, bounds: geometryBounds(geometry) };
+  const extentBounds = geometryBounds(geometry);
+  return { extent, assets: assetData, context, geometryAvailable: geometry !== null,
+    geometryEmpty: geometry !== null && extentBounds === null,
+    assetsAvailable: assets !== null,
+    // A dry/unavailable difference can still be situated using these exact runs.
+    bounds: extentBounds ?? geometryBounds(comparison.scenario.floodGeometry) ?? geometryBounds(comparison.baseline.floodGeometry) };
 }
 
 function geometryBounds(geometry: Geometry | null): [[number, number], [number, number]] | null {
