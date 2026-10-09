@@ -21,6 +21,7 @@ class SFINCSOutputParser:
             p = Path(target_dir)
             if p.exists() and p.is_dir():
                 return p
+            raise FileNotFoundError(f"Requested SFINCS directory not found: {p}")
         
         # Check primary output directory
         if self.base_outputs_dir.exists():
@@ -62,7 +63,7 @@ class SFINCSOutputParser:
 
         return SFINCSMetadata(
             model=data.get("model", "SFINCS"),
-            model_version=data.get("model_version", "v2.4.2"),
+            model_version=data.get("model_version", "unknown"),
             location=data.get("location", "Mangaluru Coastal"),
             event_name=data.get("event_name"),
             simulation_id=data.get("simulation_id", "mangaluru-simulation"),
@@ -78,6 +79,13 @@ class SFINCSOutputParser:
             onset_threshold_m=float(data.get("onset_threshold_m", 0.05)),
             flood_threshold_m=float(data.get("flood_threshold_m", 0.10)),
             forcing=forcing,
+            purpose="scenario",
+            operational=False,
+            validation_status="unvalidated",
+            terrain_source=data.get("terrain_source", "unknown"),
+            artifact_kind=data.get("artifact_kind", "maximum_extent"),
+            frames=data.get("frames", []) if data.get("artifact_kind") == "time_series" else [],
+            provenance=data.get("provenance", {}),
         )
 
     def parse_flood_extent_geojson(self, directory: Optional[Union[str, Path]] = None) -> Optional[Dict[str, Any]]:
@@ -151,4 +159,6 @@ class SFINCSOutputParser:
             peak_depth_tif_path=_check_file("peak_depth.tif"),
             onset_time_tif_path=_check_file("onset_time.tif"),
             peak_time_tif_path=_check_file("peak_time.tif"),
+            artifact_kind=metadata.artifact_kind,
+            frames=metadata.frames,
         )

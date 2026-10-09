@@ -35,6 +35,38 @@ simulationRouter.get("/", async (c) => {
 });
 
 /**
+ * GET /api/v1/simulations/capabilities
+ * Reports whether a bounded solver runner is enabled. This endpoint is
+ * intentionally read-only; it never starts Docker or SFINCS.
+ */
+simulationRouter.get("/capabilities", (c) => c.json(simulationService.getRunnerCapabilities()));
+
+/**
+ * GET /api/v1/simulations/live/forecast
+ *
+ * Keep this literal route before /:eventId/forecast. Hono matches routes in
+ * registration order, so otherwise `live` is interpreted as an event ID.
+ */
+simulationRouter.get("/live/forecast", async (c) => {
+  try {
+    // The current truth-preserving live forecast loader does not require a DB.
+    // It returns an explicit unavailable response until a validated artifact
+    // is published, without starting a solver or reusing replay geometry.
+    const forecast = await simulationService.getLiveForecast();
+    return c.json(forecast);
+  } catch (error) {
+    const err = error as Error;
+    return c.json(
+      {
+        success: false,
+        error: `Failed to generate operational live forecast: ${err.message}`,
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/v1/simulations/:eventId/forecast
  * Returns normalized FloodPrediction adhering strictly to TideMesh contract.
  */
@@ -84,6 +116,17 @@ simulationRouter.get("/:eventId/extent", async (c) => {
   }
 });
 
+/** GET /api/v1/simulations/:eventId/frames */
+simulationRouter.get("/:eventId/frames", async (c) => {
+  const eventId = c.req.param("eventId");
+  try {
+    return c.json(await simulationService.getScenarioArtifacts(eventId));
+  } catch (error) {
+    const err = error as Error;
+    return c.json({ success: false, error: `Failed to retrieve frames for event: ${eventId}`, message: err.message }, 404);
+  }
+});
+
 /**
  * POST /api/v1/simulations/:eventId/sync
  * Syncs and persists normalized prediction into Neon PostgreSQL (PostGIS geometry).
@@ -115,15 +158,17 @@ simulationRouter.post("/:eventId/sync", async (c) => {
 
 /**
  * POST /api/v1/simulations/run
- * Manual trigger / On-demand runner endpoint for SFINCS hydrodynamic simulations.
- * Triggered by P4's Dashboard "Run Simulation" button or scheduled cron worker.
+ * Manual trigger / on-demand bounded SFINCS artifact endpoint.
+ * It delegates to the configured ML runner and does not persist credentials or
+ * start a process in this Node service.
  */
 simulationRouter.post("/run", async (c) => {
   try {
-    const db = getDb(c.env);
     const body = await c.req.json().catch(() => ({}));
 
-    const result = await simulationService.runSimulation(db, {
+    // Solver artifacts are retrieved from the ML service; this endpoint does
+    // not require database credentials or persist anything as a side effect.
+    const result = await simulationService.runSimulation(undefined, {
       eventId: body.eventId,
       zoneId: body.zoneId || "zone-mangaluru-coastal",
       rainfallRateMmHr:
@@ -136,28 +181,34 @@ simulationRouter.post("/run", async (c) => {
       durationHours:
         body.durationHours != null ? Number(body.durationHours) : 6,
       scenarioName: body.scenarioName,
-      useLiveWeather: body.useLiveWeather !== false,
+      // Dashboard runs must use explicit bounded inputs; live forcing is not
+      // enabled by this request path.
+      useLiveWeather: false,
     });
 
     return c.json(
       {
         success: true,
-        message:
-          "SFINCS hydrodynamic simulation executed and saved to PostGIS successfully",
+        message: result.status === "queued"
+          ? "SFINCS solver job accepted"
+          : "SFINCS hydrodynamic simulation completed",
+        eventId: result.eventId,
+        status: result.status,
         executionTimeMs: result.executionTimeMs,
         simulation: result.simulation,
         persistedRecord: result.dbRecord?.prediction,
       },
-      201
+      result.status === "queued" ? 202 : 201
     );
   } catch (error) {
     const err = error as Error;
+    const disabled = err.message === "Bounded local SFINCS solver is disabled";
     return c.json(
       {
         success: false,
         error: `Simulation run failed: ${err.message}`,
       },
-      500
+      disabled ? 409 : 500
     );
   }
 });
@@ -179,28 +230,6 @@ simulationRouter.get("/:eventId/replay", async (c) => {
       {
         success: false,
         error: `Failed to load replay data for event ${eventId}: ${err.message}`,
-      },
-      500
-    );
-  }
-});
-
-/**
- * GET /api/v1/simulations/live/forecast
- * Primary Operational Mode: 0–6 hour forward hydrodynamic forecast
- * driven by live and forecast meteorological + marine conditions.
- */
-simulationRouter.get("/live/forecast", async (c) => {
-  try {
-    const db = getDb(c.env);
-    const forecast = await simulationService.getLiveForecast(db);
-    return c.json(forecast);
-  } catch (error) {
-    const err = error as Error;
-    return c.json(
-      {
-        success: false,
-        error: `Failed to generate operational live forecast: ${err.message}`,
       },
       500
     );
@@ -233,4 +262,3 @@ simulationRouter.post("/scenario", async (c) => {
     );
   }
 });
-

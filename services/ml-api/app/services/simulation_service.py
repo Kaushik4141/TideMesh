@@ -3,6 +3,8 @@ import shutil
 import subprocess
 import sys
 import json
+import re
+import uuid
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -44,26 +46,6 @@ class SimulationService:
         except Exception:
             pass
 
-        # Check latest dynamic simulation run directory if distinct
-        latest_dir = settings.repo_root / "simulations" / "latest"
-        if latest_dir.exists() and (latest_dir / "metadata.json").exists():
-            try:
-                meta_latest = self.parser.parse_metadata(latest_dir)
-                if not any(e["eventId"] == meta_latest.simulation_id for e in events):
-                    events.append({
-                        "eventId": meta_latest.simulation_id,
-                        "name": meta_latest.event_name or "Latest Simulation Run",
-                        "location": meta_latest.location,
-                        "startTime": meta_latest.start_time,
-                        "endTime": meta_latest.end_time,
-                        "maxDepthM": meta_latest.max_depth_m,
-                        "floodedAreaKm2": meta_latest.flooded_area_km2,
-                        "model": f"{meta_latest.model} {meta_latest.model_version}",
-                        "status": "ready",
-                    })
-            except Exception:
-                pass
-
         # Check baseline simulations dir if distinct
         if settings.sfincs_baseline_dir.exists() and settings.sfincs_baseline_dir != settings.outputs_dir:
             try:
@@ -93,28 +75,21 @@ class SimulationService:
         """
         Retrieves the normalized FloodPrediction for the specified event ID.
         """
-        # Look in dynamic run directories if requested
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", event_id):
+            raise FileNotFoundError("Invalid simulation event ID")
+        # Look in immutable run directories only when the exact ID exists.
         if event_id.startswith("sim-"):
             run_out = settings.repo_root / "simulations" / "runs" / event_id / "outputs"
             if run_out.exists():
                 return self.adapter.load_and_normalize(run_out, zone_id=zone_id)
 
-        latest_dir = settings.repo_root / "simulations" / "latest"
-        if event_id in ("latest", "live") and latest_dir.exists():
-            return self.adapter.load_and_normalize(latest_dir, zone_id=zone_id)
-
-        # Look in outputs_dir first
+        # Look in outputs_dir only for the exact event ID.
         try:
             prediction = self.adapter.load_and_normalize(settings.outputs_dir, zone_id=zone_id)
-            if prediction.eventId == event_id or event_id in ("default", "latest", "mangaluru-historical-2018"):
+            if prediction.eventId == event_id:
                 return prediction
         except Exception:
             pass
-
-        # Look in baseline outputs as fallback
-        if settings.sfincs_baseline_dir.exists():
-            prediction = self.adapter.load_and_normalize(settings.sfincs_baseline_dir, zone_id=zone_id)
-            return prediction
 
         raise FileNotFoundError(f"Simulation event '{event_id}' outputs not found.")
 
@@ -129,21 +104,16 @@ class SimulationService:
                 if extent:
                     return extent
 
-        latest_dir = settings.repo_root / "simulations" / "latest"
-        if event_id in ("latest", "live") and latest_dir.exists():
-            extent = self.parser.parse_flood_extent_geojson(latest_dir)
-            if extent:
-                return extent
-
-        # Check outputs_dir
+        # Check outputs_dir only after exact event validation.
+        try:
+            metadata = self.parser.parse_metadata(settings.outputs_dir)
+            if metadata.simulation_id != event_id:
+                raise FileNotFoundError
+        except Exception:
+            metadata = None
         extent = self.parser.parse_flood_extent_geojson(settings.outputs_dir)
-        if extent:
+        if extent and metadata:
             return extent
-
-        if settings.sfincs_baseline_dir.exists():
-            extent = self.parser.parse_flood_extent_geojson(settings.sfincs_baseline_dir)
-            if extent:
-                return extent
 
         raise FileNotFoundError(f"Flood extent GeoJSON for event '{event_id}' not found.")
 
@@ -156,14 +126,31 @@ class SimulationService:
             if run_out.exists():
                 return self.parser.catalog_outputs(run_out)
 
-        latest_dir = settings.repo_root / "simulations" / "latest"
-        if event_id in ("latest", "live") and latest_dir.exists():
-            return self.parser.catalog_outputs(latest_dir)
-
         try:
-            return self.parser.catalog_outputs(settings.outputs_dir)
-        except Exception:
-            return self.parser.catalog_outputs(settings.sfincs_baseline_dir)
+            catalog = self.parser.catalog_outputs(settings.outputs_dir)
+            if catalog.simulation_id != event_id:
+                raise FileNotFoundError
+            return catalog
+        except Exception as exc:
+            raise FileNotFoundError(f"Simulation event '{event_id}' outputs not found") from exc
+
+    def get_frames(self, event_id: str) -> Dict[str, Any]:
+        """Return only solver-produced timestep frames; maximum-only artifacts have none."""
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", event_id):
+            raise FileNotFoundError("Invalid simulation event ID")
+        candidates = []
+        if event_id.startswith("sim-"):
+            candidates.append(settings.repo_root / "simulations" / "runs" / event_id / "outputs")
+        candidates.append(settings.outputs_dir)
+        for directory in candidates:
+            try:
+                metadata = self.parser.parse_metadata(directory)
+                if metadata.simulation_id == event_id:
+                    return {"success": True, "eventId": event_id, "artifactKind": metadata.artifact_kind,
+                            "operational": False, "validationStatus": "unvalidated", "frames": metadata.frames}
+            except Exception:
+                continue
+        raise FileNotFoundError(f"Simulation event '{event_id}' outputs not found")
 
     def run_simulation(
         self,
@@ -179,8 +166,30 @@ class SimulationService:
         Runs an on-demand SFINCS hydrodynamic simulation in Docker, extracts standardized
         rasters and PostGIS-compatible GeoJSON polygons, and produces a normalized FloodPrediction.
         """
+        # A local hydrodynamic run is deliberately opt-in. SFINCS starts a Docker
+        # workload and can exhaust a laptop when invoked by a dashboard or cron
+        # request accidentally. Production/background workers should set this
+        # explicitly after applying their own CPU and memory limits.
+        if os.getenv("ENABLE_SFINCS_LOCAL_RUNNER", "false").lower() != "true":
+            raise RuntimeError(
+                "Local SFINCS execution is disabled; set ENABLE_SFINCS_LOCAL_RUNNER=true "
+                "only on a bounded background runner"
+            )
+        if zone_id != "zone-mangaluru-coastal":
+            raise ValueError("No model configured for the requested zone")
+        if duration_hours != 6:
+            raise ValueError("Scenario runs must cover exactly six hours")
+        if rainfall_rate_mm_hr is None and not rainfall_series:
+            raise ValueError("Explicit scenario rainfall is required")
+        if rainfall_series is not None and (len(rainfall_series) != 7 or any(not isinstance(v, (int, float)) or v < 0 or v > 1000 for v in rainfall_series)):
+            raise ValueError("Rainfall series must contain seven values in range 0–1000 mm/hr")
+        if rainfall_rate_mm_hr is not None and (rainfall_rate_mm_hr < 0 or rainfall_rate_mm_hr > 1000):
+            raise ValueError("Rainfall rate must be in range 0–1000 mm/hr")
+        if surge_level_m is not None and (surge_level_m < -5 or surge_level_m > 10):
+            raise ValueError("Boundary water level must be in range -5–10 m")
         now = datetime.now(timezone.utc)
-        sim_id = event_id or f"sim-{now.strftime('%Y%m%d-%H%M%S')}"
+        # IDs are immutable and generated server-side; callers cannot overwrite a prior run.
+        sim_id = f"sim-{uuid.uuid4().hex}"
 
         run_dir = settings.repo_root / "simulations" / "runs" / sim_id
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -245,8 +254,13 @@ class SimulationService:
                 f.write(f"{t} {z:.2f}\n")
 
         # Execute SFINCS in Docker
+        docker_cpus = os.getenv("SFINCS_DOCKER_CPUS", "2")
+        docker_memory = os.getenv("SFINCS_DOCKER_MEMORY", "4g")
         docker_cmd = [
             "docker", "run", "--rm",
+            "--cpus", docker_cpus,
+            "--memory", docker_memory,
+            "--pids-limit", "256",
             "-v", f"{str(run_dir.resolve())}:/data",
             "-w", "/data",
             "deltares/sfincs-cpu"
@@ -282,7 +296,17 @@ class SimulationService:
             with open(meta_file, "r") as f:
                 meta_json = json.load(f)
             meta_json["simulation_id"] = sim_id
-            meta_json["event_name"] = scenario_name or f"Live Hydrodynamic Run {sim_id}"
+            meta_json["event_name"] = scenario_name or f"Private scenario run {sim_id}"
+            meta_json["purpose"] = "scenario"
+            meta_json["operational"] = False
+            meta_json["validation_status"] = "unvalidated"
+            meta_json["terrain_source"] = "Mangaluru synthetic template"
+            meta_json["artifact_kind"] = meta_json.get("artifact_kind", "maximum_extent")
+            meta_json["provenance"] = {
+                "runner": "services/ml-api/app/services/simulation_service.py",
+                "terrain": "synthetic Mangaluru template; nonoperational",
+                "forcing": "caller-supplied scenario forcing",
+            }
             meta_json["start_time"] = now.isoformat()
             meta_json["end_time"] = tstop_dt.isoformat()
             if "forcing" not in meta_json:
@@ -292,14 +316,6 @@ class SimulationService:
             with open(meta_file, "w") as f:
                 json.dump(meta_json, f, indent=2)
 
-        # Sync deliverables to simulations/latest directory
-        latest_dir = settings.repo_root / "simulations" / "latest"
-        latest_dir.mkdir(parents=True, exist_ok=True)
-        for f in run_out_dir.glob("*"):
-            if f.is_file():
-                shutil.copy2(f, latest_dir / f.name)
-
         return self.adapter.load_and_normalize(run_out_dir, zone_id=zone_id)
 
 simulation_service = SimulationService()
-

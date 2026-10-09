@@ -17,6 +17,7 @@ interface TimelineProps {
   onReset?: () => void;
   currentFloodDepth?: string;
   statusLabel?: string;
+  truthfulArtifact?: boolean;
   className?: string;
 }
 
@@ -46,6 +47,7 @@ export function Timeline({
   onReset,
   currentFloodDepth = '0.31–0.71 m',
   statusLabel,
+  truthfulArtifact = false,
   className,
 }: TimelineProps) {
   const currentIndex = availableTimestamps.indexOf(currentTime);
@@ -64,8 +66,9 @@ export function Timeline({
     >
       {/* Visual Timeline Hydrograph Track */}
       <div className="relative w-full h-8 flex items-center px-1">
-        {/* Hydrograph Background Curve */}
-        <svg
+        {/* The demo curve is hidden for real solver artifacts; no timing is
+            inferred when the artifact is maximum-only. */}
+        {!truthfulArtifact && <svg
           className="absolute inset-0 w-full h-full"
           preserveAspectRatio="none"
           viewBox="0 0 800 32"
@@ -82,7 +85,7 @@ export function Timeline({
             fill="#FEE2E2"
             opacity="0.5"
           />
-        </svg>
+        </svg>}
 
         {/* Base Progress Rail */}
         <div className="w-full h-1.5 bg-slate-200 rounded-full relative z-0 flex items-center overflow-hidden">
@@ -104,20 +107,20 @@ export function Timeline({
         </div>
 
         {/* Static Milestone: ONSET 14:30 */}
-        <div className="absolute left-[25%] -top-1.5 flex flex-col items-center z-10 -translate-x-1/2 pointer-events-none">
+        {!truthfulArtifact && <div className="absolute left-[25%] -top-1.5 flex flex-col items-center z-10 -translate-x-1/2 pointer-events-none">
           <span className="bg-red-600 text-white px-1.5 py-0.2 rounded text-[9px] font-bold shadow-xs whitespace-nowrap">
             ONSET 14:30
           </span>
           <div className="w-0.5 h-3 bg-red-600 mt-0.5" />
-        </div>
+        </div>}
 
         {/* Static Milestone: PEAK 15:10 */}
-        <div className="absolute left-[58%] -top-1.5 flex flex-col items-center z-10 -translate-x-1/2 pointer-events-none">
+        {!truthfulArtifact && <div className="absolute left-[58%] -top-1.5 flex flex-col items-center z-10 -translate-x-1/2 pointer-events-none">
           <span className="bg-slate-900 text-white px-1.5 py-0.2 rounded text-[9px] font-bold shadow-xs whitespace-nowrap">
             PEAK 15:10 (0.71 m)
           </span>
           <div className="w-0.5 h-3 bg-slate-900 mt-0.5" />
-        </div>
+        </div>}
       </div>
 
       {/* Playback Controls & Timesteps */}
@@ -159,6 +162,7 @@ export function Timeline({
 
         {/* Clickable Timestep Scrub Buttons */}
         <div className="flex items-center justify-between flex-1 max-w-xl px-2 overflow-x-auto gap-1">
+          {truthfulArtifact && availableTimestamps.length === 0 && <span className="text-[11px] text-slate-500">Maximum-only artifact · no solver timestep frames</span>}
           {availableTimestamps.map((t) => (
             <button
               key={t}

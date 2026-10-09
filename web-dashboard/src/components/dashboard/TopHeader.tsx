@@ -22,8 +22,12 @@ interface TopHeaderProps {
   isSimulation?: boolean;
   isSimulationRunning?: boolean;
   onRunSimulation?: () => void;
+  onLoadDemo?: () => void;
   onRefresh?: () => void;
   isLoading?: boolean;
+  isDataAvailable?: boolean;
+  solverEnabled?: boolean;
+  solverCapabilityReason?: string;
 }
 
 export function TopHeader({
@@ -34,8 +38,12 @@ export function TopHeader({
   isSimulation = true,
   isSimulationRunning = false,
   onRunSimulation,
+  onLoadDemo,
   onRefresh,
   isLoading = false,
+  isDataAvailable = true,
+  solverEnabled = false,
+  solverCapabilityReason,
 }: TopHeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-200 z-40 flex items-center justify-between px-4 lg:px-6 whitespace-nowrap select-none shadow-xs">
@@ -90,8 +98,13 @@ export function TopHeader({
           <span className="font-bold tracking-wide text-slate-900">
             {eventType} · {currentTime}
           </span>
-          <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-bold uppercase border border-emerald-200">
-            Data Ready
+          <span className={cn(
+            'text-[10px] px-1.5 py-0.2 rounded font-bold uppercase border',
+            isDataAvailable
+              ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+              : 'text-amber-800 bg-amber-50 border-amber-300'
+          )}>
+            {isDataAvailable ? 'Data Ready' : 'Unavailable'}
           </span>
         </div>
 
@@ -108,9 +121,9 @@ export function TopHeader({
         {onRunSimulation && (
           <button
             onClick={onRunSimulation}
-            disabled={isSimulationRunning}
+            disabled={isSimulationRunning || !solverEnabled}
             className="flex items-center gap-1.5 px-3 py-1 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 text-white rounded-md text-[11px] lg:text-xs font-bold shadow-xs transition-colors cursor-pointer"
-            title="Execute on-demand SFINCS hydrodynamic simulation (<15s)"
+            title={solverEnabled ? 'Run bounded Mangaluru SFINCS solver' : solverCapabilityReason}
           >
             {isSimulationRunning ? (
               <>
@@ -120,9 +133,20 @@ export function TopHeader({
             ) : (
               <>
                 <Zap className="w-3.5 h-3.5 fill-current" />
-                <span>Run SFINCS Simulation</span>
+                <span>{solverEnabled ? 'Run bounded Mangaluru solver' : 'Solver unavailable'}</span>
               </>
             )}
+          </button>
+        )}
+
+        {onLoadDemo && (
+          <button
+            onClick={onLoadDemo}
+            className="flex items-center gap-1.5 px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-md text-[11px] lg:text-xs font-bold shadow-xs transition-colors cursor-pointer"
+            title="Load the bounded Mangaluru illustrative simulation without running a solver"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>Load Mangaluru Demo</span>
           </button>
         )}
 

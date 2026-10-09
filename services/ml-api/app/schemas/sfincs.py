@@ -1,5 +1,5 @@
-from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any, List, Literal, Annotated
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 class SFINCSForcing(BaseModel):
     rainfall_source: Optional[str] = Field(None, description="Rainfall forcing dataset or gauge description")
@@ -23,6 +23,13 @@ class SFINCSMetadata(BaseModel):
     onset_threshold_m: Optional[float] = Field(0.05, description="Depth threshold for onset calculation")
     flood_threshold_m: Optional[float] = Field(0.10, description="Depth threshold defining flood extent")
     forcing: Optional[SFINCSForcing] = None
+    purpose: str = "scenario"
+    operational: bool = False
+    validation_status: str = "unvalidated"
+    terrain_source: str = "unknown"
+    artifact_kind: str = "maximum_extent"
+    frames: List[Dict[str, Any]] = Field(default_factory=list)
+    provenance: Dict[str, Any] = Field(default_factory=dict)
 
 class SFINCSOutputsCatalog(BaseModel):
     simulation_id: str
@@ -32,15 +39,24 @@ class SFINCSOutputsCatalog(BaseModel):
     peak_depth_tif_path: Optional[str] = None
     onset_time_tif_path: Optional[str] = None
     peak_time_tif_path: Optional[str] = None
+    artifact_kind: str = "maximum_extent"
+    frames: List[Dict[str, Any]] = Field(default_factory=list)
 
 class SimulationRunRequest(BaseModel):
-    eventId: Optional[str] = None
-    zoneId: str = "zone-mangaluru-coastal"
-    rainfallRateMmHr: Optional[float] = None
-    rainfallSeries: Optional[List[float]] = None
-    surgeLevelM: Optional[float] = 1.5
-    durationHours: int = 6
-    scenarioName: Optional[str] = None
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    # Callers cannot choose filesystem IDs or repurpose the Mangaluru terrain.
+    zoneId: Literal["zone-mangaluru-coastal"] = "zone-mangaluru-coastal"
+    rainfallRateMmHr: Optional[Annotated[float, Field(ge=0, le=1000)]] = None
+    rainfallSeries: Optional[List[Annotated[float, Field(ge=0, le=1000)]]] = Field(None, min_length=7, max_length=7)
+    surgeLevelM: float = Field(1.5, ge=-5, le=10)
+    durationHours: Literal[6] = 6
+    scenarioName: Optional[str] = Field(None, max_length=200)
+
+    @model_validator(mode="after")
+    def explicit_rainfall(self):
+        if self.rainfallRateMmHr is None and self.rainfallSeries is None:
+            raise ValueError("Explicit scenario rainfall rate or seven hourly values are required")
+        return self
 
 class SimulationRunResponse(BaseModel):
     status: str

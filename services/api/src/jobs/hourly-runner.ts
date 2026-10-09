@@ -25,6 +25,11 @@ import { environmentalService } from "../services/environmental.service.js";
 import { simulationService } from "../services/simulation.service.js";
 
 async function runHourlyPipeline() {
+  if (process.env.ENABLE_SFINCS_LOCAL_RUNNER?.toLowerCase() !== "true") {
+    console.log("Laptop-safe mode: hourly environmental ingestion and SFINCS execution are disabled.");
+    console.log("Set ENABLE_SFINCS_LOCAL_RUNNER=true only on a bounded background runner.");
+    return;
+  }
   console.log("==================================================");
   console.log(" COASTSHIELD AI: HOURLY LIVE INTELLIGENCE CRON   ");
   console.log("==================================================");
@@ -53,6 +58,10 @@ async function runHourlyPipeline() {
     useLiveWeather: true,
     scenarioName: `Hourly Cycle ${new Date().toISOString().substring(0, 13)}:00`,
   });
+
+  if (!simResult.simulation) {
+    throw new Error(`SFINCS run did not complete an artifact (status: ${simResult.status}, event: ${simResult.eventId ?? "none"})`);
+  }
 
   console.log(
     `[SUCCESS] Simulation finished in ${(simResult.executionTimeMs / 1000).toFixed(2)}s!`

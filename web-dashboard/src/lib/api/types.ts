@@ -22,7 +22,7 @@ export interface ReplayTimestep {
   priorities: PriorityItem[];
 }
 
-export type DashboardMode = 'LIVE_FORECAST' | 'HISTORICAL_REPLAY' | 'SCENARIO';
+export type DashboardMode = 'LIVE_FORECAST' | 'HISTORICAL_REPLAY' | 'SCENARIO' | 'DEMO_PREVIEW';
 
 export interface CurrentConditions {
   rainfallMmHr: number;
@@ -42,7 +42,9 @@ export interface ScenarioParameters {
 export interface ReplayEventResponse {
   success: boolean;
   mode?: DashboardMode;
-  event: {
+  status?: 'available' | 'unavailable' | 'stale' | string;
+  reason?: string;
+  event?: {
     id: string;
     name: string;
     type: string;
@@ -65,7 +67,7 @@ export interface ReplayEventResponse {
   };
 }
 
-export type ReplaySimulationEvent = ReplayEventResponse['event'];
+export type ReplaySimulationEvent = NonNullable<ReplayEventResponse['event']>;
 
 export interface EventEnvironmentResponse {
   success: boolean;
@@ -96,8 +98,66 @@ export interface SimulationEventSummary {
 
 export interface RunSimulationResponse {
   success: boolean;
-  message: string;
-  executionTimeMs: number;
-  simulation: Record<string, unknown>;
+  message?: string;
+  status?: 'completed' | 'queued' | string;
+  eventId?: string | null;
+  executionTimeMs?: number;
+  simulation?: Record<string, unknown> | null;
   persistedRecord?: Record<string, unknown>;
+}
+
+export interface SimulationRunnerCapabilities {
+  solver: 'sfincs';
+  enabled: boolean;
+  operational: false;
+  reason: string;
+}
+
+export interface SimulationArtifactMetadata {
+  eventId: string;
+  terrainSource: string | null;
+  validationStatus: string | null;
+  operational: boolean | null;
+  artifactKind: string | null;
+  frameCount: number;
+  provenance: Record<string, unknown> | null;
+}
+
+export interface SimulationArtifacts {
+  eventId: string;
+  forecast: Record<string, unknown>;
+  extent: Record<string, unknown>;
+  frames: Array<Record<string, unknown>>;
+  metadata: SimulationArtifactMetadata;
+}
+
+export interface OperationsJurisdiction {
+  id: string;
+  name: string;
+  geometry: Record<string, unknown>;
+  boundaryStatus: 'approximate-unverified' | 'verified';
+  boundarySource: string;
+  modelStatus: 'available' | 'unavailable';
+  modelId: string | null;
+  teamIds?: string[];
+}
+
+export interface OperationsContextResponse {
+  success: boolean;
+  status: 'pilot' | 'operational' | string;
+  user: { id: string; name: string; teamId: string; jurisdictionIds: string[]; canRunScenarios: false } | null;
+  canRunScenarios: false;
+  jurisdiction: OperationsJurisdiction;
+  jurisdictions: OperationsJurisdiction[];
+  modelStatus: string;
+  boundaryStatus: string;
+  notices: string[];
+  resources: { forecasts: string; jurisdictions: string; alerts: string };
+}
+
+export interface LatestForecastResponse {
+  success: boolean;
+  forecast: Record<string, unknown> | null;
+  status: 'available' | 'stale' | 'unavailable' | string;
+  reason?: string;
 }

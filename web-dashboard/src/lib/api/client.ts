@@ -3,6 +3,11 @@ import type {
   SimulationEventSummary,
   RunSimulationResponse,
   EventEnvironmentResponse,
+  OperationsContextResponse,
+  LatestForecastResponse,
+  SimulationRunnerCapabilities,
+  SimulationArtifacts,
+  SimulationArtifactMetadata,
 } from './types';
 
 const resolveApiBaseUrl = (): string => {
@@ -52,6 +57,32 @@ class ApiClient {
       console.warn(`[ApiClient] Failed to fetch live forecast from ${url}:`, err);
       throw err;
     }
+  }
+
+  async fetchOperationsContext(): Promise<OperationsContextResponse> {
+    const res = await fetch(`${this.baseUrl}/api/v1/operations/context`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`Operations context unavailable (HTTP ${res.status})`);
+    return (await res.json()) as OperationsContextResponse;
+  }
+
+  async fetchLatestForecast(): Promise<LatestForecastResponse> {
+    const res = await fetch(`${this.baseUrl}/api/v1/operations/forecasts/latest`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`Latest forecast unavailable (HTTP ${res.status})`);
+    return (await res.json()) as LatestForecastResponse;
+  }
+
+  async fetchSimulationCapabilities(): Promise<SimulationRunnerCapabilities> {
+    const res = await fetch(`${this.baseUrl}/api/v1/simulations/capabilities`, {
+      headers: { Accept: 'application/json' }, cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`Solver capability status unavailable (HTTP ${res.status})`);
+    return (await res.json()) as SimulationRunnerCapabilities;
   }
 
   /**
@@ -171,6 +202,70 @@ class ApiClient {
     return (await res.json()) as Record<string, unknown>;
   }
 
+  async fetchSimulationFrames(eventId: string): Promise<{
+    eventId: string;
+    artifactKind?: string;
+    operational?: boolean;
+    validationStatus?: string;
+    frames: Array<Record<string, unknown>>;
+  }> {
+    const url = `${this.baseUrl}/api/v1/simulations/${encodeURIComponent(eventId)}/frames`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+    if (!res.ok) throw new Error(`Simulation frames unavailable (HTTP ${res.status})`);
+    return (await res.json()) as {
+      eventId: string;
+      artifactKind?: string;
+      operational?: boolean;
+      validationStatus?: string;
+      frames: Array<Record<string, unknown>>;
+    };
+  }
+
+  /** Load only artifacts belonging to the exact solver event ID. */
+  async fetchSimulationArtifacts(eventId: string, options: { attempts?: number; delayMs?: number } = {}): Promise<SimulationArtifacts> {
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(eventId)) throw new Error('Invalid solver event ID');
+    const attempts = Math.max(1, Math.min(options.attempts ?? 5, 5));
+    const delayMs = Math.max(250, options.delayMs ?? 750);
+    let lastError: unknown;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        const [forecastResponse, extent, framesResponse] = await Promise.all([
+          this.fetchForecast(eventId),
+          this.fetchFloodExtent(eventId),
+          this.fetchSimulationFrames(eventId),
+        ]);
+        const forecast = (forecastResponse.forecast && typeof forecastResponse.forecast === 'object'
+          ? forecastResponse.forecast
+          : forecastResponse) as Record<string, unknown>;
+        const returnedEventId = forecast.eventId;
+        if (returnedEventId !== eventId || framesResponse.eventId !== eventId) {
+          throw new Error('Solver artifact event ID mismatch');
+        }
+        const metrics = forecast.metrics && typeof forecast.metrics === 'object'
+          ? forecast.metrics as Record<string, unknown>
+          : {};
+        const metadata: SimulationArtifactMetadata = {
+          eventId,
+          terrainSource: typeof metrics.terrainSource === 'string' ? metrics.terrainSource : null,
+          validationStatus: typeof metrics.validationStatus === 'string' ? metrics.validationStatus : null,
+          operational: typeof metrics.operational === 'boolean' ? metrics.operational : null,
+          artifactKind: typeof metrics.artifactKind === 'string'
+            ? metrics.artifactKind
+            : (typeof framesResponse.artifactKind === 'string' ? framesResponse.artifactKind : null),
+          frameCount: typeof metrics.frameCount === 'number' ? metrics.frameCount : framesResponse.frames.length,
+          provenance: metrics.provenance && typeof metrics.provenance === 'object'
+            ? metrics.provenance as Record<string, unknown>
+            : null,
+        };
+        return { eventId, forecast, extent, frames: framesResponse.frames, metadata };
+      } catch (error) {
+        lastError = error;
+        if (attempt < attempts - 1) await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error('Solver artifacts unavailable');
+  }
+
   /**
    * Triggers an on-demand SFINCS hydrodynamic simulation run (< 15 seconds).
    */
@@ -188,11 +283,22 @@ class ApiClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(options),
     });
-    if (!res.ok) {
+    if (!res.ok && res.status !== 202) {
       const text = await res.text();
       throw new Error(`Simulation failed (HTTP ${res.status}): ${text}`);
     }
-    return (await res.json()) as RunSimulationResponse;
+    const payload = (await res.json()) as RunSimulationResponse & {
+      simulation_id?: string;
+      event_id?: string;
+      job?: { eventId?: string; event_id?: string };
+    };
+    const simulationEventId = payload.eventId
+      ?? payload.simulation?.eventId as string | undefined
+      ?? payload.simulation_id
+      ?? payload.event_id
+      ?? payload.job?.eventId
+      ?? payload.job?.event_id;
+    return { ...payload, eventId: simulationEventId ?? null };
   }
 }
 

@@ -26,6 +26,9 @@ import type {
   EventEnvironmentResponse,
   DashboardMode,
   ScenarioParameters,
+  OperationsContextResponse,
+  SimulationArtifactMetadata,
+  SimulationArtifacts,
 } from '@/lib/api/types';
 
 export type ActionStatus = 'unassigned' | 'dispatched' | 'done';
@@ -74,10 +77,18 @@ export function useFloodDashboard() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
   const [eventData, setEventData] = useState<ReplaySimulationEvent | null>(null);
+  const [demoExtentGeoJson, setDemoExtentGeoJson] = useState<Record<string, unknown> | null>(null);
   const [environmentalData, setEnvironmentalData] = useState<
     EventEnvironmentResponse['eventEnvironment'] | null
   >(null);
   const [error, setError] = useState<string | null>(null);
+  const [forecastStatus, setForecastStatus] = useState<string>('Loading official forecast status…');
+  const [operationsContext, setOperationsContext] = useState<OperationsContextResponse | null>(null);
+  const [solverEnabled, setSolverEnabled] = useState(false);
+  const [solverCapabilityReason, setSolverCapabilityReason] = useState('Solver capability has not been reported by the server');
+  const [solverArtifact, setSolverArtifact] = useState<SimulationArtifacts | null>(null);
+  const [artifactMetadata, setArtifactMetadata] = useState<SimulationArtifactMetadata | null>(null);
+  const [solverRunRequested, setSolverRunRequested] = useState(false);
 
   // Duty officer acknowledgments per zone
   const [acknowledgments, setAcknowledgments] = useState<
@@ -95,15 +106,33 @@ export function useFloodDashboard() {
       setIsLoading(true);
       setError(null);
       setIsPlaying(false);
+      setSolverArtifact(null);
+      setArtifactMetadata(null);
       try {
         let resp;
-        if (mode === 'LIVE_FORECAST') {
+        if (mode === 'DEMO_PREVIEW') {
+          setEventData(null);
+          setSolverRunRequested(false);
+          setForecastStatus('Illustrative Mangaluru demo · not an operational forecast');
+          setAvailableTimestamps(DEMO_REPLAY_STATES.map((state) => state.time));
+          setCurrentTime('14:26');
+          try {
+            setDemoExtentGeoJson(await apiClient.fetchFloodExtent('mangaluru-historical-2018'));
+          } catch {
+            setDemoExtentGeoJson(null);
+          }
+          return;
+        } else if (mode === 'LIVE_FORECAST') {
           resp = await apiClient.fetchLiveForecast();
         } else if (mode === 'HISTORICAL_REPLAY') {
           resp = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
         } else {
           resp = await apiClient.fetchScenario(customScenarioParams || scenarioParams);
         }
+
+        setForecastStatus(resp?.status === 'unavailable'
+          ? (resp.reason || 'No validated forecast is available.')
+          : (resp?.status || 'Forecast status unavailable'));
 
         if (resp?.success && resp.event) {
           setEventData(resp.event);
@@ -123,6 +152,16 @@ export function useFloodDashboard() {
               setCurrentTime(resp.event.timestamps[0] || 'T+00');
             }
           }
+        } else {
+          setEventData(null);
+          setAvailableTimestamps([]);
+          setCurrentTime('NOW');
+        }
+
+        try {
+          setOperationsContext(await apiClient.fetchOperationsContext());
+        } catch {
+          setOperationsContext(null);
         }
 
         // Fetch live environmental telemetry for sidebar
@@ -145,13 +184,29 @@ export function useFloodDashboard() {
   // Initial Data Fetching for active mode
   useEffect(() => {
     let mounted = true;
-    if (mounted) {
-      loadModeData(activeMode);
-    }
+    queueMicrotask(() => {
+      if (mounted) void loadModeData(activeMode);
+    });
     return () => {
       mounted = false;
     };
   }, [activeMode, loadModeData]);
+
+  useEffect(() => {
+    let mounted = true;
+    apiClient.fetchSimulationCapabilities()
+      .then((capabilities) => {
+        if (!mounted) return;
+        setSolverEnabled(capabilities.enabled === true);
+        setSolverCapabilityReason(capabilities.reason);
+      })
+      .catch((err: unknown) => {
+        if (!mounted) return;
+        setSolverEnabled(false);
+        setSolverCapabilityReason(err instanceof Error ? err.message : 'Solver capability is unavailable');
+      });
+    return () => { mounted = false; };
+  }, []);
 
   // Mode switcher handler
   const switchMode = useCallback(
@@ -171,6 +226,12 @@ export function useFloodDashboard() {
     [loadModeData]
   );
 
+  const loadDemoPreview = useCallback(async () => {
+    setSolverRunRequested(false);
+    setActiveMode('DEMO_PREVIEW');
+    await loadModeData('DEMO_PREVIEW');
+  }, [loadModeData]);
+
   // Manual refresh helper
   const refreshData = useCallback(async () => {
     await loadModeData(activeMode);
@@ -186,14 +247,18 @@ export function useFloodDashboard() {
 
   // Dynamic Zones list for active timestamp
   const zones = useMemo<ZoneData[]>(() => {
+    if (solverRunRequested) return [];
+    if (activeMode === 'DEMO_PREVIEW') {
+      return MOCK_ZONES;
+    }
     if (activeTimestep?.zones && activeTimestep.zones.length > 0) {
       return activeTimestep.zones;
     }
-    return MOCK_ZONES;
-  }, [activeTimestep]);
+    return [];
+  }, [activeMode, activeTimestep, solverRunRequested]);
 
   // Selected Zone data
-  const selectedZone = useMemo<ZoneData>(() => {
+  const selectedZone = useMemo<ZoneData | null>(() => {
     return zones.find((z) => z.id === selectedZoneId) || zones[0];
   }, [zones, selectedZoneId]);
 
@@ -212,11 +277,22 @@ export function useFloodDashboard() {
 
   // Dynamic KPI summary for active timestamp
   const kpi = useMemo<KpiSummary>(() => {
+    if (activeMode === 'DEMO_PREVIEW' && !solverRunRequested) {
+      return INITIAL_KPI_SUMMARY;
+    }
     if (activeTimestep?.kpi) {
       return activeTimestep.kpi;
     }
-    return INITIAL_KPI_SUMMARY;
-  }, [activeTimestep]);
+    return {
+      highRiskZones: 0,
+      criticalZones: 0,
+      exposedPopulation: 0,
+      facilitiesAffected: 0,
+      nextOnset: '--',
+      nextOnsetZone: 'No validated forecast available',
+      nextOnsetTimeRemainingMin: 0,
+    };
+  }, [activeMode, activeTimestep, solverRunRequested]);
 
   // Dynamic facilities list
   const facilities = useMemo<CriticalFacility[]>(() => {
@@ -226,8 +302,8 @@ export function useFloodDashboard() {
         facs.push(...z.facilities);
       }
     });
-    return facs.length > 0 ? facs : MOCK_FACILITIES;
-  }, [zones]);
+    return activeMode === 'DEMO_PREVIEW' && !solverRunRequested && facs.length === 0 ? MOCK_FACILITIES : facs;
+  }, [activeMode, zones, solverRunRequested]);
 
   // Dynamic Response Priorities
   const priorities = useMemo<PriorityItem[]>(() => {
@@ -243,13 +319,14 @@ export function useFloodDashboard() {
         reason: p.reason,
       }));
     }
-    return DEMO_PRIORITIES;
-  }, [activeTimestep]);
+    return activeMode === 'DEMO_PREVIEW' && !solverRunRequested ? DEMO_PRIORITIES : [];
+  }, [activeMode, activeTimestep, solverRunRequested]);
 
   // Dynamic GeoJSON flood extent polygon
   const floodExtentGeoJson = useMemo(() => {
-    return activeTimestep?.floodExtent || null;
-  }, [activeTimestep]);
+    if (solverRunRequested) return solverArtifact?.extent || null;
+    return activeMode === 'DEMO_PREVIEW' ? demoExtentGeoJson : activeTimestep?.floodExtent || null;
+  }, [activeMode, activeTimestep, demoExtentGeoJson, solverArtifact, solverRunRequested]);
 
   // Replay state tracking for demo timeline
   const replayIndex = useMemo(() => {
@@ -258,22 +335,22 @@ export function useFloodDashboard() {
   }, [currentTime]);
 
   const currentReplayState = useMemo<ReplayState>(() => {
-    const match = DEMO_REPLAY_STATES.find((s) => s.time === currentTime);
+    const match = solverRunRequested ? undefined : DEMO_REPLAY_STATES.find((s) => s.time === currentTime);
     if (match) return match;
     return {
       time: currentTime,
       statusLabel: `${currentTime} IST`,
-      floodDepth: selectedZone?.depth || '0.31–0.71 m',
-      highRiskZones: kpi?.highRiskZones ?? 3,
-      criticalZones: kpi?.criticalZones ?? 1,
-      exposedPopulation: kpi?.exposedPopulation ?? 4820,
-      affectedBuildings: selectedZone?.buildingsExposed ?? 890,
+      floodDepth: selectedZone?.depth || '—',
+      highRiskZones: kpi?.highRiskZones ?? 0,
+      criticalZones: kpi?.criticalZones ?? 0,
+      exposedPopulation: kpi?.exposedPopulation ?? 0,
+      affectedBuildings: selectedZone?.buildingsExposed ?? 0,
       affectedRoads:
         typeof selectedZone?.roadsAffectedKm === 'number'
           ? Math.round(selectedZone.roadsAffectedKm * 4)
-          : 12,
+          : 0,
     };
-  }, [currentTime, selectedZone, kpi]);
+  }, [currentTime, selectedZone, kpi, solverRunRequested]);
 
   // Dynamic playback toggle with instant feedback
   const togglePlay = useCallback(() => {
@@ -362,24 +439,46 @@ export function useFloodDashboard() {
   // Trigger on-demand simulation run
   const triggerSimulationRun = useCallback(
     async (options: { rainfallRateMmHr?: number; surgeLevelM?: number } = {}) => {
+      setError(null);
+      if (!solverEnabled) {
+        const message = 'Bounded Mangaluru solver is unavailable because the server has disabled the local runner.';
+        setError(message);
+        throw new Error(message);
+      }
       setIsSimulationRunning(true);
+      setIsPlaying(false);
+      setSolverRunRequested(true);
+      setEventData(null);
+      setSolverArtifact(null);
+      setArtifactMetadata(null);
       try {
-        const res = await apiClient.runSimulation(options);
-        // Refresh replay data
-        const refreshed = await apiClient.fetchReplayEvent('mangaluru-historical-2018');
-        if (refreshed?.success && refreshed.event) {
-          setEventData(refreshed.event);
-          setAvailableTimestamps(refreshed.event.timestamps);
-        }
-        return res;
+        const run = await apiClient.runSimulation({
+          zoneId: 'zone-mangaluru-coastal',
+          rainfallRateMmHr: options.rainfallRateMmHr ?? 110,
+          surgeLevelM: options.surgeLevelM ?? 2.8,
+          durationHours: 6,
+          scenarioName: 'Bounded Mangaluru solver run',
+        });
+        if (!run.eventId) throw new Error('Solver response did not include an exact event ID');
+        const artifacts = await apiClient.fetchSimulationArtifacts(run.eventId);
+        setSolverArtifact(artifacts);
+        setArtifactMetadata(artifacts.metadata);
+        const timestamps = artifacts.frames
+          .map((frame) => frame.timestamp)
+          .filter((timestamp): timestamp is string => typeof timestamp === 'string' && timestamp.length > 0);
+        setAvailableTimestamps(timestamps);
+        setCurrentTime(timestamps[0] || 'MAXIMUM');
+        setForecastStatus(`Solver artifact ${run.eventId} loaded · ${artifacts.metadata.artifactKind || 'unknown artifact'}`);
       } catch (err: unknown) {
-        console.error('[useFloodDashboard] Simulation run failed:', err);
+        // A failed real run remains a failure; never replace it with demo data.
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
         throw err;
       } finally {
         setIsSimulationRunning(false);
       }
     },
-    []
+    [solverEnabled]
   );
 
   // Global Keyboard Shortcuts
@@ -472,7 +571,15 @@ export function useFloodDashboard() {
     isSimulationRunning,
     error,
     eventData,
+    activeMode,
+    loadDemoPreview,
     environmentalData,
+    forecastStatus,
+    operationsContext,
+    solverEnabled,
+    solverCapabilityReason,
+    solverArtifact,
+    artifactMetadata,
     triggerSimulationRun,
     refreshData,
 

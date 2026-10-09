@@ -39,10 +39,19 @@ export default function OverviewPage() {
     setShortcutsModalOpen,
     floodExtentGeoJson,
     eventData,
+    activeMode,
+    loadDemoPreview,
     environmentalData,
+    forecastStatus,
+    operationsContext,
     isLoading,
     isSimulationRunning,
+    error,
     triggerSimulationRun,
+    solverEnabled,
+    solverCapabilityReason,
+    artifactMetadata,
+    solverArtifact,
     refreshData,
     // Replay controls & scenario
     currentReplayState,
@@ -70,13 +79,17 @@ export default function OverviewPage() {
       <TopHeader
         onOpenShortcuts={() => setShortcutsModalOpen(true)}
         eventName={eventData?.name}
-        eventType={eventData?.type || 'SIMULATION'}
+        eventType={activeMode === 'DEMO_PREVIEW' ? 'DEMO' : eventData?.type || 'LIVE FORECAST'}
         currentTime={currentTime}
-        isSimulation={true}
+        isSimulation={activeMode !== 'LIVE_FORECAST'}
         isSimulationRunning={isSimulationRunning}
-        onRunSimulation={() => triggerSimulationRun()}
+        onRunSimulation={() => { void triggerSimulationRun(); }}
+        solverEnabled={solverEnabled}
+        solverCapabilityReason={solverCapabilityReason}
+        onLoadDemo={loadDemoPreview}
         onRefresh={() => refreshData()}
         isLoading={isLoading}
+        isDataAvailable={Boolean(eventData) || Boolean(solverArtifact) || activeMode === 'DEMO_PREVIEW'}
       />
 
       {/* Main Body */}
@@ -91,6 +104,11 @@ export default function OverviewPage() {
         <main className="flex-1 ml-[220px] lg:ml-[232px] p-2.5 lg:p-3 overflow-hidden flex flex-col gap-2.5">
           {/* KPI Strip */}
           <KpiStrip kpi={kpi} />
+          {error && (
+            <div role="alert" className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-medium text-red-800">
+              {error}
+            </div>
+          )}
 
           {/* Workspace Area: Map + Timeline on Left, Zone Drawer on Right */}
           <div className="flex-1 min-h-0 flex flex-col xl:flex-row gap-2.5 overflow-hidden">
@@ -98,13 +116,17 @@ export default function OverviewPage() {
             <div className="flex-1 min-w-0 flex flex-col gap-2.5 overflow-hidden">
               {/* Flood Map Canvas (≥ 55% of workspace) */}
               <div className="flex-1 min-h-0 relative">
-                <FloodMap
+                  <FloodMap
                   zones={zones}
                   facilities={facilities}
                   selectedZoneId={selectedZoneId}
                   onSelectZone={selectZone}
-                  floodExtentGeoJson={floodExtentGeoJson}
-                  currentTime={currentTime}
+                    floodExtentGeoJson={floodExtentGeoJson}
+                    jurisdictionGeoJson={operationsContext?.jurisdiction?.geometry ?? null}
+                    forecastStatus={forecastStatus}
+                    mode={activeMode === 'DEMO_PREVIEW' ? 'demo' : eventData?.mode === 'SCENARIO' ? 'scenario' : eventData?.mode === 'HISTORICAL_REPLAY' ? 'replay' : 'official'}
+                    initialView="india"
+                    currentTime={currentTime}
                   className="w-full h-full"
                 />
               </div>
@@ -123,20 +145,44 @@ export default function OverviewPage() {
                 onReset={resetTimeline}
                 currentFloodDepth={currentReplayState.floodDepth}
                 statusLabel={currentReplayState.statusLabel}
+                truthfulArtifact={Boolean(solverArtifact)}
               />
+              {artifactMetadata && solverArtifact && (
+                <div className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-[11px] text-slate-700 flex flex-wrap gap-x-4 gap-y-1">
+                  <strong className="text-slate-900">Solver artifact: {solverArtifact.eventId}</strong>
+                  <span>Terrain: {artifactMetadata.terrainSource || 'unknown'}</span>
+                  <span>Validation: {artifactMetadata.validationStatus || 'unknown'}</span>
+                  <span>Operational: {artifactMetadata.operational === false ? 'false' : String(artifactMetadata.operational)}</span>
+                  <span>Kind: {artifactMetadata.artifactKind || 'unknown'}</span>
+                  <span>Frames: {artifactMetadata.frameCount}</span>
+                  <span>Provenance: {artifactMetadata.provenance ? JSON.stringify(artifactMetadata.provenance) : 'unreported'}</span>
+                </div>
+              )}
             </div>
 
             {/* Zone Detail Drawer */}
-            <ZoneDrawer
-              zone={selectedZone}
-              isOpen={drawerOpen}
-              onClose={() => setDrawerOpen(false)}
-              countdownMinutes={countdownMinutes}
-              acknowledgment={currentZoneAcknowledgment}
-              onAcknowledge={acknowledgeCurrentZone}
-              actionsState={actionsState}
-              onAssignAction={assignAction}
-            />
+              {selectedZone ? (
+                <ZoneDrawer
+                  zone={selectedZone}
+                  isOpen={drawerOpen}
+                  onClose={() => setDrawerOpen(false)}
+                  countdownMinutes={countdownMinutes}
+                  acknowledgment={currentZoneAcknowledgment}
+                  onAcknowledge={acknowledgeCurrentZone}
+                  actionsState={actionsState}
+                  onAssignAction={assignAction}
+                />
+              ) : (
+                <aside className="w-full xl:w-[420px] 2xl:w-[440px] shrink-0 bg-white border border-slate-200/90 rounded-lg shadow-xs p-5 h-full">
+                  <h2 className="text-base font-bold text-slate-900">No forecast frame selected</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {forecastStatus}. Blue lines are mapped waterways only. Red flood areas will appear here only after a validated forecast is published.
+                  </p>
+                  <p className="mt-4 text-xs text-slate-500">
+                    Jurisdiction: {operationsContext?.jurisdiction?.name || 'Unavailable'}
+                  </p>
+                </aside>
+              )}
           </div>
         </main>
       </div>

@@ -5,6 +5,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { healthRouter } from "./routes/health.js";
 import { simulationRouter } from "./routes/simulation.js";
+import { riversRouter } from "./routes/rivers.js";
+import { operationsRouter } from "./routes/operations.js";
 import {
   environmentalRouter,
   eventEnvironmentRouter,
@@ -45,6 +47,8 @@ app.get("/", (c) => {
       health: "/api/v1/health",
       databaseHealth: "/api/v1/health/db",
       simulations: "/api/v1/simulations",
+      rivers: "/api/v1/rivers",
+      operations: "/api/v1/operations/context",
       mangaluruForecast: "/api/v1/simulations/mangaluru-historical-2018/forecast",
       mangaluruExtent: "/api/v1/simulations/mangaluru-historical-2018/extent",
       environmentalObservations: "/api/v1/environmental-observations",
@@ -58,6 +62,8 @@ app.get("/", (c) => {
 // Mount routes
 app.route("/api/v1/health", healthRouter);
 app.route("/api/v1/simulations", simulationRouter);
+app.route("/api/v1/rivers", riversRouter);
+app.route("/api/v1/operations", operationsRouter);
 app.route("/api/v1/environmental-observations", environmentalRouter);
 app.route("/api/v1/events", eventEnvironmentRouter);
 app.route("/api/v1/environmental/events", eventEnvironmentRouter);

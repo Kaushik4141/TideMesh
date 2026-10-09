@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Dict, Any, Optional
 from app.schemas.prediction import NormalizedFloodPrediction
-from app.schemas.sfincs import SFINCSOutputsCatalog
+from app.schemas.sfincs import SFINCSOutputsCatalog, SimulationRunRequest
 from app.services.simulation_service import simulation_service
 
 router = APIRouter(prefix="/simulations", tags=["SFINCS Hydrodynamic Simulations"])
@@ -53,9 +53,19 @@ def get_simulation_catalog(event_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load catalog: {str(e)}")
 
+@router.get("/{event_id}/frames")
+def get_simulation_frames(event_id: str):
+    """Returns actual timestep frames, or an empty catalog for maximum-only artifacts."""
+    try:
+        return simulation_service.get_frames(event_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load simulation frames: {str(e)}")
+
 @router.post("/run", response_model=NormalizedFloodPrediction)
 def run_simulation(
-    req: Dict[str, Any] = {},
+    req: SimulationRunRequest,
 ):
     """
     Triggers an on-demand SFINCS hydrodynamic simulation in Docker.
@@ -63,13 +73,12 @@ def run_simulation(
     """
     try:
         return simulation_service.run_simulation(
-            event_id=req.get("eventId"),
-            zone_id=req.get("zoneId", "zone-mangaluru-coastal"),
-            rainfall_rate_mm_hr=req.get("rainfallRateMmHr"),
-            rainfall_series=req.get("rainfallSeries"),
-            surge_level_m=req.get("surgeLevelM", 1.5),
-            duration_hours=req.get("durationHours", 6),
-            scenario_name=req.get("scenarioName"),
+            zone_id=req.zoneId,
+            rainfall_rate_mm_hr=req.rainfallRateMmHr,
+            rainfall_series=req.rainfallSeries,
+            surge_level_m=req.surgeLevelM,
+            duration_hours=req.durationHours,
+            scenario_name=req.scenarioName,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Simulation run failed: {str(e)}")
