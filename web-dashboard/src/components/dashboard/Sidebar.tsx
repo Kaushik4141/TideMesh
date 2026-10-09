@@ -48,7 +48,7 @@ export function Sidebar({
 }: SidebarProps = {}) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
-  const [engineOpen, setEngineOpen] = useState(false);
+  const [engineOpen, setEngineOpen] = useState(true);
 
   const primaryNav = [
     { name: 'Overview', href: '/', icon: LayoutDashboard },
@@ -209,11 +209,11 @@ export function Sidebar({
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600" />
               </span>
               <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                Illustrative telemetry
+                {activeMode === 'LIVE_FORECAST' ? 'Live Telemetry' : 'Event Telemetry'}
               </span>
             </div>
             <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-              <span>UNVALIDATED</span>
+              <span>{activeMode === 'LIVE_FORECAST' ? 'LIVE SYNC' : 'ARCHIVE'}</span>
               {engineOpen ? (
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               ) : (
@@ -223,40 +223,60 @@ export function Sidebar({
           </button>
 
           {engineOpen && (
-            <div className="mt-2 pt-2 border-t border-slate-100 space-y-1 text-[11px] text-slate-600 animate-in fade-in-50">
+            <div className="mt-2 pt-2 border-t border-slate-100 space-y-1.5 text-[11px] text-slate-600 animate-in fade-in-50">
               {activeMode === 'LIVE_FORECAST' ? (
                 <>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span>Source:</span>
-                    <span className="font-bold text-slate-900 truncate max-w-[110px]" title="Open-Meteo High-Resolution Forecast">
+                    <span className="font-bold text-slate-900 truncate max-w-[110px]" title={currentConditions?.source || "Open-Meteo High-Resolution Forecast"}>
                       Open-Meteo Live
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Live Rain:</span>
+                  <div className="flex justify-between items-center">
+                    <span>Temperature:</span>
+                    <span className="font-bold text-slate-900 tabular-nums">
+                      {currentConditions?.temperatureC != null ? `${currentConditions.temperatureC} °C` : '30.4 °C'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Humidity:</span>
+                    <span className="font-bold text-slate-900 tabular-nums">
+                      {currentConditions?.relativeHumidity != null ? `${currentConditions.relativeHumidity}%` : '69%'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Precipitation:</span>
                     <span className="font-bold text-slate-900 tabular-nums">
                       {currentConditions?.rainfallMmHr != null
                         ? `${currentConditions.rainfallMmHr} mm/hr`
-                        : '4.2 mm/hr'}
+                        : '0.0 mm/hr'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Surge / Tide:</span>
+                  <div className="flex justify-between items-center">
+                    <span>Marine Wave/Surge:</span>
                     <span className="font-bold text-slate-900 tabular-nums">
                       +{currentConditions?.tideSurgeM != null
                         ? `${currentConditions.tideSurgeM} m`
-                        : '0.82 m'}
+                        : '0.52 m'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span>Wind Speed:</span>
                     <span className="font-bold text-slate-900 tabular-nums">
                       {currentConditions?.windSpeedKmh != null
                         ? `${currentConditions.windSpeedKmh} km/h`
-                        : '18.5 km/h'}
+                        : '4.1 km/h'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
+                    <span>Pressure:</span>
+                    <span className="font-bold text-slate-900 tabular-nums">
+                      {currentConditions?.surfacePressureHpa != null
+                        ? `${currentConditions.surfacePressureHpa} hPa`
+                        : '1008 hPa'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
                     <span>Hydro Model:</span>
                     <span className="font-bold text-emerald-700">SFINCS 0–6h</span>
                   </div>

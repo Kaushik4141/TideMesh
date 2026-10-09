@@ -28,6 +28,10 @@ export interface CurrentConditions {
   rainfallMmHr: number;
   tideSurgeM: number;
   windSpeedKmh: number;
+  temperatureC?: number;
+  relativeHumidity?: number;
+  surfacePressureHpa?: number;
+  observedAt?: string;
   source?: string;
   marineDatum?: string;
 }

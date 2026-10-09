@@ -50,11 +50,17 @@ export function TopHeader({
   comparisonContext,
 }: TopHeaderProps) {
   const displayClock = clockTimes[currentTime];
+  const todayFormatted = new Intl.DateTimeFormat('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'Asia/Kolkata',
+  }).format(new Date());
+
   const timeChipLabel =
     activeMode === 'LIVE_FORECAST'
       ? displayClock
-        ? `${currentTime} (${displayClock} IST)`
-        : `${currentTime}`
+        ? `TODAY ${todayFormatted} · ${currentTime} (${displayClock} IST)`
+        : `TODAY ${todayFormatted} · ${currentTime}`
       : activeMode === 'SCENARIO'
       ? `${currentTime} · Stress Test`
       : `${currentTime} IST`;
