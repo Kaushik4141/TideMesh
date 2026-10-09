@@ -41,7 +41,10 @@ export interface AcknowledgmentState {
 
 export function useFloodDashboard() {
   // Operational Dashboard Mode: LIVE_FORECAST (Default), HISTORICAL_REPLAY, or SCENARIO
-  const [activeMode, setActiveMode] = useState<DashboardMode>('LIVE_FORECAST');
+  // The default is an explicitly labelled local preview so the dashboard is
+  // useful immediately without pretending that an unavailable live forecast
+  // exists. Operational users can switch to live mode once an artifact is published.
+  const [activeMode, setActiveMode] = useState<DashboardMode>('DEMO_PREVIEW');
   const [scenarioParams, setScenarioParams] = useState<ScenarioParameters>({
     rainfallRateMmHr: 110,
     surgeLevelM: 2.80,
@@ -78,6 +81,7 @@ export function useFloodDashboard() {
   const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
   const [eventData, setEventData] = useState<ReplaySimulationEvent | null>(null);
   const [demoExtentGeoJson, setDemoExtentGeoJson] = useState<Record<string, unknown> | null>(null);
+  const [demoRiverGeoJson, setDemoRiverGeoJson] = useState<Record<string, unknown> | null>(null);
   const [environmentalData, setEnvironmentalData] = useState<
     EventEnvironmentResponse['eventEnvironment'] | null
   >(null);
@@ -117,9 +121,17 @@ export function useFloodDashboard() {
           setAvailableTimestamps(DEMO_REPLAY_STATES.map((state) => state.time));
           setCurrentTime('14:26');
           try {
-            setDemoExtentGeoJson(await apiClient.fetchFloodExtent('mangaluru-historical-2018'));
+            setOperationsContext(await apiClient.fetchOperationsContext());
+          } catch {
+            setOperationsContext(null);
+          }
+          try {
+            const preview = await apiClient.fetchDemoPreview();
+            setDemoExtentGeoJson(preview.floodExtent);
+            setDemoRiverGeoJson(preview.rivers);
           } catch {
             setDemoExtentGeoJson(null);
+            setDemoRiverGeoJson(null);
           }
           return;
         } else if (mode === 'LIVE_FORECAST') {
@@ -542,6 +554,7 @@ export function useFloodDashboard() {
     facilities,
     priorities,
     floodExtentGeoJson,
+    demoRiverGeoJson,
 
     // Time & Playback
     currentTime,

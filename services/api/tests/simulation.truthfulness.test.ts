@@ -23,6 +23,12 @@ export async function runSimulationTruthfulnessTests() {
     status: "unavailable",
     reason: "No validated operational forecast artifact is configured",
   });
+  const demoResponse = await simulationRouter.request("/demo/preview");
+  assert.equal(demoResponse.status, 200);
+  const demo = await demoResponse.json() as any;
+  assert.equal(demo.mode, "DEMO_PREVIEW");
+  assert.equal(demo.provenance.operational, false);
+  assert.equal(demo.rivers.features.length, 2);
   const capabilitiesResponse = await simulationRouter.request("/capabilities");
   assert.equal(capabilitiesResponse.status, 200);
   const capabilities = await capabilitiesResponse.json() as { solver: string; enabled: boolean; operational: boolean; reason: string };

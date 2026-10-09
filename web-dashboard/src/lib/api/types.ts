@@ -161,3 +161,13 @@ export interface LatestForecastResponse {
   status: 'available' | 'stale' | 'unavailable' | string;
   reason?: string;
 }
+
+export interface DemoPreviewResponse {
+  success: boolean;
+  mode: 'DEMO_PREVIEW';
+  status: 'illustrative_unvalidated';
+  reason: string;
+  floodExtent: Record<string, unknown>;
+  rivers: Record<string, unknown>;
+  provenance: { source: string; operational: false; validationStatus: 'unvalidated' };
+}

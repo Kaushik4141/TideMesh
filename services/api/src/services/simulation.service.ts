@@ -30,6 +30,24 @@ export interface SimulationRunResult {
   executionTimeMs: number;
 }
 
+export interface DemoPreviewResponse {
+  success: true;
+  mode: "DEMO_PREVIEW";
+  status: "illustrative_unvalidated";
+  reason: string;
+  floodExtent: Record<string, unknown>;
+  rivers: {
+    type: "FeatureCollection";
+    features: Array<{
+      type: "Feature";
+      id: string;
+      properties: { name: string; waterway: "river"; source: "TideMesh illustrative demo" };
+      geometry: { type: "LineString"; coordinates: [number, number][] };
+    }>;
+  };
+  provenance: { source: string; operational: false; validationStatus: "unvalidated" };
+}
+
 /** Scenario artifacts are never an operational forecast or an alert source. */
 export class SimulationService {
   private mlApiUrl: string;
@@ -60,6 +78,39 @@ export class SimulationService {
       reason: enabled
         ? "Bounded local SFINCS runner is enabled"
         : "Bounded local SFINCS runner is disabled; no solver process will be started",
+    };
+  }
+
+  /**
+   * Backend-owned synthetic preview. This is intentionally separate from the
+   * official forecast and solver endpoints so the UI can demo its complete map
+   * flow without inventing live data or starting Docker.
+   */
+  public getDemoPreview(): DemoPreviewResponse {
+    return {
+      success: true,
+      mode: "DEMO_PREVIEW",
+      status: "illustrative_unvalidated",
+      reason: "Synthetic Mangaluru preview served by the backend; not an operational forecast.",
+      floodExtent: this.loadLocalFloodExtent("mangaluru-historical-2018"),
+      rivers: {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            id: "demo-gurupura-river",
+            properties: { name: "Gurupura (Phalguni) River", waterway: "river", source: "TideMesh illustrative demo" },
+            geometry: { type: "LineString", coordinates: [[74.8815, 12.9472], [74.85, 12.9426], [74.8298, 12.9232], [74.82, 12.8955], [74.8268, 12.8575], [74.8335, 12.8435]] },
+          },
+          {
+            type: "Feature",
+            id: "demo-netravati-river",
+            properties: { name: "Netravati River", waterway: "river", source: "TideMesh illustrative demo" },
+            geometry: { type: "LineString", coordinates: [[74.912, 12.867], [74.878, 12.855], [74.849, 12.8455], [74.8335, 12.8435], [74.796, 12.8385]] },
+          },
+        ],
+      },
+      provenance: { source: "TideMesh backend demo fixture", operational: false, validationStatus: "unvalidated" },
     };
   }
 

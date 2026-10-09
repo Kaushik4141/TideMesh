@@ -8,6 +8,7 @@ import type {
   SimulationRunnerCapabilities,
   SimulationArtifacts,
   SimulationArtifactMetadata,
+  DemoPreviewResponse,
 } from './types';
 
 const resolveApiBaseUrl = (): string => {
@@ -75,6 +76,15 @@ class ApiClient {
     });
     if (!res.ok) throw new Error(`Latest forecast unavailable (HTTP ${res.status})`);
     return (await res.json()) as LatestForecastResponse;
+  }
+
+  async fetchDemoPreview(): Promise<DemoPreviewResponse> {
+    const res = await fetch(`${this.baseUrl}/api/v1/simulations/demo/preview`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`Demo preview unavailable (HTTP ${res.status})`);
+    return (await res.json()) as DemoPreviewResponse;
   }
 
   async fetchSimulationCapabilities(): Promise<SimulationRunnerCapabilities> {

@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-09T03:50:45Z",
+  "domain": {
+    "crs": "EPSG:32643",
+    "bounds": [
+      483000.0,
+      1421000.0,
+      488000.0,
+      1426000.0
+    ],
+    "resolution_m": 50
+  },
+  "operational": false,
+  "operational_ready": false,
+  "requirements": {
+    "dem_rainfall_tide_and_flood_provenance": {
+      "dem": true,
+      "rainfall": true,
+      "tide": true,
+      "flood_extent": false
+    }
+  },
+  "inputs": {
+    "dem": {
+      "status": "real",
+      "valid": true,
+      "operationally_valid": true,
+      "path": "/home/kaushi/Projects/singularity-main/ml/sfincs/mangaluru/provenance/../raw/dem/mangaluru_srtm30m_egm96.tif",
+      "source": "NASA SRTMGL1 v3 tile N12E074 via AWS elevation-tiles-prod",
+      "provenance_class": "public-observation",
+      "checksum_sha256": "e7b9cc14a406a66df4e002ec6c719783780296fae8e5d4edd651fd99ffffbbfb",
+      "expected_checksum_sha256": "e7b9cc14a406a66df4e002ec6c719783780296fae8e5d4edd651fd99ffffbbfb",
+      "checksum_verified": true,
+      "crs": "EPSG:4326",
+      "vertical_datum": "EGM96",
+      "timestamp_coverage": {
+        "start": null,
+        "end": null
+      },
+      "error": null
+    },
+    "rainfall": {
+      "status": "real",
+      "valid": true,
+      "operationally_valid": true,
+      "path": "/home/kaushi/Projects/singularity-main/ml/sfincs/mangaluru/provenance/../../../../data-pipeline/data/raw/open-meteo/open_meteo_hourly.json",
+      "source": "Open-Meteo hourly precipitation forecast for Mangaluru",
+      "provenance_class": "forecast-model",
+      "checksum_sha256": "14133069e64acaa168219a365da5e8b14143de1171173c8f4915c778cc888bf7",
+      "expected_checksum_sha256": "14133069e64acaa168219a365da5e8b14143de1171173c8f4915c778cc888bf7",
+      "checksum_verified": true,
+      "crs": "not applicable",
+      "vertical_datum": "not applicable",
+      "timestamp_coverage": {
+        "start": "2026-10-08T00:00:00Z",
+        "end": "2026-10-14T23:00:00Z"
+      },
+      "error": null
+    },
+    "tide": {
+      "status": "real",
+      "valid": true,
+      "operationally_valid": true,
+      "path": "/home/kaushi/Projects/singularity-main/ml/sfincs/mangaluru/provenance/../raw/tide/panambur_open_meteo_marine.json",
+      "source": "Open-Meteo Marine sea-level forecast at Panambur vicinity",
+      "provenance_class": "forecast-model",
+      "checksum_sha256": "d7c8b8b4a991b3e6d119cef988496b79a74d93c05c78558a06ca09b758a85ee1",
+      "expected_checksum_sha256": "d7c8b8b4a991b3e6d119cef988496b79a74d93c05c78558a06ca09b758a85ee1",
+      "checksum_verified": true,
+      "crs": "not applicable",
+      "vertical_datum": "MSL",
+      "timestamp_coverage": {
+        "start": "2026-10-09T00:00:00Z",
+        "end": "2026-10-15T23:00:00Z"
+      },
+      "error": null
+    },
+    "river": {
+      "status": "assumed",
+      "valid": false,
+      "operationally_valid": false,
+      "path": "/home/kaushi/Projects/singularity-main/ml/sfincs/mangaluru/provenance/../../../../data-pipeline/data/raw/cwc/cwc_observations.json",
+      "source": "Local data-pipeline fixture; gauge provenance not established",
+      "provenance_class": "unverified",
+      "checksum_sha256": "10ea68bb5e453ec94a016671e9841cda23fc9644305b5ae48a186a0aac03b53a",
+      "expected_checksum_sha256": null,
+      "checksum_verified": false,
+      "crs": null,
+      "vertical_datum": null,
+      "timestamp_coverage": {
+        "start": null,
+        "end": null
+      },
+      "error": "hourly JSON requires time and a same-length value array"
+    },
+    "flood_extent": {
+      "status": "assumed",
+      "valid": true,
+      "operationally_valid": false,
+      "path": "/home/kaushi/Projects/singularity-main/ml/sfincs/mangaluru/provenance/../raw/observations/mangaluru_2018_flood_extent.geojson",
+      "source": "Checked-in observation placeholder; source record and checksum pending",
+      "provenance_class": "unverified",
+      "checksum_sha256": "00b6a4c30089b5eab194ea97ad44527396e9ccf60729768c4b13f4b80cbef2e2",
+      "expected_checksum_sha256": null,
+      "checksum_verified": false,
+      "crs": "EPSG:4326",
+      "vertical_datum": "not applicable",
+      "timestamp_coverage": {
+        "start": null,
+        "end": null
+      },
+      "error": null
+    }
+  }
+}

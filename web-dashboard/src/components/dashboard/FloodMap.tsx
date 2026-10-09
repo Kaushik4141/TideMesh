@@ -15,6 +15,8 @@ export interface FloodMapProps {
   facilities: CriticalFacility[];
   /** Validated frame geometry; no fallback flood extent is created. */
   floodExtentGeoJson?: Record<string, unknown> | null;
+  /** Backend-owned illustrative river geometry for demo mode only. */
+  demoRiverGeoJson?: Record<string, unknown> | null;
   nationalForecastExtentGeoJson?: Record<string, unknown> | null;
   /** Polygon features with properties.zoneId or properties.id for zone selection. */
   jurisdictionGeoJson?: Record<string, unknown> | null;
@@ -35,6 +37,7 @@ type Basemap = keyof typeof BASEMAPS;
 
 export function FloodMap({
   zones, selectedZoneId, onSelectZone, facilities, floodExtentGeoJson,
+  demoRiverGeoJson,
   nationalForecastExtentGeoJson, jurisdictionGeoJson, forecastStatus,
   mode = 'official', initialView = 'india', currentTime, className,
 }: FloodMapProps) {
@@ -105,9 +108,10 @@ export function FloodMap({
           setLoaded(true);
         });
         map.on('error', (event) => {
-          if (disposed) return;
-          if ('sourceId' in event && event.sourceId === 'rivers-vector') setRiverNotice('Configured river tiles unavailable. Check dataset URL, source layer, CORS, and coverage.');
-          else if ('sourceId' in event && event.sourceId === 'basemap') setMapError('Basemap tiles unavailable; river and flood layers remain separate.');
+           if (disposed) return;
+           if ('sourceId' in event && event.sourceId === 'rivers-vector') setRiverNotice('Configured river tiles unavailable. Check dataset URL, source layer, CORS, and coverage.');
+           else if ('sourceId' in event && event.sourceId === 'basemap') setMapError('Basemap tiles unavailable; river and flood layers remain separate.');
+           else setMapError('Map layer failed to load. Try the Mangalore button or switch basemap.');
         });
       } catch { if (!disposed) setMapError('Map could not be initialized. Check WebGL support and network access.'); }
     }
@@ -146,6 +150,12 @@ export function FloodMap({
     const clearViewport = () => (map.getSource('rivers-viewport') as GeoJSONSource | undefined)?.setData(emptyCollection());
     const cancel = () => { generation++; controller?.abort(); if (timer) clearTimeout(timer); clearViewport(); };
 
+    if (demoRiverGeoJson) {
+      const demoRivers = riverCollection(demoRiverGeoJson);
+      (map.getSource('rivers-viewport') as GeoJSONSource).setData(demoRivers);
+      setRiverNotice('Backend demo waterways · synthetic preview, not operational data.');
+      return;
+    }
     if (config.vector) {
       if (!map.getSource('rivers-vector')) {
         map.addSource('rivers-vector', { type: 'vector', tiles: config.vector.tiles, attribution: config.vector.attribution });
@@ -188,7 +198,7 @@ export function FloodMap({
     map.on('moveend', schedule);
     schedule();
     return () => { disposed = true; cancel(); map.off('movestart', cancel); map.off('moveend', schedule); };
-  }, [loaded, config, showRivers]);
+  }, [loaded, config, demoRiverGeoJson, showRivers]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -203,11 +213,13 @@ export function FloodMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
-    map.removeLayer('basemap');
-    map.removeSource('basemap');
     const tiles = BASEMAPS[basemap];
-    map.addSource('basemap', { type: 'raster', tiles: [tiles.url], tileSize: 256, attribution: tiles.attribution });
-    map.addLayer({ id: 'basemap', type: 'raster', source: 'basemap' }, map.getStyle().layers?.[0]?.id);
+    // Keep the original source/layer alive. Removing a raster source during a
+    // style-load transition can leave MapLibre with a blank canvas on some
+    // browsers. RasterTileSource.setTiles swaps the URL without tearing down
+    // the loaded style.
+    const source = map.getSource('basemap') as (GeoJSONSource & { setTiles?: (urls: string[]) => void }) | undefined;
+    if (source && typeof source.setTiles === 'function') source.setTiles([tiles.url]);
   }, [basemap, loaded]);
 
   useEffect(() => {

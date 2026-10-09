@@ -66,6 +66,16 @@ simulationRouter.get("/live/forecast", async (c) => {
   }
 });
 
+/** Backend-owned synthetic preview used only for UI/demo mode. */
+simulationRouter.get("/demo/preview", (c) => {
+  try {
+    return c.json(simulationService.getDemoPreview());
+  } catch (error) {
+    const err = error as Error;
+    return c.json({ success: false, error: `Failed to load demo preview: ${err.message}` }, 404);
+  }
+});
+
 /**
  * GET /api/v1/simulations/:eventId/forecast
  * Returns normalized FloodPrediction adhering strictly to TideMesh contract.

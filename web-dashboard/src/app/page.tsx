@@ -52,6 +52,7 @@ export default function OverviewPage() {
     solverCapabilityReason,
     artifactMetadata,
     solverArtifact,
+    demoRiverGeoJson,
     refreshData,
     // Replay controls & scenario
     currentReplayState,
@@ -122,6 +123,7 @@ export default function OverviewPage() {
                   selectedZoneId={selectedZoneId}
                   onSelectZone={selectZone}
                     floodExtentGeoJson={floodExtentGeoJson}
+                    demoRiverGeoJson={demoRiverGeoJson}
                     jurisdictionGeoJson={operationsContext?.jurisdiction?.geometry ?? null}
                     forecastStatus={forecastStatus}
                     mode={activeMode === 'DEMO_PREVIEW' ? 'demo' : eventData?.mode === 'SCENARIO' ? 'scenario' : eventData?.mode === 'HISTORICAL_REPLAY' ? 'replay' : 'official'}

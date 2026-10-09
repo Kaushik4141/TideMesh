@@ -1,7 +1,30 @@
 # PERSON 1 — SFINCS Flood Physics & Prediction Engine (Mangaluru)
 
 ## Overview
-This directory contains the scientific flood simulation and prediction pipeline for **TideMesh / AI for Coastal Flood Intelligence — Mangaluru**. 
+This directory contains the scientific flood simulation and prediction pipeline for **TideMesh / AI for Coastal Flood Intelligence — Mangaluru**.
+
+## Real-input readiness
+
+The checked-in model and historical simulation files are reproducible synthetic
+fixtures. They are not Copernicus terrain, measured rainfall, measured tide, or
+validated flood observations. No real DEM is currently present in this checkout.
+Use the local-only readiness validator before an operational run:
+
+```bash
+python ml/sfincs/mangaluru/scripts/validate_inputs.py \
+  --manifest ml/sfincs/mangaluru/provenance/manifest.json \
+  --output /tmp/mangaluru-data-readiness.json --operational
+```
+
+The command never downloads data, starts Docker, or runs SFINCS. Supply explicit
+local paths and a reviewed JSON manifest with `status: real`, source, checksum,
+CRS/datum, and timestamp coverage for operational inputs. DEM preparation is
+also explicit and laptop-safe:
+
+```bash
+python ml/sfincs/mangaluru/scripts/prepare_dem.py \
+  --input /path/to/real-dem.tif --output processed/dem/dem_utm43n.tif
+```
 
 The pipeline uses **SFINCS** (*Super-Fast INundation of CoastS*) driven by **HydroMT-SFINCS** to simulate time-varying flood depth fields, flood extent, onset times, and peak depths across Mangaluru using local terrain (DEM), tidal forcing, and rainfall data.
 
@@ -32,13 +55,13 @@ ml/sfincs/mangaluru/
 
 | Milestone | Status | Description | Verification Artifact |
 | :--- | :--- | :--- | :--- |
-| **M0: Environment** | **COMPLETE** | Python venv, HydroMT, HydroMT-SFINCS & Docker Desktop runtime | Benchmark run verified |
-| **M1: Data Audit** | **COMPLETE** | $5\text{ km} \times 5\text{ km}$ domain (`EPSG:32643`), DEM, Panambur tide, IMD rainfall | [`DATA_SOURCES.md`](file:///c:/Users/Chaithra/Desktop/TideMesh/ml/sfincs/mangaluru/DATA_SOURCES.md), [`domain.geojson`](file:///c:/Users/Chaithra/Desktop/TideMesh/ml/sfincs/mangaluru/processed/boundaries/domain.geojson) |
-| **M2: Baseline Model** | **COMPLETE** | Mesh, elevation, roughness ($n=0.035$), controlled ocean pulse run | `model/base/` |
-| **M3: Compound Forcing** | **COMPLETE** | Panambur spring tide ($+2.25\text{m}$ MSL) + IMD extreme downpour ($75\text{ mm/hr}$) | [`simulations/historical/`](file:///c:/Users/Chaithra/Desktop/TideMesh/ml/sfincs/mangaluru/simulations/historical/) |
-| **M4: Historical Replay** | **COMPLETE** | May 29, 2018 Cyclone Mekunu / Monsoon extreme flood event replay | `simulations/historical/` |
-| **M5 & M6: Calib / Valid** | **COMPLETE** | Calibrated roughness, computed IoU (`0.3782`), CSI (`0.3782`), RMSE (`0.125m`) | [`validation/metrics/report.json`](file:///c:/Users/Chaithra/Desktop/TideMesh/ml/sfincs/mangaluru/validation/metrics/report.json) |
-| **M7: Product Outputs** | **COMPLETE** | All 6 standardized geospatial deliverables exported to `outputs/` | [`outputs/`](file:///c:/Users/Chaithra/Desktop/TideMesh/outputs/) |
+| **M0: Environment** | **DEPENDENCY SPEC** | Python/HydroMT dependencies are listed; this readiness flow does not require Docker or a SFINCS run | `requirements.txt` |
+| **M1: Data Audit** | **READINESS CHECK** | Domain specification and input provenance requirements; real DEM, tide, rainfall, and validated observations are not present | [`DATA_SOURCES.md`](DATA_SOURCES.md), [`provenance/manifest.json`](provenance/manifest.json) |
+| **M2: Baseline Model** | **SYNTHETIC FIXTURE** | Generated mesh/terrain retained for development only | [`model/base/SYNTHETIC.md`](model/base/SYNTHETIC.md) |
+| **M3: Compound Forcing** | **SYNTHETIC FIXTURE** | Generated tide/rainfall forcing retained for development only | [`simulations/historical/SYNTHETIC.md`](simulations/historical/SYNTHETIC.md) |
+| **M4: Historical Replay** | **NOT OPERATIONAL** | No real-input replay is claimed by this checkout | `scripts/validate_inputs.py` |
+| **M5 & M6: Calib / Valid** | **NOT OPERATIONAL** | Existing metrics are not evidence of real-input validation | [`validation/metrics/report.json`](validation/metrics/report.json) |
+| **M7: Product Outputs** | **SCENARIO FIXTURES** | Existing outputs are retained but are not operational observations | [`simulations/baseline/outputs/`](simulations/baseline/outputs/) |
 
 ---
 

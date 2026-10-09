@@ -61,7 +61,7 @@ Processing Steps:
   2. Clipping to 5km x 5km domain bounding box.
   3. Vertical datum reconciliation: EGM96 to MSL adjustment.
   4. Integration of coastal bathymetry for river channels (Netravati & Gurupura river beds).
-   QA Status: Not validated; elevation range and vertical datum must be established from the supplied GeoTIFF.
+QA Status: Not validated; elevation range and vertical datum must be established from the supplied GeoTIFF.
 ```
 
 ---
