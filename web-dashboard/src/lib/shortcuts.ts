@@ -1,6 +1,7 @@
 export type ShortcutActionId =
   | 'acknowledge'
   | 'assignTeam'
+  | 'addRescuer'
   | 'selectZone1'
   | 'selectZone2'
   | 'selectZone3'
@@ -18,8 +19,8 @@ export interface ShortcutDefinition {
   id: ShortcutActionId;
   label: string;
   description: string;
-  defaultKey: string; // e.g. "a", "s", "1", "]", "[", "o", "escape", " ", "n", "t", "l", "?"
-  permission?: 'acknowledge' | 'assignTeam' | 'manageAlerts';
+  defaultKey: string; // e.g. "a", "s", "r", "1", "]", "[", "o", "escape", " ", "n", "t", "l", "?"
+  permission?: 'acknowledge' | 'assignTeam' | 'manageAlerts' | 'manageRescuers';
   category: 'Actions' | 'Navigation' | 'Timeline' | 'General';
 }
 
@@ -38,6 +39,14 @@ export const SHORTCUT_REGISTRY: Record<ShortcutActionId, ShortcutDefinition> = {
     description: 'Assign response team to primary zone action',
     defaultKey: 's',
     permission: 'assignTeam',
+    category: 'Actions',
+  },
+  addRescuer: {
+    id: 'addRescuer',
+    label: 'Add Rescuer',
+    description: 'Open dialog to register a new field rescuer',
+    defaultKey: 'r',
+    permission: 'manageRescuers',
     category: 'Actions',
   },
   selectZone1: {

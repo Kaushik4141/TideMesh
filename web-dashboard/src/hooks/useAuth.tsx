@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type UserRole = 'DUTY_OFFICER' | 'INCIDENT_COMMANDER' | 'COMMISSIONER' | 'OBSERVER';
+export type UserRole = 'DUTY_OFFICER' | 'INCIDENT_COMMANDER' | 'COMMISSIONER' | 'OBSERVER' | 'SYSTEM_ADMIN';
 
 export interface User {
   id: string;
@@ -33,6 +33,13 @@ export const MOCK_USERS: User[] = [
     role: 'COMMISSIONER',
     roleTitle: 'Municipal Commissioner (Executive)',
     avatarInitials: 'VH',
+  },
+  {
+    id: 'user-admin',
+    name: 'A. K. Sharma',
+    role: 'SYSTEM_ADMIN',
+    roleTitle: 'System Administrator',
+    avatarInitials: 'AS',
   },
   {
     id: 'user-observer',
@@ -104,17 +111,22 @@ export function usePermission() {
   const can = (permission: string): boolean => {
     if (!permission) return true;
 
+    // Rescuer management capability - strictly System Admin only
+    if (permission === 'manageRescuers') {
+      return currentUser.role === 'SYSTEM_ADMIN';
+    }
+
     // Actions requiring responder write capabilities
     if (permission === 'acknowledge') {
-      return currentUser.role === 'DUTY_OFFICER' || currentUser.role === 'INCIDENT_COMMANDER';
+      return currentUser.role === 'DUTY_OFFICER' || currentUser.role === 'INCIDENT_COMMANDER' || currentUser.role === 'SYSTEM_ADMIN';
     }
 
     if (permission === 'assignTeam') {
-      return currentUser.role === 'DUTY_OFFICER' || currentUser.role === 'INCIDENT_COMMANDER';
+      return currentUser.role === 'DUTY_OFFICER' || currentUser.role === 'INCIDENT_COMMANDER' || currentUser.role === 'SYSTEM_ADMIN';
     }
 
     if (permission === 'manageAlerts') {
-      return currentUser.role === 'DUTY_OFFICER' || currentUser.role === 'INCIDENT_COMMANDER';
+      return currentUser.role === 'DUTY_OFFICER' || currentUser.role === 'INCIDENT_COMMANDER' || currentUser.role === 'SYSTEM_ADMIN';
     }
 
     // Navigation and viewing shortcuts are permitted for all roles
@@ -124,6 +136,7 @@ export function usePermission() {
   return {
     can,
     role: currentUser.role,
+    canManageRescuers: currentUser.role === 'SYSTEM_ADMIN',
     isReadOnly: currentUser.role === 'COMMISSIONER' || currentUser.role === 'OBSERVER',
   };
 }

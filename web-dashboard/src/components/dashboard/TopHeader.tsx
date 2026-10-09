@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils';
 
 interface TopHeaderProps {
   onOpenShortcuts?: () => void;
+  onOpenAddRescuer?: () => void;
+  addRescuerButtonRef?: React.RefObject<HTMLButtonElement | null>;
   eventName?: string;
   eventType?: string;
   currentTime?: string;
@@ -18,8 +20,9 @@ interface TopHeaderProps {
   isLoading?: boolean;
 }
 
-export function TopHeader({ onOpenShortcuts }: TopHeaderProps) {
+export function TopHeader({ onOpenShortcuts, onOpenAddRescuer, addRescuerButtonRef }: TopHeaderProps) {
   const { currentUser, setCurrentUser, users } = useAuth();
+  const isAdmin = currentUser.role === 'SYSTEM_ADMIN';
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -47,32 +50,53 @@ export function TopHeader({ onOpenShortcuts }: TopHeaderProps) {
         TIDEMESH
       </Link>
 
-      {/* Right: Profile Avatar Button with Role-Based User Menu */}
-      <div className="relative shrink-0" ref={menuRef}>
-        <button
-          onClick={() => setMenuOpen((prev) => !prev)}
-          className="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 min-h-[44px] cursor-pointer"
-          aria-expanded={menuOpen}
-          aria-haspopup="true"
-          aria-label={`User menu for ${currentUser.name} (${currentUser.roleTitle})`}
-        >
-          {/* Avatar */}
-          <div
-            className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold shadow-xs select-none"
-            title={`${currentUser.name} (${currentUser.roleTitle})`}
-          >
-            {currentUser.avatarInitials}
-          </div>
-
-          <div className="hidden sm:flex flex-col text-left leading-tight pr-1">
-            <span className="text-xs font-bold text-slate-900">{currentUser.name}</span>
-            <span className="text-[10px] text-slate-500 font-medium truncate max-w-[140px]">
-              {currentUser.roleTitle}
+      {/* Right controls: Add rescuer, Admin, and Avatar Profile Menu */}
+      <div className="flex items-center gap-1 sm:gap-2">
+        {isAdmin && (
+          <>
+            <button
+              ref={addRescuerButtonRef}
+              onClick={onOpenAddRescuer}
+              className="px-3 min-h-[44px] flex items-center justify-center text-sm font-semibold text-[#0F172A] hover:bg-slate-100 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 cursor-pointer"
+              aria-label="Add rescuer"
+            >
+              Add rescuer
+            </button>
+            <span
+              className="px-2.5 min-h-[44px] flex items-center justify-center text-xs font-bold text-[#0F172A] uppercase tracking-wider select-none"
+              aria-label="Administrator mode active"
+            >
+              Admin
             </span>
-          </div>
+          </>
+        )}
 
-          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-        </button>
+        {/* Profile Avatar Button with Role-Based User Menu */}
+        <div className="relative shrink-0" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 min-h-[44px] cursor-pointer"
+            aria-expanded={menuOpen}
+            aria-haspopup="true"
+            aria-label={`User menu for ${currentUser.name} (${currentUser.roleTitle})`}
+          >
+            {/* Avatar */}
+            <div
+              className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold shadow-xs select-none"
+              title={`${currentUser.name} (${currentUser.roleTitle})`}
+            >
+              {currentUser.avatarInitials}
+            </div>
+
+            <div className="hidden sm:flex flex-col text-left leading-tight pr-1">
+              <span className="text-xs font-bold text-slate-900">{currentUser.name}</span>
+              <span className="text-[10px] text-slate-500 font-medium truncate max-w-[140px]">
+                {currentUser.roleTitle}
+              </span>
+            </div>
+
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+          </button>
 
         {/* Dropdown Menu */}
         {menuOpen && (
@@ -150,6 +174,7 @@ export function TopHeader({ onOpenShortcuts }: TopHeaderProps) {
             )}
           </div>
         )}
+        </div>
       </div>
     </header>
   );

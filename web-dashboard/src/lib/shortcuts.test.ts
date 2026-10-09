@@ -78,6 +78,7 @@ export function runShortcutsTestSuite() {
     const defaults = getDefaultBindings();
     assert(defaults.acknowledge === 'a', 'Default acknowledge must be "a"');
     assert(defaults.assignTeam === 's', 'Default assignTeam must be "s"');
+    assert(defaults.addRescuer === 'r', 'Default addRescuer must be "r"');
     assert(defaults.selectZone1 === '1', 'Default selectZone1 must be "1"');
     assert(defaults.selectZone2 === '2', 'Default selectZone2 must be "2"');
     assert(defaults.selectZone3 === '3', 'Default selectZone3 must be "3"');

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFloodDashboard } from '@/hooks/useFloodDashboard';
 import { TopHeader } from '@/components/dashboard/TopHeader';
@@ -12,7 +12,10 @@ import { ZoneDrawer, ZoneDrawerSkeleton } from '@/components/dashboard/ZoneDrawe
 import { DataErrorPanel } from '@/components/dashboard/DashboardSkeletons';
 import { ShortcutsCustomizationModal } from '@/components/dashboard/ShortcutsCustomizationModal';
 import { ScenarioModal } from '@/components/dashboard/ScenarioModal';
+import { AddRescuerDialog } from '@/components/dashboard/AddRescuerDialog';
 import { useShortcuts } from '@/hooks/useShortcuts';
+import { useAuth, usePermission } from '@/hooks/useAuth';
+import { removeRescuer } from '@/lib/rescuers';
 import type { ShortcutActionId } from '@/lib/shortcuts';
 
 export default function OverviewPage() {
@@ -56,7 +59,15 @@ export default function OverviewPage() {
 
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  const [addRescuerModalOpen, setAddRescuerModalOpen] = useState(false);
   const [isCapturingKey, setIsCapturingKey] = useState(false);
+
+  // Rescuer toast notification with undo action
+  const [rescuerToast, setRescuerToast] = useState<{ id: string; name: string } | null>(null);
+  const addRescuerButtonRef = useRef<HTMLButtonElement>(null);
+
+  const { currentUser } = useAuth();
+  const { canManageRescuers } = usePermission();
 
   // Data loading and error watchdog states
   const [isLoading, setIsLoading] = useState(true);
@@ -147,6 +158,11 @@ export default function OverviewPage() {
           assignAction(selectedZone.actions[0].id, 'Team Delta');
         }
       },
+      addRescuer: () => {
+        if (canManageRescuers) {
+          setAddRescuerModalOpen(true);
+        }
+      },
       selectZone1: () => {
         selectZone('B');
       },
@@ -172,7 +188,9 @@ export default function OverviewPage() {
         router.push('/zones');
       },
       closeDrawer: () => {
-        if (shortcutsModalOpen) {
+        if (addRescuerModalOpen) {
+          setAddRescuerModalOpen(false);
+        } else if (shortcutsModalOpen) {
           setShortcutsModalOpen(false);
         } else if (scenarioModalOpen) {
           setScenarioModalOpen(false);
@@ -200,6 +218,8 @@ export default function OverviewPage() {
     acknowledgeCurrentZone,
     actionsState,
     assignAction,
+    canManageRescuers,
+    addRescuerModalOpen,
     scenarioModalOpen,
     selectZone,
     selectedZone,
@@ -223,11 +243,23 @@ export default function OverviewPage() {
     canPerformAction,
   } = useShortcuts(actionHandlers, { isCapturing: isCapturingKey });
 
+  // Handle undo of added rescuer
+  const handleUndoRescuer = () => {
+    if (!rescuerToast) return;
+    removeRescuer(rescuerToast.id, {
+      name: currentUser.name,
+      roleTitle: currentUser.roleTitle,
+    });
+    setRescuerToast(null);
+  };
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-slate-100 flex flex-col font-sans antialiased text-slate-900 select-none">
       {/* Top Header with live data fetching status and simulation trigger */}
       <TopHeader
         onOpenShortcuts={() => setShortcutsModalOpen(true)}
+        onOpenAddRescuer={() => setAddRescuerModalOpen(true)}
+        addRescuerButtonRef={addRescuerButtonRef}
         eventName={eventData?.name}
         eventType={eventData?.type || 'SIMULATION'}
         currentTime={currentTime}
@@ -377,6 +409,38 @@ export default function OverviewPage() {
         onClose={() => setScenarioModalOpen(false)}
         scenario={scenario}
       />
+
+      {/* Add Rescuer Dialog (Admin Only) */}
+      <AddRescuerDialog
+        open={addRescuerModalOpen}
+        onOpenChange={setAddRescuerModalOpen}
+        onSuccess={(id, name) => {
+          setRescuerToast({ id, name });
+          // Auto-hide toast after 8 seconds if not undone
+          setTimeout(() => {
+            setRescuerToast((curr) => (curr?.id === id ? null : curr));
+          }, 8000);
+        }}
+        triggerButtonRef={addRescuerButtonRef}
+      />
+
+      {/* Rescuer Added Toast Notification with Undo */}
+      {rescuerToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-16 right-4 z-50 bg-[#0F172A] text-white px-4 py-3 rounded-[4px] shadow-none border border-slate-700 animate-in fade-in slide-in-from-bottom-2 duration-150 flex items-center gap-3 text-xs font-medium"
+        >
+          <span>Rescuer added · {rescuerToast.name}</span>
+          <span className="text-slate-400">·</span>
+          <button
+            onClick={handleUndoRescuer}
+            className="text-amber-400 hover:text-amber-300 font-bold underline underline-offset-2 min-h-[36px] flex items-center px-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded-xs"
+          >
+            Undo
+          </button>
+        </div>
+      )}
 
       {/* Role Permission Toast Announcement */}
       {toastMessage && (
